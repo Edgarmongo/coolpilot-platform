@@ -42,7 +42,7 @@ public class OperationLogController {
 	/**
 	 * 按id删除操作日志
 	 *
-	 * @param id
+	 * @param id 日志id
 	 * @return
 	 */
 	@DeleteMapping("/operationLog")

@@ -17,7 +17,7 @@
 				</template>
 			</el-table-column>
 			<el-table-column label="序号" type="index" width="50"></el-table-column>
-			<el-table-column label="操作者" prop="username" width="100"></el-table-column>
+			<el-table-column label="操作者" prop="username"></el-table-column>
 			<el-table-column label="请求方式" prop="method" width="80"></el-table-column>
 			<el-table-column label="描述" prop="description"></el-table-column>
 			<el-table-column label="ip" prop="ip"></el-table-column>
