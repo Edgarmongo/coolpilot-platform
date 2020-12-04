@@ -40,7 +40,7 @@ public class ExceptionLogController {
 	}
 
 	/**
-	 * 按id删除操作日志
+	 * 按id删除异常日志
 	 *
 	 * @param id 日志id
 	 * @return
