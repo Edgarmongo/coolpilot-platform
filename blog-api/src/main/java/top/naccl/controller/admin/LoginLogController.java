@@ -31,8 +31,8 @@ public class LoginLogController {
 	 * @return
 	 */
 	@GetMapping("/loginLogs")
-	public Result operationLogs(@RequestParam(defaultValue = "1") Integer pageNum,
-	                            @RequestParam(defaultValue = "10") Integer pageSize) {
+	public Result loginLogs(@RequestParam(defaultValue = "1") Integer pageNum,
+	                        @RequestParam(defaultValue = "10") Integer pageSize) {
 		String orderBy = "create_time desc";
 		PageHelper.startPage(pageNum, pageSize, orderBy);
 		PageInfo<LoginLog> pageInfo = new PageInfo<>(loginLogService.getLoginLogList());
