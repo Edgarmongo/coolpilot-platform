@@ -28,6 +28,7 @@ public class VisitLogController {
 	 * 分页查询访问日志列表
 	 *
 	 * @param uuid     按访客标识码模糊查询
+	 * @param date     按访问时间查询
 	 * @param pageNum  页码
 	 * @param pageSize 每页个数
 	 * @return
