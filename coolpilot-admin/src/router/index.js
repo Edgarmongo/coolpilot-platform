@@ -68,6 +68,12 @@ export const routes = [
 				meta: {title: '动态管理', icon: 'ChatDotRound'}
 			},
 			{
+				path: 'feedback',
+				name: 'FeedbackList',
+				component: () => import('@/views/community/FeedbackList.vue'),
+				meta: {title: '用户反馈', icon: 'ChatLineSquare'}
+			},
+			{
 				path: 'comment',
 				name: 'CommentList',
 				component: () => import('@/views/blog/CommentList.vue'),
@@ -119,6 +125,20 @@ export const routes = [
 				name: 'Logs',
 				component: () => import('@/views/log/Logs.vue'),
 				meta: {title: '日志中心', icon: 'Document'}
+			}
+		]
+	},
+	{
+		path: '/product',
+		component: Layout,
+		redirect: '/product/list',
+		meta: {title: '商品管理', icon: 'Goods'},
+		children: [
+			{
+				path: 'list',
+				name: 'ProductManage',
+				component: () => import('@/views/product/ProductList.vue'),
+				meta: {title: '商品列表', icon: 'Goods'}
 			}
 		]
 	},
