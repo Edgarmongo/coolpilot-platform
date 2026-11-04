@@ -27,7 +27,7 @@ const blogMap = computed(() => (data.value as any)?.data?.blogMap || {})
 const groups = computed(() => Object.keys(blogMap.value).map(month => ({month, items: blogMap.value[month]})))
 const totalCount = computed(() => groups.value.reduce((sum, group) => sum + group.items.length, 0))
 
-useHead({title: '归档 - CoolPilot'})
+useHead({title: '归档 - CoolSkyAI'})
 </script>
 
 <style scoped>

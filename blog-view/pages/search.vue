@@ -58,7 +58,7 @@ function go(target: number) {
 	window.scrollTo({top: 0, behavior: 'smooth'})
 }
 
-useHead({title: '搜索 - CoolPilot'})
+useHead({title: '搜索 - CoolSkyAI'})
 </script>
 
 <style scoped>

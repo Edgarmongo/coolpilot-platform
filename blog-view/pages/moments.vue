@@ -55,7 +55,7 @@ async function like(moment: any) {
 }
 
 await load(1)
-useHead({title: '动态 - CoolPilot'})
+useHead({title: '动态 - CoolSkyAI'})
 </script>
 
 <style scoped>

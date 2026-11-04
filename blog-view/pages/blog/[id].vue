@@ -94,9 +94,9 @@ async function unlock() {
 await fetchBlog()
 
 if (blog.value) {
-	useHead({title: `${blog.value.title} - CoolPilot`})
+	useHead({title: `${blog.value.title} - CoolSkyAI`})
 } else {
-	useHead({title: '受密码保护 - CoolPilot'})
+	useHead({title: '受密码保护 - CoolSkyAI'})
 }
 </script>
 

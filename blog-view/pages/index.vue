@@ -2,7 +2,7 @@
 	<div>
 		<section class="hero card">
 			<div class="hero-main">
-				<span class="tag">CoolPilot 技术平台</span>
+				<span class="tag">CoolSkyAI 技术平台</span>
 				<h1>把技术写成可以交付的东西</h1>
 				<p>文章、课程、文档与代码资源，一套账号打通阅读、购买与下载。</p>
 				<div class="hero-actions">

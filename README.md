@@ -1,6 +1,6 @@
-# CoolPilot Platform
+# CoolSkyAI Platform
 
-> **CoolPilot 技术平台** — 个人技术知识与服务平台
+> **CoolSkyAI 技术平台** — 个人技术知识与服务平台
 > 把文章、课程、文档、代码资源和技术服务放在一个地方，用一套账号打通「看内容 → 买内容 → 交付 → 售后」。
 
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)

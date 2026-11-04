@@ -4,7 +4,7 @@
 			<div class="login-brand">
 				<span class="login-mark">CP</span>
 				<div>
-					<h1>CoolPilot</h1>
+					<h1>CoolSkyAI</h1>
 					<p>技术平台管理后台</p>
 				</div>
 			</div>

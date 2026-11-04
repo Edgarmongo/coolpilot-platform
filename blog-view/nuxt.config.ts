@@ -9,11 +9,11 @@ export default defineNuxtConfig({
 	},
 	app: {
 		head: {
-			title: 'CoolPilot 技术平台',
+			title: 'CoolSkyAI 技术平台',
 			htmlAttrs: {lang: 'zh-CN'},
 			meta: [
 				{name: 'viewport', content: 'width=device-width, initial-scale=1'},
-				{name: 'description', content: 'CoolPilot 技术平台 —— 个人技术知识与服务'}
+				{name: 'description', content: 'CoolSkyAI 技术平台 —— 个人技术知识与服务'}
 			]
 		}
 	}

@@ -4,7 +4,7 @@
 			<div class="container header-inner">
 				<NuxtLink to="/" class="brand">
 					<span class="brand-mark">CP</span>
-					<span class="brand-text">CoolPilot</span>
+					<span class="brand-text">CoolSkyAI</span>
 				</NuxtLink>
 
 				<nav class="nav">
@@ -36,7 +36,7 @@
 
 		<footer class="footer">
 			<div class="container">
-				<span>CoolPilot 技术平台</span>
+				<span>CoolSkyAI 技术平台</span>
 				<span class="dot">·</span>
 				<span>基于 NBlog 二次开发</span>
 			</div>

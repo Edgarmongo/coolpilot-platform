@@ -46,7 +46,7 @@ const detailHtml = computed(() => (data.value as any)?.data?.detailHtml || '')
 const resources = computed(() => (data.value as any)?.data?.resources || [])
 
 if (product.value) {
-	useHead({title: `${product.value.title} - CoolPilot`})
+	useHead({title: `${product.value.title} - CoolSkyAI`})
 	// 登录态下判断是否已购买，避免重复下单
 	if (isLogin.value) {
 		const access = await call(`/resource/access?productNo=${route.params.no}`).catch(() => null)

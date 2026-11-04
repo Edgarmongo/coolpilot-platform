@@ -11,7 +11,7 @@ const {call} = useApi()
 const {data} = await useAsyncData('about', () => call('/about'))
 const about = computed(() => (data.value as any)?.data || {})
 
-useHead({title: '关于 - CoolPilot'})
+useHead({title: '关于 - CoolSkyAI'})
 </script>
 
 <style scoped>

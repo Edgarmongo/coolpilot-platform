@@ -160,7 +160,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-	document.title = to.meta.title ? `${to.meta.title} - CoolPilot` : 'CoolPilot 管理后台'
+	document.title = to.meta.title ? `${to.meta.title} - CoolSkyAI` : 'CoolSkyAI 管理后台'
 	const token = localStorage.getItem('token')
 	if (!token && to.path !== '/login') {
 		next({path: '/login', query: {redirect: to.fullPath}})

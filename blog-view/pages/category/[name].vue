@@ -27,5 +27,5 @@ async function go(page: number) {
 	window.scrollTo({top: 0, behavior: 'smooth'})
 }
 
-useHead({title: `分类 ${name.value} - CoolPilot`})
+useHead({title: `分类 ${name.value} - CoolSkyAI`})
 </script>

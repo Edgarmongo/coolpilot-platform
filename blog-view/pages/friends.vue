@@ -27,7 +27,7 @@ const {data} = await useAsyncData('friends', () => call('/friends'))
 const info = computed(() => (data.value as any)?.data?.friendInfo?.content || '')
 const friends = computed(() => (data.value as any)?.data?.friends || [])
 
-useHead({title: '友人帐 - CoolPilot'})
+useHead({title: '友人帐 - CoolSkyAI'})
 </script>
 
 <style scoped>
