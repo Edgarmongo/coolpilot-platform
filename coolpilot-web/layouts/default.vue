@@ -10,6 +10,7 @@
 				<nav class="nav">
 					<NuxtLink to="/" class="nav-item" active-class="is-active">首页</NuxtLink>
 					<NuxtLink to="/archives" class="nav-item" active-class="is-active">归档</NuxtLink>
+					<NuxtLink to="/topic" class="nav-item" active-class="is-active">专题</NuxtLink>
 					<NuxtLink to="/moments" class="nav-item" active-class="is-active">动态</NuxtLink>
 					<NuxtLink to="/friends" class="nav-item" active-class="is-active">友链</NuxtLink>
 					<NuxtLink to="/about" class="nav-item" active-class="is-active">关于</NuxtLink>

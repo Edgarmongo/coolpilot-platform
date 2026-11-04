@@ -68,8 +68,10 @@ public final class SecurityPaths {
 	 */
 	public static final String[] PUBLIC = {
 			// 内容浏览
-			"/blogs", "/blog", "/blog/*/products", "/archives", "/searchBlog", "/category", "/tag",
+			"/blogs", "/blog", "/blog/*/products", "/blog/*/topics", "/archives", "/searchBlog", "/category", "/tag",
 			"/moments", "/about", "/site",
+			// 专题：公开页面，文章本身仍由 /blog 的可见性规则把关
+			"/topics", "/topic/*",
 			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）
 			"/comments", "/comment",
 			// 友链：匿名可看、可申请；浏览量计数在 Service 层按 IP 去重

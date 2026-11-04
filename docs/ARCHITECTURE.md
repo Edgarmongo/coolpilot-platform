@@ -304,7 +304,20 @@ upload.file.resources-locations=file:${upload.file.path}
 - 文章页在正文下方展示卡片，已购显示「已拥有」；未登录点击进入商品页
 - 未绑定商品的文章不渲染该区块，不留空位
 
-### 4.10 V1.3 知识库检索（第一阶段）
+### 4.10 专题（合集）
+
+模块：`com.coolskyai.modules.topic`；表：`topic` / `topic_article`（V8）。
+
+- 一个专题 = 一组**有序**文章，顺序即阅读顺序；同一篇文章可以进多个专题
+- 后台：`内容管理 → 专题管理`（列表、发布开关、编辑抽屉里搜文章并上下移调序）
+- 前台：`/topic` 列表、`/topic/{slug}` 详情；文章页顶部显示「本篇属于专题 X · 共 N 篇」
+- 接口：`GET /topics`、`GET /topic/{slug}`、`GET /blog/{id}/topics`（均公开）；
+  `GET/POST /admin/topics`、`GET/PUT/DELETE /admin/topic/{id}`、`PUT /admin/topic/{id}/status|articles`
+- **可见性**：专题页会过滤掉未发布文章，`articleCount` 也只算已发布；
+  后台详情反而要看到全部，否则编辑调完顺序一保存就会把草稿踢出专题
+- slug 必填且唯一（可留空自动生成 `topic-xxxx`），带进 `sitemap.xml`
+
+### 4.11 V1.3 知识库检索（第一阶段）
 
 模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；
 决策记录见 `docs/ADR-0001-VECTOR-STORE.md`。

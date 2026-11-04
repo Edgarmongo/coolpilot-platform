@@ -233,7 +233,22 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 | POST | `/admin/milestone/{id}/deliver` | 交付里程碑（上传文件 + 说明） |
 | GET | `/admin/deliveries` | 交付记录 |
 
-### 4.5 文件与统计
+### 4.5 专题（合集）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/topics` | 公开：已发布专题列表，带 `articleCount`（只算已发布文章） |
+| GET | `/topic/{slug}` | 公开：专题详情 + 有序文章列表 |
+| GET | `/blog/{blogId}/topics` | 公开：文章所属的已发布专题（文章页「本篇属于」） |
+| GET | `/admin/topics` | 后台列表，`published` `keyword` 分页 |
+| GET | `/admin/topic/{id}` | 后台详情，含 `articleIds` 与全部文章（含草稿） |
+| POST | `/admin/topic` | 新建，可同时传 `articleIds` |
+| PUT | `/admin/topic/{id}` | 编辑；`articleIds` 传 `null` 表示不改绑定，传 `[]` 表示清空 |
+| PUT | `/admin/topic/{id}/status?published=` | 发布 / 下线 |
+| PUT | `/admin/topic/{id}/articles` | 整组替换绑定，数组顺序即阅读顺序 |
+| DELETE | `/admin/topic/{id}` | 删除专题（文章不受影响） |
+
+### 4.6 文件与统计
 
 | 方法 | 路径 | 说明 |
 |---|---|---|

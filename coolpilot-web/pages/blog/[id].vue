@@ -11,6 +11,15 @@
 				</div>
 				<div class="article" v-html="blog.content"></div>
 
+				<!-- 本篇所属专题：从单篇回到系列阅读路径 -->
+				<div v-if="topics.length" class="topic-tip">
+					<span class="muted">本篇属于专题</span>
+					<NuxtLink v-for="item in topics" :key="item.id" :to="`/topic/${item.slug}`" class="tag">
+						{{ item.title }}
+					</NuxtLink>
+					<span class="muted" v-if="topics[0].articleCount">共 {{ topics[0].articleCount }} 篇</span>
+				</div>
+
 				<!-- 关联付费内容：内容底部导流到商品 -->
 				<div v-if="relatedProducts.length" class="related">
 					<h3>相关付费内容</h3>
@@ -83,6 +92,7 @@ const favorited = ref(false)
 const liked = ref(false)
 const likeCount = ref(0)
 const relatedProducts = ref<any[]>([])
+const topics = ref<any[]>([])
 // 密码凭证按文章维度存，30 天有效
 const pwdToken = useCookie<string | null>(`cp_blog_pwd_${param}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
 
@@ -97,7 +107,7 @@ async function fetchBlog() {
 		blog.value = res.data
 		if (res.data && res.data.id) {
 			blogId.value = res.data.id
-			await loadRelated()
+			await Promise.all([loadRelated(), loadTopics()])
 		}
 		locked.value = false
 		message.value = ''
@@ -180,6 +190,11 @@ async function toggleLike() {
 		liked.value = !liked.value
 		likeCount.value = Math.max(0, likeCount.value + (liked.value ? 1 : -1))
 	}
+}
+
+async function loadTopics() {
+	const res: any = await call(`/blog/${blogId.value}/topics`).catch(() => null)
+	topics.value = (res && res.code === 200 && res.data) ? res.data : []
 }
 
 async function loadRelated() {
@@ -329,5 +344,17 @@ if (blog.value) {
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
+}
+
+.topic-tip {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 18px 0 0;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: #f4faf8;
+	border: 1px solid rgba(15, 118, 110, .12);
 }
 </style>

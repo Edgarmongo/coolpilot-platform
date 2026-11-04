@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 	const base = (config.public.siteUrl || 'http://localhost:8081').replace(/\/$/, '')
 	const api = config.apiBase
 
-	const staticPaths = ['/', '/archives', '/moments', '/friends', '/about', '/knowledge', '/search']
+	const staticPaths = ['/', '/archives', '/topic', '/moments', '/friends', '/about', '/knowledge', '/search', '/service']
 
 	const urls: {loc: string, lastmod?: string, changefreq?: string, priority?: string}[] = staticPaths.map(p => ({
 		loc: base + p,
@@ -29,6 +29,21 @@ export default defineEventHandler(async (event) => {
 		}
 	} catch {
 		// 后端不可用时也要能返回一份可用的 sitemap（至少含静态页）
+	}
+
+	try {
+		// 专题是长尾入口，单独提交；未发布的专题后端不会返回
+		const topics: any = await $fetch(`${api}/topics`)
+		for (const t of (topics?.data || [])) {
+			urls.push({
+				loc: `${base}/topic/${t.slug}`,
+				lastmod: t.updateTime ? new Date(t.updateTime).toISOString().slice(0, 10) : undefined,
+				changefreq: 'weekly',
+				priority: '0.7'
+			})
+		}
+	} catch {
+		// 同上
 	}
 
 	try {
