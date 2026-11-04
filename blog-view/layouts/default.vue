@@ -38,7 +38,7 @@
 			<div class="container">
 				<span>CoolSkyAI 技术平台</span>
 				<span class="dot">·</span>
-				<span>基于 NBlog 二次开发</span>
+				<span>技术知识与服务</span>
 			</div>
 		</footer>
 	</div>

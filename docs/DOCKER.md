@@ -27,7 +27,7 @@ docker info --format '{{.OSType}}'
 ## 二、快速开始
 
 ```bash
-cd NBlog
+cd coolpilot-platform
 
 # 1. 准备环境变量（首次）
 cp .env.example .env

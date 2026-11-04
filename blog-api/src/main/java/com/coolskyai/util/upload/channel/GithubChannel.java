@@ -52,7 +52,7 @@ public class GithubChannel implements FileUploadChannel {
 		headers.add("Authorization", "token " + githubProperties.getToken());
 
 		HashMap<String, String> body = new HashMap<>(4);
-		body.put("message", "Add files via NBlog");
+		body.put("message", "Add files via CoolSkyAI");
 		body.put("content", imgBase64);
 
 		HttpEntity httpEntity = new HttpEntity(body, headers);
