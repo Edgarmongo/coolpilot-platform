@@ -94,6 +94,18 @@ server {
         add_header Cache-Control "public";
     }
 
+    # 探活（HTTPS）：外部监控通常只探 443
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    # 不带斜杠时补一个跳转，否则会落到前台的 404
+    location = /cms {
+        return 301 /cms/;
+    }
+
     # 管理后台：静态站自己带 /cms/ 前缀，原样转发
     location /cms/ {
         proxy_pass http://admin_upstream;
