@@ -67,7 +67,13 @@
 
 				<div class="side-block">
 					<h4>首图</h4>
-					<el-input v-model="form.firstPicture" placeholder="/img/cover.jpg 或完整图片地址" class="mt"/>
+					<el-input v-model="form.firstPicture" placeholder="上传或直接填写图片地址" class="mt"/>
+					<div class="upload-row">
+						<input ref="fileInput" type="file" accept="image/*" hidden @change="uploadCover">
+						<el-button size="small" :loading="uploading" @click="$refs.fileInput.click()">
+							{{ uploading ? '上传中…' : '上传图片' }}
+						</el-button>
+					</div>
 					<img v-if="form.firstPicture" :src="form.firstPicture" class="cover" alt="">
 				</div>
 
@@ -86,6 +92,7 @@ import {useRoute, useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {Back} from '@element-plus/icons-vue'
 import {marked} from 'marked'
+import request from '@/util/request'
 import {getBlog, getCategoryAndTag, saveBlog, updateBlog} from '@/api/blog'
 
 const route = useRoute()
@@ -93,6 +100,7 @@ const router = useRouter()
 
 const loading = ref(false)
 const saving = ref(false)
+const uploading = ref(false)
 const categories = ref([])
 const tags = ref([])
 const isEdit = computed(() => !!route.params.id)
@@ -116,6 +124,31 @@ const form = reactive({
 const wordCount = computed(() => (form.content || '').replace(/\s/g, '').length)
 const readTime = computed(() => Math.max(1, Math.ceil(wordCount.value / 350)))
 const previewHtml = computed(() => (form.content ? marked.parse(form.content) : '<p class="muted">暂无内容</p>'))
+
+async function uploadCover(event) {
+	const file = event.target.files && event.target.files[0]
+	if (!file) {
+		return
+	}
+	uploading.value = true
+	try {
+		const formData = new FormData()
+		formData.append('file', file)
+		formData.append('bizType', 'ARTICLE')
+		formData.append('isPublic', 'true')
+		const res = await request({
+			url: 'file/upload',
+			method: 'POST',
+			data: formData,
+			headers: {'Content-Type': 'multipart/form-data'}
+		})
+		form.firstPicture = res.data.url
+		ElMessage.success('已插入首图地址')
+	} finally {
+		uploading.value = false
+		event.target.value = ''
+	}
+}
 
 async function submit() {
 	if (!form.title.trim()) {
@@ -279,6 +312,10 @@ onMounted(async () => {
 }
 
 .mt {
+	margin-top: 8px;
+}
+
+.upload-row {
 	margin-top: 8px;
 }
 

@@ -1,6 +1,7 @@
 package top.naccl.modules.file.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -42,6 +43,10 @@ public class FileController {
 	@Autowired
 	private AccountService accountService;
 
+	/** 前台/图片直链的域名前缀，用于拼接可长期访问的图片地址 */
+	@Value("${blog.api}")
+	private String blogApi;
+
 	@OperationLogger("上传文件")
 	@PostMapping("/admin/file/upload")
 	public Result upload(@RequestParam("file") MultipartFile multipartFile,
@@ -56,6 +61,8 @@ public class FileController {
 		data.put("fileSize", info.getFileSize());
 		data.put("mimeType", info.getMimeType());
 		data.put("isPublic", info.getIsPublic());
+		// /image/** 映射到上传目录，拼出可直接放进 Markdown 的地址
+		data.put("url", blogApi + "/image/" + info.getObjectKey());
 		return Result.ok("上传成功", data);
 	}
 
