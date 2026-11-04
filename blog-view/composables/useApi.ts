@@ -12,12 +12,28 @@ export function useApi() {
 		sameSite: 'lax'
 	})
 
+	/**
+	 * @param options.skipAuth 不注入登录 token（密码文章用独立凭证）
+	 */
 	async function call<T = any>(path: string, options: Record<string, any> = {}): Promise<T> {
+		const {skipAuth, ...rest} = options
 		const headers: Record<string, string> = {...(options.headers || {})}
-		if (token.value) {
+		if (!skipAuth && token.value && !headers.authorization) {
 			headers.authorization = token.value
 		}
-		return await $fetch<T>(`/api${path}`, {...options, headers})
+		try {
+			return await $fetch<T>(`/api${path}`, {...rest, headers})
+		} catch (error: any) {
+			/*
+			 * 后端业务错误（403 密码文章、400 参数、500 异常）会被 Nitro 原样透传状态码，
+			 * $fetch 对非 2xx 会抛异常。这里把业务体当正常结果返回，
+			 * 调用方看 code 即可，不必到处 try/catch。
+			 */
+			if (error && error.data && typeof error.data.code !== 'undefined') {
+				return error.data as T
+			}
+			throw error
+		}
 	}
 
 	function setSession(data: {token: string, user: any}) {
