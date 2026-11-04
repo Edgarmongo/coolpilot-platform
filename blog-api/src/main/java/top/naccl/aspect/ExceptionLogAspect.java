@@ -18,7 +18,7 @@ import top.naccl.util.IpAddressUtils;
 import top.naccl.util.JacksonUtils;
 import top.naccl.util.StringUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Map;
 

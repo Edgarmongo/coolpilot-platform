@@ -4,6 +4,10 @@ import router from './router'
 import store from './store'
 //自定义css
 import './assets/css/base.css'
+//门户主题样式
+import './assets/css/portal.css'
+//门户内容页样式
+import './assets/css/portal-content.css'
 //阿里icon
 import './assets/css/icon/iconfont.css'
 //typo.css

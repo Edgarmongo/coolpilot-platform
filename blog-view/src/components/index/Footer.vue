@@ -77,6 +77,11 @@
 <style scoped>
 	@import "../../assets/css/badge.css";
 
+	footer.ui.inverted.vertical.segment {
+		background: var(--portal-primary-strong) !important;
+		border-radius: 0;
+	}
+
 	.github-badge a {
 		color: #fff;
 	}

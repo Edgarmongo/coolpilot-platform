@@ -1,9 +1,10 @@
 <template>
 	<div>
-		<div class="ui top attached segment" style="text-align: center">
-			<h2 class="m-text-500">我的动态</h2>
+		<div class="portal-page-head">
+			<h2>我的动态</h2>
+			<p>碎片化的想法与即时记录。</p>
 		</div>
-		<div class="ui attached segment m-padding-bottom-large">
+		<div class="portal-content-block m-padding-bottom-large">
 			<div class="moments">
 				<div class="moment" v-for="(moment,index) in momentList" :key="index">
 					<div class="avatar">

@@ -10,7 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import top.naccl.constant.JwtConstants;
 import top.naccl.entity.LoginLog;
 import top.naccl.entity.User;
 import top.naccl.exception.BadRequestException;
@@ -21,9 +21,9 @@ import top.naccl.util.JacksonUtils;
 import top.naccl.util.JwtUtils;
 import top.naccl.util.StringUtils;
 
-import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
@@ -35,11 +35,15 @@ import java.util.Map;
  * @Date: 2020-07-21
  */
 public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
+	/** 登录请求路径 */
+	private static final String LOGIN_PROCESSES_URL = "/admin/login";
+
 	LoginLogService loginLogService;
 	ThreadLocal<String> currentUsername = new ThreadLocal<>();
 
-	protected JwtLoginFilter(String defaultFilterProcessesUrl, AuthenticationManager authenticationManager, LoginLogService loginLogService) {
-		super(new AntPathRequestMatcher(defaultFilterProcessesUrl));
+	protected JwtLoginFilter(AuthenticationManager authenticationManager, LoginLogService loginLogService) {
+		// Spring Security 7 已废弃 AntPathRequestMatcher，这里改用函数式 RequestMatcher
+		super(request -> LOGIN_PROCESSES_URL.equals(request.getServletPath()));
 		setAuthenticationManager(authenticationManager);
 		this.loginLogService = loginLogService;
 	}
@@ -52,9 +56,19 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 				throw new BadRequestException("请求方法错误");
 			}
 			User user = JacksonUtils.readValue(request.getInputStream(), User.class);
+			//请求体为空或不是合法JSON时，readValue内部吞掉异常并返回null，
+			//此处必须显式拦截，否则下面user.getUsername()会抛NPE，接口返回500而不是400
+			if (user == null) {
+				throw new BadRequestException("请求体格式错误");
+			}
+			if (StringUtils.isEmpty(user.getUsername()) || StringUtils.isEmpty(user.getPassword())) {
+				throw new BadRequestException("用户名或密码不能为空");
+			}
 			currentUsername.set(user.getUsername());
 			return getAuthenticationManager().authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
 		} catch (BadRequestException exception) {
+			//非法请求不会进入登录成功/失败回调，需在此清空ThreadLocal，避免线程复用时的数据残留
+			currentUsername.remove();
 			response.setContentType("application/json;charset=utf-8");
 			Result result = Result.create(400, "非法请求");
 			PrintWriter out = response.getWriter();
@@ -68,7 +82,7 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	@Override
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 	                                        FilterChain chain, Authentication authResult) throws IOException {
-		String jwt = JwtUtils.generateToken(authResult.getName(), authResult.getAuthorities());
+		String jwt = JwtUtils.generateToken(JwtConstants.ADMIN_PREFIX + authResult.getName(), authResult.getAuthorities());
 		response.setContentType("application/json;charset=utf-8");
 		User user = (User) authResult.getPrincipal();
 		user.setPassword(null);

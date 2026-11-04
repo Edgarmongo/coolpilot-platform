@@ -5,11 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import top.naccl.exception.BadRequestException;
 import top.naccl.exception.NotFoundException;
 import top.naccl.exception.PersistenceException;
 import top.naccl.model.vo.Result;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @Description: 对Controller层全局异常处理
@@ -45,6 +46,19 @@ public class ControllerExceptionHandler {
 	public Result persistenceExceptionHandler(HttpServletRequest request, PersistenceException e) {
 		logger.error("Request URL : {}, Exception :", request.getRequestURL(), e);
 		return Result.create(500, e.getMessage());
+	}
+
+	/**
+	 * 捕获自定义的非法请求异常（参数校验不通过等）
+	 *
+	 * @param request 请求
+	 * @param e       自定义抛出的异常信息
+	 * @return
+	 */
+	@ExceptionHandler(BadRequestException.class)
+	public Result badRequestExceptionHandler(HttpServletRequest request, BadRequestException e) {
+		logger.warn("Request URL : {}, BadRequest : {}", request.getRequestURL(), e.getMessage());
+		return Result.create(400, e.getMessage());
 	}
 
 	/**

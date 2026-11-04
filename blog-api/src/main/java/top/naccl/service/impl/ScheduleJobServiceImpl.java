@@ -13,7 +13,7 @@ import top.naccl.mapper.ScheduleJobMapper;
 import top.naccl.service.ScheduleJobService;
 import top.naccl.util.quartz.ScheduleUtils;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 /**

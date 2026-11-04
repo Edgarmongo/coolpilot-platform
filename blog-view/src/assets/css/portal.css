@@ -1,0 +1,946 @@
+/**
+ * 门户主题样式层
+ *
+ * 设计规范对齐参考站（MkDocs Material + 自定义主题）：
+ *   主色   #0F766E   强色 #115E59   强调 #D97706
+ *   文字   #18231F   次要 #64736C   边框 #DFE5EE
+ *   表面   #FFFFFF   次面 #F5F7FB   圆角 8px
+ *   阴影   0 10px 30px rgba(24,39,75,.1)
+ *   栅格   max-width 88rem
+ */
+
+:root {
+	/*品牌色*/
+	--portal-primary: #0f766e;
+	--portal-primary-strong: #115e59;
+	--portal-primary-soft: rgba(15, 118, 110, 0.08);
+	--portal-primary-line: rgba(15, 118, 110, 0.22);
+	--portal-accent: #d97706;
+	--portal-accent-soft: rgba(217, 119, 6, 0.08);
+
+	/*文字色*/
+	--portal-ink: #18231f;
+	--portal-muted: #64736c;
+	--portal-text-inverse: #ffffff;
+
+	/*表面与线条*/
+	--portal-surface: #ffffff;
+	--portal-surface-alt: #f5f7fb;
+	--portal-bg: #ffffff;
+	--portal-border: #dfe5ee;
+	--portal-border-light: #eaeef4;
+
+	/*圆角与阴影*/
+	--portal-radius: 8px;
+	--portal-radius-lg: 8px;
+	--portal-shadow: 0 10px 30px rgba(24, 39, 75, 0.1);
+	--portal-shadow-sm: 0 1px 2px rgba(24, 39, 75, 0.05);
+
+	/*布局尺寸*/
+	--portal-header-height: 48px;
+	--portal-subnav-height: 44px;
+	--portal-sidebar-width: 236px;
+	--portal-container-width: 1408px;
+
+	/*过渡*/
+	--portal-ease: 180ms ease;
+}
+
+/*---------------- 基础 ----------------*/
+.portal-layout,
+.portal-layout *,
+.portal-header,
+.portal-header * {
+	box-sizing: border-box;
+}
+
+.portal-layout {
+	display: flex;
+	align-items: flex-start;
+	gap: 32px;
+	/* 父级是纵向 flex 且水平居中，这里必须显式占满宽度，否则内容较窄的页面会被收缩居中 */
+	width: 100%;
+	max-width: var(--portal-container-width);
+	margin: 0 auto;
+	padding: 24px 24px 56px;
+	box-sizing: border-box;
+}
+
+.portal-main {
+	flex: 1;
+	min-width: 0;
+}
+
+/*防止长标题/长英文串撑破布局*/
+.portal-nav-link,
+.portal-hero-title,
+.portal-hero-desc,
+.portal-post-title,
+.portal-article-title {
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+/*---------------- 顶部双层导航 ----------------*/
+.portal-header {
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+}
+
+/*第一层：品牌栏*/
+.portal-brandbar {
+	height: var(--portal-header-height);
+	background: var(--portal-primary);
+	display: flex;
+	align-items: center;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.portal-brandbar-inner {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	width: 100%;
+	max-width: var(--portal-container-width);
+	margin: 0 auto;
+	padding: 0 24px;
+}
+
+.portal-logo {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--portal-text-inverse);
+	text-decoration: none;
+	flex-shrink: 0;
+}
+
+.portal-logo-icon {
+	width: 26px;
+	height: 26px;
+	border-radius: 7px;
+	background: rgba(255, 255, 255, 0.16);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 14px;
+}
+
+.portal-logo-text {
+	font-size: 14.5px;
+	font-weight: 700;
+	letter-spacing: 0.2px;
+	white-space: nowrap;
+}
+
+/*搜索框*/
+.portal-search {
+	flex: 1 1 18rem;
+	max-width: 24rem;
+	margin-left: auto;
+	position: relative;
+}
+
+.portal-search-input {
+	width: 100%;
+	height: 30px;
+	padding: 0 30px 0 30px;
+	font-size: 12.5px;
+	color: #fff;
+	background: rgba(0, 0, 0, 0.16);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: var(--portal-radius);
+	outline: none;
+	transition: background var(--portal-ease), border-color var(--portal-ease);
+}
+
+.portal-search-input::placeholder {
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.portal-search-input:focus {
+	background: rgba(0, 0, 0, 0.24);
+	border-color: rgba(255, 255, 255, 0.32);
+}
+
+.portal-search-icon {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: rgba(255, 255, 255, 0.62);
+	font-size: 12px;
+	pointer-events: none;
+}
+
+.portal-search-clear {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: rgba(255, 255, 255, 0.65);
+	cursor: pointer;
+	font-size: 12px;
+	display: none;
+}
+
+.portal-search.has-value .portal-search-clear {
+	display: block;
+}
+
+/*搜索建议下拉*/
+.portal-search-panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	max-height: 340px;
+	overflow-y: auto;
+	background: var(--portal-surface);
+	border: 1px solid var(--portal-border);
+	border-radius: var(--portal-radius);
+	box-shadow: var(--portal-shadow);
+	z-index: 1100;
+	display: none;
+}
+
+.portal-search-panel.is-open {
+	display: block;
+}
+
+.portal-search-item {
+	display: block;
+	padding: 9px 12px;
+	border-bottom: 1px solid var(--portal-border-light);
+	cursor: pointer;
+	transition: background var(--portal-ease);
+}
+
+.portal-search-item:last-child {
+	border-bottom: none;
+}
+
+.portal-search-item:hover {
+	background: var(--portal-surface-alt);
+}
+
+.portal-search-item-title {
+	font-size: 13px;
+	color: var(--portal-ink);
+	margin-bottom: 2px;
+}
+
+.portal-search-item-desc {
+	font-size: 11.5px;
+	color: var(--portal-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/*登录按钮*/
+.portal-login {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 30px;
+	padding: 0 11px;
+	font-size: 12.5px;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.94);
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 7px;
+	cursor: pointer;
+	text-decoration: none;
+	transition: background var(--portal-ease), color var(--portal-ease);
+	flex-shrink: 0;
+}
+
+.portal-login:hover {
+	background: rgba(255, 255, 255, 0.2);
+	color: #fff;
+}
+
+/*访客登录态：头像 + 昵称 + 退出*/
+.portal-user {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 30px;
+	padding: 0 6px 0 4px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 7px;
+	flex-shrink: 0;
+}
+
+.portal-user-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.portal-user-link:hover .portal-user-name {
+	text-decoration: underline;
+}
+
+.portal-user-avatar {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	object-fit: cover;
+	background: rgba(255, 255, 255, 0.2);
+}
+
+.portal-user-name {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: #fff;
+	max-width: 96px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.portal-logout {
+	padding: 2px 6px;
+	font-size: 11.5px;
+	color: rgba(255, 255, 255, 0.8);
+	background: transparent;
+	border: none;
+	border-left: 1px solid rgba(255, 255, 255, 0.2);
+	cursor: pointer;
+	transition: color var(--portal-ease);
+}
+
+.portal-logout:hover {
+	color: #fff;
+}
+
+/*第二层：分类标签栏*/
+.portal-subnav {
+	background: var(--portal-primary);
+	border-bottom: 1px solid var(--portal-border);
+}
+
+.portal-subnav-inner {
+	display: flex;
+	align-items: center;
+	max-width: var(--portal-container-width);
+	margin: 0 auto;
+	padding: 0 24px;
+	height: var(--portal-subnav-height);
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.portal-subnav-inner::-webkit-scrollbar {
+	display: none;
+}
+
+.portal-subnav-item {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	height: 100%;
+	padding: 0 12px;
+	font-size: 13px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.8);
+	text-decoration: none;
+	white-space: nowrap;
+	transition: color var(--portal-ease), background var(--portal-ease);
+}
+
+.portal-subnav-item:hover {
+	color: #fff;
+	background: rgba(0, 0, 0, 0.1);
+}
+
+.portal-subnav-item.is-active {
+	color: #fff;
+	background: var(--portal-primary-strong);
+}
+
+/*移动端汉堡按钮*/
+.portal-menu-toggle {
+	display: none;
+	margin-left: auto;
+	color: #fff;
+	font-size: 17px;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 6px 8px;
+}
+
+/*---------------- 左侧文档目录（Material 导航观感）----------------*/
+.portal-sidebar {
+	flex: 0 0 var(--portal-sidebar-width);
+	width: var(--portal-sidebar-width);
+	position: sticky;
+	top: calc(var(--portal-header-height) + var(--portal-subnav-height) + 20px);
+	max-height: calc(100vh - var(--portal-header-height) - var(--portal-subnav-height) - 40px);
+	overflow-y: auto;
+	overflow-x: hidden;
+	box-sizing: border-box;
+	padding: 4px 10px 16px 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.portal-sidebar::-webkit-scrollbar {
+	width: 5px;
+}
+
+.portal-sidebar::-webkit-scrollbar-thumb {
+	background: #d3dae1;
+	border-radius: 3px;
+}
+
+.portal-sidebar-title {
+	margin: 0 0 8px;
+	padding-left: 10px;
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+	color: var(--portal-muted);
+}
+
+.portal-nav-group {
+	margin-bottom: 14px;
+}
+
+.portal-nav-group-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 2px;
+	padding: 0 10px;
+	height: 32px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--portal-muted);
+	cursor: pointer;
+	user-select: none;
+	border-radius: 6px;
+	transition: background var(--portal-ease);
+}
+
+.portal-nav-group-title:hover {
+	background: var(--portal-surface-alt);
+}
+
+.portal-nav-group-title i {
+	font-size: 10px;
+	transition: transform 0.2s ease;
+}
+
+.portal-nav-group-title.is-collapsed i {
+	transform: rotate(-90deg);
+}
+
+.portal-nav-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.portal-nav-link {
+	display: flex;
+	align-items: center;
+	padding: 7px 10px;
+	margin-bottom: 2px;
+	min-height: 34px;
+	line-height: 1.45;
+	font-size: 13px;
+	color: var(--portal-ink);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background var(--portal-ease), color var(--portal-ease);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.portal-nav-link:hover {
+	background: var(--portal-primary-soft);
+	color: var(--portal-primary-strong);
+}
+
+.portal-nav-link.is-active {
+	background: var(--portal-primary-soft);
+	color: var(--portal-primary-strong);
+	font-weight: 700;
+}
+
+/*二级目录项（分类下的文章）*/
+.portal-nav-sub {
+	list-style: none;
+	margin: 0 0 4px;
+	padding: 0 0 0 8px;
+	border-left: 1px solid var(--portal-border);
+}
+
+.portal-nav-sub .portal-nav-link {
+	min-height: 28px;
+	padding: 5px 9px;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--portal-muted);
+}
+
+.portal-nav-sub .portal-nav-link.is-active {
+	color: var(--portal-primary-strong);
+}
+
+.portal-nav-empty {
+	padding: 6px 10px;
+	font-size: 12px;
+	color: var(--portal-muted);
+}
+
+/*---------------- Hero ----------------*/
+.portal-hero {
+	position: relative;
+	overflow: hidden;
+	margin: -4px 0 22px;
+	padding: clamp(34px, 4vw, 66px);
+	border: 1px solid var(--portal-border);
+	border-radius: var(--portal-radius);
+	background:
+		linear-gradient(135deg, rgba(15, 118, 110, 0.13), rgba(217, 119, 6, 0.08)),
+		linear-gradient(180deg, var(--portal-surface), var(--portal-surface-alt));
+	box-shadow: var(--portal-shadow);
+}
+
+/*右下角装饰网格*/
+.portal-hero::after {
+	content: "";
+	position: absolute;
+	right: 32px;
+	bottom: -1px;
+	width: min(42vw, 34rem);
+	height: 42%;
+	border: 1px solid rgba(15, 118, 110, 0.16);
+	border-bottom: 0;
+	border-radius: 8px 8px 0 0;
+	background:
+		linear-gradient(90deg, rgba(15, 118, 110, 0.1) 1px, transparent 1px),
+		linear-gradient(180deg, rgba(217, 119, 6, 0.08) 1px, transparent 1px);
+	background-size: 44px 44px;
+	opacity: 0.75;
+	pointer-events: none;
+}
+
+.portal-hero-content {
+	position: relative;
+	z-index: 1;
+	max-width: 48rem;
+}
+
+/*胶囊标签*/
+.portal-hero-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 26px;
+	margin: 0 0 11px;
+	padding: 0 11px;
+	border: 1px solid rgba(15, 118, 110, 0.2);
+	border-radius: 999px;
+	color: var(--portal-primary-strong);
+	background: rgba(15, 118, 110, 0.08);
+	font-size: 12.5px;
+	font-weight: 700;
+}
+
+/*大标题*/
+.portal-hero-title {
+	max-width: 15ch;
+	margin: 0;
+	font-size: clamp(32px, 3.8vw, 58px);
+	line-height: 1.08;
+	font-weight: 780;
+	letter-spacing: -0.5px;
+	color: var(--portal-ink);
+}
+
+/*描述*/
+.portal-hero-desc {
+	max-width: 42rem;
+	margin: 16px 0 0;
+	color: var(--portal-muted);
+	font-size: clamp(14.5px, 1.1vw, 17px);
+	line-height: 1.75;
+}
+
+/*按钮组*/
+.portal-hero-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 11px;
+	margin-top: 20px;
+}
+
+.portal-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 38px;
+	padding: 0 15px;
+	border: 1px solid var(--portal-border);
+	border-radius: 7px;
+	color: var(--portal-ink);
+	background: var(--portal-surface);
+	font-size: 12.5px;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+	transition: border-color var(--portal-ease), box-shadow var(--portal-ease), transform var(--portal-ease);
+}
+
+.portal-button:hover {
+	border-color: rgba(15, 118, 110, 0.45);
+	box-shadow: 0 8px 18px rgba(15, 118, 110, 0.14);
+	transform: translateY(-1px);
+	color: var(--portal-ink);
+}
+
+.portal-button--primary {
+	border-color: var(--portal-primary);
+	color: #fff;
+	background: var(--portal-primary);
+}
+
+.portal-button--primary:hover {
+	background: var(--portal-primary-strong);
+	border-color: var(--portal-primary-strong);
+	color: #fff;
+}
+
+/*统计卡*/
+.portal-stats {
+	display: grid;
+	grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+	gap: 13px;
+	margin: 22px 0 0;
+}
+
+.portal-stat {
+	display: block;
+	min-height: 84px;
+	padding: 15px;
+	border: 1px solid var(--portal-border);
+	border-radius: var(--portal-radius);
+	color: var(--portal-ink);
+	background: var(--portal-surface);
+	text-decoration: none;
+	transition: border-color var(--portal-ease), box-shadow var(--portal-ease), transform var(--portal-ease);
+}
+
+.portal-stat:hover {
+	border-color: rgba(15, 118, 110, 0.45);
+	box-shadow: var(--portal-shadow);
+	transform: translateY(-2px);
+}
+
+.portal-stat strong {
+	display: block;
+	color: var(--portal-ink);
+	font-size: 24px;
+	line-height: 1.2;
+	font-weight: 780;
+}
+
+.portal-stat span {
+	display: block;
+	margin-top: 6px;
+	color: var(--portal-muted);
+	font-size: 13px;
+}
+
+/*---------------- 区块标题 ----------------*/
+.portal-section {
+	margin-bottom: 34px;
+}
+
+.portal-section-head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 16px;
+	margin: 34px 0 14px;
+}
+
+.portal-section-head h2 {
+	margin: 0;
+	font-size: 22px;
+	font-weight: 780;
+	color: var(--portal-ink);
+	letter-spacing: -0.2px;
+}
+
+.portal-section-head p {
+	max-width: 32rem;
+	margin: 0;
+	color: var(--portal-muted);
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+/*首个区块不额外留白*/
+.portal-main > .portal-section:first-child .portal-section-head {
+	margin-top: 0;
+}
+
+/*---------------- 卡片栅格 ----------------*/
+.portal-card-grid {
+	display: grid;
+	gap: 13px;
+	margin: 16px 0;
+}
+
+.portal-card-grid--4 {
+	grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+}
+
+.portal-card-grid--3 {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portal-card-grid--2 {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/*路由式卡片（分类入口）*/
+.portal-route-card {
+	display: block;
+	min-height: 104px;
+	padding: 16px;
+	border: 1px solid var(--portal-border);
+	border-radius: var(--portal-radius);
+	color: var(--portal-ink);
+	background: var(--portal-surface);
+	text-decoration: none;
+	transition: border-color var(--portal-ease), box-shadow var(--portal-ease), transform var(--portal-ease);
+}
+
+.portal-route-card:hover {
+	border-color: rgba(15, 118, 110, 0.5);
+	box-shadow: var(--portal-shadow);
+	transform: translateY(-2px);
+	color: var(--portal-ink);
+}
+
+.portal-route-card strong {
+	display: block;
+	margin-bottom: 7px;
+	font-size: 16px;
+	font-weight: 760;
+	color: var(--portal-ink);
+}
+
+.portal-route-card span {
+	color: var(--portal-muted);
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+/*---------------- 文章卡片 ----------------*/
+.portal-post-card {
+	padding: 22px 24px;
+	margin-bottom: 14px;
+	background: var(--portal-surface);
+	border: 1px solid var(--portal-border);
+	border-radius: var(--portal-radius);
+	transition: border-color var(--portal-ease), box-shadow var(--portal-ease), transform var(--portal-ease);
+}
+
+.portal-post-card:hover {
+	border-color: rgba(15, 118, 110, 0.38);
+	box-shadow: var(--portal-shadow);
+	transform: translateY(-2px);
+}
+
+.portal-post-title {
+	margin: 0 0 10px;
+	font-size: 19px;
+	font-weight: 760;
+	line-height: 1.45;
+	letter-spacing: -0.2px;
+}
+
+.portal-post-title a {
+	color: var(--portal-ink);
+	text-decoration: none;
+	transition: color var(--portal-ease);
+}
+
+.portal-post-title a:hover {
+	color: var(--portal-primary);
+}
+
+.portal-post-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 14px;
+	margin-bottom: 12px;
+	font-size: 12.5px;
+	color: var(--portal-muted);
+}
+
+.portal-post-meta span {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.portal-post-excerpt {
+	font-size: 14px;
+	line-height: 1.8;
+	color: var(--portal-muted);
+}
+
+.portal-post-excerpt p {
+	margin: 0 0 8px;
+}
+
+.portal-post-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+	margin-top: 14px;
+}
+
+.portal-tag {
+	padding: 3px 9px;
+	font-size: 12px;
+	color: var(--portal-primary-strong);
+	background: var(--portal-primary-soft);
+	border-radius: 4px;
+	text-decoration: none;
+	transition: background var(--portal-edge, 180ms) ease, color var(--portal-edge, 180ms) ease;
+}
+
+.portal-tag:hover {
+	background: var(--portal-primary);
+	color: #fff;
+}
+
+/*---------------- 响应式 ----------------*/
+@media screen and (max-width: 1200px) {
+	.portal-card-grid--4 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.portal-card-grid--3 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.portal-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media screen and (max-width: 900px) {
+	.portal-layout {
+		flex-direction: column;
+		gap: 20px;
+		padding: 18px 16px 40px;
+	}
+
+	/*移动端优先展示正文，文档目录置于下方*/
+	.portal-main {
+		order: 1;
+		width: 100%;
+	}
+
+	.portal-sidebar {
+		order: 2;
+		position: static;
+		width: 100%;
+		flex: none;
+		max-height: none;
+		padding: 0;
+	}
+
+	.portal-hero {
+		padding: 26px 20px;
+	}
+
+	.portal-hero-title {
+		font-size: 28px;
+		max-width: none;
+	}
+
+	/*移动端隐藏装饰块，避免遮挡文字*/
+	.portal-hero::after {
+		display: none;
+	}
+
+	.portal-section-head {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		margin: 26px 0 12px;
+	}
+
+	.portal-search {
+		max-width: none;
+	}
+
+	.portal-menu-toggle {
+		display: block;
+	}
+
+	.portal-card-grid--2 {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media screen and (max-width: 640px) {
+	.portal-card-grid--4,
+	.portal-card-grid--3 {
+		grid-template-columns: 1fr;
+	}
+
+	/*统计卡在窄屏保持一行，压缩字号避免占满首屏*/
+	.portal-stats {
+		grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+		gap: 9px;
+	}
+
+	.portal-stat {
+		min-height: auto;
+		padding: 11px 10px;
+	}
+
+	.portal-stat strong {
+		font-size: 19px;
+	}
+
+	.portal-stat span {
+		margin-top: 3px;
+		font-size: 11.5px;
+	}
+
+	.portal-brandbar-inner {
+		padding: 0 14px;
+	}
+
+	.portal-subnav-inner {
+		padding: 0 14px;
+	}
+
+	.portal-search {
+		display: none;
+	}
+}

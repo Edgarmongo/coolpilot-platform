@@ -15,4 +15,10 @@
     <update id="updateUserByUsername">
         update user set username=#{user.username}, password=#{user.password}, update_time=now() where username=#{username}
     </update>
+
+    <!--新增用户（前台访客注册）-->
+    <insert id="saveUser" parameterType="top.naccl.entity.User" useGeneratedKeys="true" keyProperty="id">
+        insert into user (username, password, nickname, avatar, email, create_time, update_time, role)
+        values (#{username}, #{password}, #{nickname}, #{avatar}, #{email}, #{createTime}, #{updateTime}, #{role})
+    </insert>
 </mapper>

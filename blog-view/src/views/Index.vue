@@ -1,49 +1,27 @@
 <template>
 	<div class="site">
-		<!--顶部导航-->
+		<!--顶部双层导航-->
 		<Nav :blogName="siteInfo.blogName" :categoryList="categoryList"/>
-		<!--首页大图 只在首页且pc端时显示-->
-		<div class="m-mobile-hide">
-			<Header v-if="$route.name==='home'"/>
-		</div>
 
-		<div class="main">
-			<div class="m-padded-tb-big">
-				<div class="ui container">
-					<div class="ui stackable grid">
-						<!--左侧-->
-						<div class="three wide column m-mobile-hide">
-							<Introduction :class="{'m-display-none':focusMode}"/>
-						</div>
-						<!--中间-->
-						<div class="ten wide column">
-							<keep-alive include="Home">
-								<router-view/>
-							</keep-alive>
-						</div>
-						<!--右侧-->
-						<div class="three wide column m-mobile-hide">
-							<RandomBlog :randomBlogList="randomBlogList" :class="{'m-display-none':focusMode}"/>
-							<Tags :tagList="tagList" :class="{'m-display-none':focusMode}"/>
-							<!--只在文章页面显示目录-->
-							<Tocbot v-if="$route.name==='blog'"/>
-						</div>
-					</div>
-				</div>
-			</div>
+		<!--门户主体：左侧文档目录 + 右侧内容区-->
+		<div class="portal-layout" :class="{'is-focus': focusMode}">
+			<!--左侧目录-->
+			<DocSidebar :categoryList="categoryList"/>
+
+			<!--右侧内容-->
+			<main class="portal-main">
+				<router-view/>
+			</main>
 		</div>
 
 		<!--私密文章密码对话框-->
 		<BlogPasswordDialog/>
 
-		<!--APlayer-->
-		<div class="m-mobile-hide">
-			<meting-js :server="siteInfo.playlistServer" :id="siteInfo.playlistId" type="playlist" fixed="true" theme="#25CCF7" v-if="siteInfo.playlistServer && siteInfo.playlistId"></meting-js>
-		</div>
 		<!--回到顶部-->
 		<el-backtop style="box-shadow: none;background: none;z-index: 9999;">
 			<img src="/img/paper-plane.png" style="width: 40px;height: 40px;">
 		</el-backtop>
+
 		<!--底部footer-->
 		<Footer :siteInfo="siteInfo" :badges="badges" :newBlogList="newBlogList" :hitokoto="hitokoto"/>
 	</div>
@@ -52,19 +30,15 @@
 <script>
 	import {getHitokoto, getSite} from '@/api/index'
 	import Nav from "@/components/index/Nav";
-	import Header from "@/components/index/Header";
 	import Footer from "@/components/index/Footer";
-	import Introduction from "@/components/sidebar/Introduction";
-	import Tags from "@/components/sidebar/Tags";
-	import RandomBlog from "@/components/sidebar/RandomBlog";
-	import Tocbot from "@/components/sidebar/Tocbot";
+	import DocSidebar from "@/components/sidebar/DocSidebar";
 	import BlogPasswordDialog from "@/components/index/BlogPasswordDialog";
 	import {mapState} from 'vuex'
-	import {SAVE_CLIENT_SIZE, SAVE_INTRODUCTION, SAVE_SITE_INFO, RESTORE_COMMENT_FORM} from "@/store/mutations-types";
+	import {SAVE_CLIENT_SIZE, SAVE_INTRODUCTION, SAVE_SITE_INFO, SAVE_CATEGORY_LIST, SAVE_TAG_LIST, RESTORE_COMMENT_FORM} from "@/store/mutations-types";
 
 	export default {
 		name: "Index",
-		components: {Header, BlogPasswordDialog, Tocbot, RandomBlog, Tags, Nav, Footer, Introduction},
+		components: {BlogPasswordDialog, Nav, Footer, DocSidebar},
 		data() {
 			return {
 				siteInfo: {
@@ -115,6 +89,8 @@
 						this.randomBlogList = res.data.randomBlogList
 						this.$store.commit(SAVE_SITE_INFO, this.siteInfo)
 						this.$store.commit(SAVE_INTRODUCTION, res.data.introduction)
+						this.$store.commit(SAVE_CATEGORY_LIST, this.categoryList)
+						this.$store.commit(SAVE_TAG_LIST, this.tagList)
 						document.title = this.$route.meta.title + this.siteInfo.webTitleSuffix
 					}
 				})
@@ -134,28 +110,10 @@
 		display: flex;
 		min-height: 100vh; /* 没有元素时，也把页面撑开至100% */
 		flex-direction: column;
+		background: var(--portal-bg);
 	}
 
-	.main {
-		margin-top: 40px;
-		flex: 1;
-	}
-
-	.main .ui.container {
-		width: 1400px !important;
-		margin-left: auto !important;
-		margin-right: auto !important;
-	}
-
-	.ui.grid .three.column {
-		padding: 0;
-	}
-
-	.ui.grid .ten.column {
-		padding-top: 0;
-	}
-
-	.m-display-none {
-		display: none !important;
+	.portal-main {
+		min-width: 0;
 	}
 </style>

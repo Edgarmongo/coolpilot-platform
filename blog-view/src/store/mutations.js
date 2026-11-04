@@ -14,6 +14,10 @@ import {
 	SET_FOCUS_MODE,
 	SET_IS_BLOG_TO_HOME,
 	SAVE_CLIENT_SIZE,
+	SAVE_CATEGORY_LIST,
+	SAVE_TAG_LIST,
+	SAVE_VISITOR,
+	CLEAR_VISITOR,
 } from "./mutations-types";
 
 export default {
@@ -77,5 +81,21 @@ export default {
 	},
 	[SAVE_CLIENT_SIZE](state, clientSize) {
 		state.clientSize = clientSize
+	},
+	[SAVE_CATEGORY_LIST](state, categoryList) {
+		state.categoryList = categoryList
+	},
+	[SAVE_TAG_LIST](state, tagList) {
+		state.tagList = tagList
+	},
+	[SAVE_VISITOR](state, data) {
+		state.visitor = data.user
+		window.localStorage.setItem('visitorToken', data.token)
+		window.localStorage.setItem('visitorUser', JSON.stringify(data.user))
+	},
+	[CLEAR_VISITOR](state) {
+		state.visitor = null
+		window.localStorage.removeItem('visitorToken')
+		window.localStorage.removeItem('visitorUser')
 	},
 }

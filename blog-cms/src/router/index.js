@@ -124,6 +124,33 @@ const routes = [
 		]
 	},
 	{
+		path: '/trade',
+		name: 'Trade',
+		redirect: '/trade/order',
+		component: Layout,
+		meta: {title: '交易管理', icon: 'el-icon-s-finance'},
+		children: [
+			{
+				path: 'order',
+				name: 'OrderManage',
+				component: () => import('@/views/trade/Orders'),
+				meta: {title: '订单管理', icon: 'el-icon-s-order'}
+			},
+			{
+				path: 'refund',
+				name: 'RefundManage',
+				component: () => import('@/views/trade/Refunds'),
+				meta: {title: '退款处理', icon: 'el-icon-refresh-left'}
+			},
+			{
+				path: 'entitlement',
+				name: 'EntitlementManage',
+				component: () => import('@/views/trade/Entitlements'),
+				meta: {title: '权益管理', icon: 'el-icon-key'}
+			},
+		]
+	},
+	{
 		path: '/pictureHosting',
 		name: 'PictureHosting',
 		redirect: '/pictureHosting/setting',

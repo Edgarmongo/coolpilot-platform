@@ -25,7 +25,7 @@ import top.naccl.service.TagService;
 import top.naccl.util.JacksonUtils;
 import top.naccl.util.markdown.MarkdownUtils;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;

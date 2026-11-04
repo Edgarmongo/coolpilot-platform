@@ -1,7 +1,8 @@
 <template>
 	<div>
-		<div class="ui top segment" style="text-align: center">
-			<h2 class="m-text-500">分类 {{ categoryName }} 下的文章</h2>
+		<div class="portal-page-head">
+			<h2>分类 {{ categoryName }} 下的文章</h2>
+			<p>共 {{ totalPage }} 页内容</p>
 		</div>
 		<BlogList :getBlogList="getBlogList" :blogList="blogList" :totalPage="totalPage"/>
 	</div>

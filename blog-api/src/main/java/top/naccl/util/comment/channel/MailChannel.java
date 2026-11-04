@@ -1,7 +1,7 @@
 package top.naccl.util.comment.channel;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.mail.MailProperties;
+import org.springframework.boot.mail.autoconfigure.MailProperties;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import top.naccl.config.properties.BlogProperties;

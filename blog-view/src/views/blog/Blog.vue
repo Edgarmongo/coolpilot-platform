@@ -1,75 +1,62 @@
 <template>
 	<div>
-		<div class="ui padded attached segment m-padded-tb-large">
-			<div class="ui large red right corner label" v-if="blog.top">
-				<i class="arrow alternate circle up icon"></i>
+		<div class="portal-article-card">
+			<!--标题-->
+			<h1 class="portal-article-title">{{ blog.title }}</h1>
+			<!--文章简要信息-->
+			<div class="portal-post-meta">
+				<span><i class="small calendar icon"></i>{{ blog.createTime | dateFormat('YYYY-MM-DD') }}</span>
+				<span><i class="small eye icon"></i>{{ blog.views }} 阅读</span>
+				<span><i class="small pencil alternate icon"></i>约 {{ blog.words }} 字</span>
+				<span><i class="small clock icon"></i>约 {{ blog.readTime }} 分钟</span>
+				<a class="item m-common-black" @click.prevent="bigFontSize=!bigFontSize">
+					<div data-inverted="" data-tooltip="点击切换字体大小" data-position="top center">
+						<i class="font icon"></i>
+					</div>
+				</a>
+				<a class="item m-common-black" @click.prevent="changeFocusMode">
+					<div data-inverted="" data-tooltip="专注模式" data-position="top center">
+						<i class="book icon"></i>
+					</div>
+				</a>
 			</div>
-			<div class="ui middle aligned mobile reversed stackable">
-				<div class="ui grid m-margin-lr">
-					<!--标题-->
-					<div class="row m-padded-tb-small">
-						<h2 class="ui header m-center">{{ blog.title }}</h2>
-					</div>
-					<!--文章简要信息-->
-					<div class="row m-padded-tb-small">
-						<div class="ui horizontal link list m-center">
-							<div class="item m-datetime">
-								<i class="small calendar icon"></i><span>{{ blog.createTime | dateFormat('YYYY-MM-DD') }}</span>
-							</div>
-							<div class="item m-views">
-								<i class="small eye icon"></i><span>{{ blog.views }}</span>
-							</div>
-							<div class="item m-common-black">
-								<i class="small pencil alternate icon"></i><span>字数≈{{ blog.words }}字</span>
-							</div>
-							<div class="item m-common-black">
-								<i class="small clock icon"></i><span>阅读时长≈{{ blog.readTime }}分</span>
-							</div>
-							<a class="item m-common-black" @click.prevent="bigFontSize=!bigFontSize">
-								<div data-inverted="" data-tooltip="点击切换字体大小" data-position="top center">
-									<i class="font icon"></i>
-								</div>
-							</a>
-							<a class="item m-common-black" @click.prevent="changeFocusMode">
-								<div data-inverted="" data-tooltip="专注模式" data-position="top center">
-									<i class="book icon"></i>
-								</div>
-							</a>
+			<!--收藏与点赞-->
+			<div class="portal-article-actions">
+				<button :class="['portal-action-btn', {active: favorited}]" @click="toggleFav">
+					<i class="bookmark icon"></i>{{ favorited ? '已收藏' : '收藏' }}
+				</button>
+				<button :class="['portal-action-btn', {active: liked}]" @click="toggleLikeBtn">
+					<i class="heart icon"></i>{{ likeCount }}
+				</button>
+			</div>
+			<router-link :to="`/category/${blog.category.name}`" class="portal-article-category" v-if="blog.category">
+				<i class="small folder open icon"></i><span>{{ blog.category.name }}</span>
+			</router-link>
+			<!--本文目录-->
+			<Tocbot/>
+			<!--文章Markdown正文-->
+			<div class="typo js-toc-content portal-article-content match-braces rainbow-braces" v-lazy-container="{selector: 'img'}" v-viewer :class="{'m-big-fontsize':bigFontSize}" v-html="blog.content"></div>
+			<!--赞赏-->
+			<div style="margin: 2em auto" v-if="blog.appreciation">
+				<el-popover placement="top" width="220" trigger="click">
+					<div class="ui orange basic label" style="width: 100%">
+						<div class="image">
+							<div style="font-size: 12px;text-align: center;margin-bottom: 5px;">一毛是鼓励</div>
+							<img :src="$store.state.siteInfo.reward" alt="" class="ui rounded bordered image" style="width: 100%">
+							<div style="font-size: 12px;text-align: center;margin-top: 5px;">一块是真爱</div>
 						</div>
 					</div>
-					<!--分类-->
-					<router-link :to="`/category/${blog.category.name}`" class="ui orange large ribbon label" v-if="blog.category">
-						<i class="small folder open icon"></i><span class="m-text-500">{{ blog.category.name }}</span>
-					</router-link>
-					<!--文章Markdown正文-->
-					<div class="typo js-toc-content m-padded-tb-small match-braces rainbow-braces" v-lazy-container="{selector: 'img'}" v-viewer :class="{'m-big-fontsize':bigFontSize}" v-html="blog.content"></div>
-					<!--赞赏-->
-					<div style="margin: 2em auto">
-						<el-popover placement="top" width="220" trigger="click" v-if="blog.appreciation">
-							<div class="ui orange basic label" style="width: 100%">
-								<div class="image">
-									<div style="font-size: 12px;text-align: center;margin-bottom: 5px;">一毛是鼓励</div>
-									<img :src="$store.state.siteInfo.reward" alt="" class="ui rounded bordered image" style="width: 100%">
-									<div style="font-size: 12px;text-align: center;margin-top: 5px;">一块是真爱</div>
-								</div>
-							</div>
-							<el-button slot="reference" class="ui orange inverted circular button m-text-500">赞赏</el-button>
-						</el-popover>
-					</div>
-					<!--横线-->
-					<el-divider></el-divider>
-					<!--标签-->
-					<div class="row m-padded-tb-no">
-						<div class="column m-padding-left-no">
-							<router-link :to="`/tag/${tag.name}`" class="ui tag label m-text-500 m-margin-small" :class="tag.color" v-for="(tag,index) in blog.tags" :key="index">{{ tag.name }}</router-link>
-						</div>
-					</div>
-				</div>
+					<el-button slot="reference" class="ui orange inverted circular button m-text-500">赞赏</el-button>
+				</el-popover>
+			</div>
+			<!--标签-->
+			<div class="portal-post-tags">
+				<router-link :to="`/tag/${tag.name}`" class="portal-tag" v-for="(tag,index) in blog.tags" :key="index">{{ tag.name }}</router-link>
 			</div>
 		</div>
 		<!--博客信息-->
-		<div class="ui attached positive message">
-			<ul class="list">
+		<div class="portal-content-block">
+			<ul class="portal-article-meta-list">
 				<li>作者：{{ $store.state.introduction.name }}
 					<router-link to="/about">（联系作者）</router-link>
 				</li>
@@ -79,7 +66,7 @@
 			</ul>
 		</div>
 		<!--评论-->
-		<div class="ui bottom teal attached segment threaded comments">
+		<div class="portal-content-block">
 			<CommentList :page="0" :blogId="blogId" v-if="blog.commentEnabled"/>
 			<h3 class="ui header" v-else>评论已关闭</h3>
 		</div>
@@ -88,17 +75,22 @@
 
 <script>
 	import {getBlogById} from "@/api/blog";
+	import {addFavorite, addLike, getFavoriteStatus, getLikeStatus, removeFavorite, removeLike} from "@/api/community";
 	import CommentList from "@/components/comment/CommentList";
+	import Tocbot from "@/components/sidebar/Tocbot";
 	import {mapState} from "vuex";
 	import {SET_FOCUS_MODE, SET_IS_BLOG_RENDER_COMPLETE} from '@/store/mutations-types';
 
 	export default {
 		name: "Blog",
-		components: {CommentList},
+		components: {CommentList, Tocbot},
 		data() {
 			return {
 				blog: {},
 				bigFontSize: false,
+				favorited: false,
+				liked: false,
+				likeCount: 0
 			}
 		},
 		computed: {
@@ -140,8 +132,59 @@
 		},
 		created() {
 			this.getBlog()
+			this.loadInteraction()
 		},
 		methods: {
+			//加载收藏/点赞状态（未登录只取点赞数）
+			loadInteraction() {
+				getLikeStatus('ARTICLE', this.blogId).then(res => {
+					if (res.code === 200) {
+						this.liked = res.data.liked
+						this.likeCount = res.data.count
+					}
+				}).catch(() => {
+				})
+				if (!this.$store.state.visitor) {
+					return
+				}
+				getFavoriteStatus('ARTICLE', this.blogId).then(res => {
+					if (res.code === 200) {
+						this.favorited = res.data.favorited
+					}
+				}).catch(() => {
+				})
+			},
+			requireLogin() {
+				if (this.$store.state.visitor) {
+					return true
+				}
+				this.$router.push(`/login?redirect=/blog/${this.blogId}`)
+				return false
+			},
+			toggleFav() {
+				if (!this.requireLogin()) {
+					return
+				}
+				const action = this.favorited ? removeFavorite : addFavorite
+				action('ARTICLE', this.blogId).then(res => {
+					if (res.code === 200) {
+						this.favorited = res.data.favorited
+						this.$message.success(this.favorited ? '已加入收藏' : '已取消收藏')
+					}
+				})
+			},
+			toggleLikeBtn() {
+				if (!this.requireLogin()) {
+					return
+				}
+				const action = this.liked ? removeLike : addLike
+				action('ARTICLE', this.blogId).then(res => {
+					if (res.code === 200) {
+						this.liked = res.data.liked
+						this.likeCount = res.data.count
+					}
+				})
+			},
 			getBlog(id = this.blogId) {
 				//密码保护的文章，需要发送密码验证通过后保存在localStorage的Token
 				const blogToken = window.localStorage.getItem(`blog${id}`)

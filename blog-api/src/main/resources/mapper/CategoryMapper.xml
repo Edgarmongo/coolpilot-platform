@@ -14,7 +14,7 @@
 
     <!--获取所有分类List不查询id-->
     <select id="getCategoryNameList" resultMap="category">
-        select category_name from category order by id desc
+        select id, category_name from category order by id ASC
     </select>
 
     <!--添加分类-->

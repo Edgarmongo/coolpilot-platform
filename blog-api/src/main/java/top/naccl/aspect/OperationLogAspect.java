@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import top.naccl.annotation.OperationLogger;
+import top.naccl.constant.JwtConstants;
 import top.naccl.entity.OperationLog;
 import top.naccl.service.OperationLogService;
 import top.naccl.util.AopUtils;
@@ -17,7 +18,7 @@ import top.naccl.util.JacksonUtils;
 import top.naccl.util.JwtUtils;
 import top.naccl.util.StringUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
@@ -68,7 +69,11 @@ public class OperationLogAspect {
 	private OperationLog handleLog(ProceedingJoinPoint joinPoint, OperationLogger operationLogger, int times) {
 		ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 		HttpServletRequest request = attributes.getRequest();
-		String username = JwtUtils.getTokenBody(request.getHeader("Authorization")).getSubject();
+		String subject = JwtUtils.getTokenBody(request.getHeader("Authorization")).getSubject();
+		// token 的 subject 带身份前缀（admin: / visitor:），落库时去掉前缀只存用户名
+		String username = subject.startsWith(JwtConstants.ADMIN_PREFIX)
+				? subject.substring(JwtConstants.ADMIN_PREFIX.length())
+				: subject;
 		String uri = request.getRequestURI();
 		String method = request.getMethod();
 		String description = operationLogger.value();

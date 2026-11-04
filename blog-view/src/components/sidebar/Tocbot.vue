@@ -1,10 +1,11 @@
 <template>
 	<!--文章目录-->
-	<div class="ui segments m-toc toc-wrapper m-box">
-		<div class="ui secondary segment">
-			<i class="list ul icon"></i>本文目录
+	<div class="portal-toc" v-show="hasToc">
+		<div class="portal-toc-head">
+			<i class="list ul icon"></i>
+			<span>本文目录</span>
 		</div>
-		<div class="ui yellow segment">
+		<div class="portal-toc-body">
 			<div class="js-toc"></div>
 		</div>
 	</div>
@@ -15,12 +16,16 @@
 
 	export default {
 		name: "Tocbot",
+		data() {
+			return {
+				hasToc: false
+			}
+		},
 		computed: {
 			...mapState(['isBlogRenderComplete'])
 		},
 		mounted() {
-			// 有可能组件创建比较慢，文章渲染已经完成，watch的时候，isBlogRenderComplete已经是true，监听不到 isBlogRenderComplete 的改变，也就不会执行watch中的方法
-			// 就需要在 mounted 中init
+			// 组件创建时文章可能已渲染完成，需直接尝试初始化
 			if (window.document.querySelector('.js-toc-content')) {
 				this.initTocbot()
 			}
@@ -35,101 +40,80 @@
 		},
 		methods: {
 			initTocbot() {
-				tocbot.init({
-					// Where to render the table of contents.
+				//销毁旧实例，避免同一页面重复初始化
+				if (window.tocbot) {
+					window.tocbot.destroy()
+				}
+				window.tocbot.init({
 					tocSelector: '.js-toc',
-					// Where to grab the headings to build the table of contents.
 					contentSelector: '.js-toc-content',
-					// Which headings to grab inside of the contentSelector element.
 					headingSelector: 'h1,h2,h3,h4',
-					// Element to add the positionFixedClass to.
-					positionFixedSelector: '.m-toc',
-					// Smooth scrolling enabled.
 					scrollSmooth: true,
-					// Smooth scroll duration.
 					scrollSmoothDuration: 420,
 					//到顶部导航条的距离
-					scrollSmoothOffset: -55,
-					// Headings offset between the headings and the top of the document (this is meant for minor adjustments).
-					// Can also be used to account for scroll height discrepancies from the use of css scroll-padding-top
-					headingsOffset: -18
+					scrollSmoothOffset: -110,
+					headingsOffset: -84
+				})
+				//目录为空时隐藏整个区块
+				this.$nextTick(() => {
+					const toc = document.querySelector('.portal-toc .js-toc')
+					this.hasToc = !!(toc && toc.querySelector('a'))
 				})
 			}
 		}
 	}
 </script>
 
-<style>
-	.m-toc {
-		z-index: 10 !important;
+<style scoped>
+	.portal-toc {
+		margin: 0 0 22px;
+		padding: 14px 18px;
+		background: var(--portal-surface-alt);
+		border: 1px solid var(--portal-border);
+		border-radius: var(--portal-radius);
 	}
 
-	.m-toc .toc {
-		overflow-y: auto
-	}
-
-	.m-toc .toc > ul {
-		overflow: hidden;
-		position: relative
-	}
-
-	.m-toc .toc > ul li {
-		list-style: none
-	}
-
-	.m-toc .toc-list {
-		list-style-type: none;
-		margin: 0;
-		padding-left: 10px
-	}
-
-	.m-toc .toc-list li a {
-		display: block;
-		padding: 4px 0;
-		font-weight: 300;
-	}
-
-	.m-toc .toc-list li a:hover {
-		color: #fbbd08;
-	}
-
-	.m-toc a.toc-link {
-		color: currentColor;
-		height: 100%
-	}
-
-	.m-toc .is-collapsible {
-		max-height: 1000px;
-		overflow: hidden;
-		transition: all 300ms ease-in-out
-	}
-
-	.m-toc .is-collapsed {
-		max-height: 0
-	}
-
-	.m-toc.is-position-fixed {
-		position: sticky !important;
-		top: 60px
-	}
-
-	.m-toc .is-active-link {
+	.portal-toc-head {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		margin-bottom: 8px;
+		font-size: 13.5px;
 		font-weight: 700;
-		color: #fbbd08 !important;
+		color: var(--portal-primary-strong);
 	}
 
-	.m-toc .toc-link::before {
-		background-color: #EEE;
-		content: ' ';
-		display: inline-block;
-		height: 0;
-		left: 0;
-		margin-top: -1px;
-		position: absolute;
-		width: 2px
+	.portal-toc-body :deep(.toc-list) {
+		list-style: none;
+		margin: 0;
+		padding-left: 0;
 	}
 
-	.m-toc .is-active-link::before {
-		background-color: #54BC4B
+	.portal-toc-body :deep(.toc-list .toc-list) {
+		padding-left: 16px;
+	}
+
+	.portal-toc-body :deep(.toc-link) {
+		display: block;
+		padding: 3px 0;
+		font-size: 13px;
+		line-height: 1.7;
+		color: var(--portal-muted);
+		text-decoration: none;
+		transition: color .16s ease;
+	}
+
+	.portal-toc-body :deep(.toc-link:hover) {
+		color: var(--portal-primary);
+	}
+
+	.portal-toc-body :deep(.is-active-link) {
+		color: var(--portal-primary) !important;
+		font-weight: 600;
+	}
+
+	/*tocbot 生成的进度条线隐藏，改用颜色高亮*/
+	.portal-toc-body :deep(.toc-link::before) {
+		display: none;
 	}
 </style>

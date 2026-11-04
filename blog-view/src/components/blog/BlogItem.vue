@@ -1,55 +1,33 @@
 <template>
 	<div>
-		<div class="ui padded attached segment m-padded-tb-large m-margin-bottom-big m-box" v-for="item in blogList" :key="item.id">
-			<div class="ui large red right corner label" v-if="item.top">
-				<i class="arrow alternate circle up icon"></i>
+		<article class="portal-post-card" v-for="item in blogList" :key="item.id">
+			<!--标题-->
+			<h2 class="portal-post-title">
+				<a href="javascript:;" @click.prevent="toBlog(item)">{{ item.title }}</a>
+			</h2>
+
+			<!--文章简要信息-->
+			<div class="portal-post-meta">
+				<span><i class="small calendar icon"></i>{{ item.createTime | dateFormat('YYYY-MM-DD') }}</span>
+				<span><i class="small eye icon"></i>{{ item.views }} 阅读</span>
+				<span><i class="small pencil alternate icon"></i>约 {{ item.words }} 字</span>
+				<span><i class="small clock icon"></i>约 {{ item.readTime }} 分钟</span>
+				<router-link :to="`/category/${item.category.name}`" class="portal-post-category" v-if="item.category">
+					<i class="small folder open icon"></i>{{ item.category.name }}
+				</router-link>
 			</div>
-			<div class="ui middle aligned mobile reversed stackable">
-				<div class="ui grid m-margin-lr">
-					<!--标题-->
-					<div class="row m-padded-tb-small">
-						<h2 class="ui header m-center m-scaleup">
-							<a href="javascript:;" @click.prevent="toBlog(item)" class="m-black">{{ item.title }}</a>
-						</h2>
-					</div>
-					<!--文章简要信息-->
-					<div class="row m-padded-tb-small">
-						<div class="ui horizontal link list m-center">
-							<div class="item m-datetime">
-								<i class="small calendar icon"></i><span>{{ item.createTime | dateFormat('YYYY-MM-DD')}}</span>
-							</div>
-							<div class="item m-views">
-								<i class="small eye icon"></i><span>{{ item.views }}</span>
-							</div>
-							<div class="item m-common-black">
-								<i class="small pencil alternate icon"></i><span>字数≈{{ item.words }}字</span>
-							</div>
-							<div class="item m-common-black">
-								<i class="small clock icon"></i><span>阅读时长≈{{ item.readTime }}分</span>
-							</div>
-						</div>
-					</div>
-					<!--分类-->
-					<router-link :to="`/category/${item.category.name}`" class="ui orange large ribbon label">
-						<i class="small folder open icon"></i><span class="m-text-500">{{ item.category.name }}</span>
-					</router-link>
-					<!--文章Markdown描述-->
-					<div class="typo m-padded-tb-small line-numbers match-braces rainbow-braces" v-lazy-container="{selector: 'img'}" v-viewer v-html="item.description"></div>
-					<!--阅读全文按钮-->
-					<div class="row m-padded-tb-small m-margin-top">
-						<a href="javascript:;" @click.prevent="toBlog(item)" class="color-btn">阅读全文</a>
-					</div>
-					<!--横线-->
-					<div class="ui section divider m-margin-lr-no"></div>
-					<!--标签-->
-					<div class="row m-padded-tb-no">
-						<div class="column m-padding-left-no">
-							<router-link :to="`/tag/${tag.name}`" class="ui tag label m-text-500 m-margin-small" :class="tag.color" v-for="(tag,index) in item.tags" :key="index">{{ tag.name }}</router-link>
-						</div>
-					</div>
-				</div>
+
+			<!--文章Markdown描述-->
+			<div class="portal-post-excerpt typo line-numbers match-braces rainbow-braces" v-lazy-container="{selector: 'img'}" v-viewer v-html="item.description"></div>
+
+			<!--阅读全文按钮-->
+			<a href="javascript:;" @click.prevent="toBlog(item)" class="portal-read-btn">阅读全文 →</a>
+
+			<!--标签-->
+			<div class="portal-post-tags">
+				<router-link :to="`/tag/${tag.name}`" class="portal-tag" v-for="(tag,index) in item.tags" :key="index">{{ tag.name }}</router-link>
 			</div>
-		</div>
+		</article>
 	</div>
 </template>
 
@@ -71,5 +49,49 @@
 </script>
 
 <style scoped>
+	.portal-post-category {
+		color: var(--portal-primary);
+	}
 
+	.portal-post-category:hover {
+		text-decoration: underline;
+	}
+
+	.portal-read-btn {
+		display: inline-flex;
+		align-items: center;
+		min-height: 34px;
+		margin-top: 14px;
+		padding: 0 13px;
+		font-size: 12.5px;
+		font-weight: 700;
+		color: var(--portal-primary-strong);
+		background: var(--portal-primary-soft);
+		border: 1px solid var(--portal-primary-line);
+		border-radius: 7px;
+		text-decoration: none;
+		transition: all var(--portal-ease);
+	}
+
+	.portal-read-btn:hover {
+		color: #fff;
+		background: var(--portal-primary);
+		border-color: var(--portal-primary);
+	}
+
+	/*描述区内的 markdown 样式收敛，避免撑破卡片*/
+	.portal-post-excerpt :deep(p) {
+		margin: 0 0 8px;
+	}
+
+	.portal-post-excerpt :deep(ul),
+	.portal-post-excerpt :deep(ol) {
+		margin: 0 0 8px;
+		padding-left: 22px;
+	}
+
+	.portal-post-excerpt :deep(pre) {
+		max-width: 100%;
+		overflow-x: auto;
+	}
 </style>

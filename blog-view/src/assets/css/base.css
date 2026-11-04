@@ -4,11 +4,16 @@ body,
     height: 100%;
     margin: 0;
     padding: 0;
-    background-color: #efefef;
-    background-attachment: fixed;
-    background-size: cover;
-    background-position: left top;
+    /*顶部淡青渐晕 + 纯白底，对齐参考站视觉基调*/
+    background-color: var(--portal-bg, #ffffff);
+    background-image: linear-gradient(180deg, rgba(15, 118, 110, 0.06), transparent 22rem);
     background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: left top;
+}
+
+body {
+    overflow-x: hidden;
 }
 
 ::selection {
@@ -23,9 +28,9 @@ body::-webkit-scrollbar {
 }
 
 body::-webkit-scrollbar-thumb {
-    -webkit-box-shadow: inset 0 0 6px #48dbfb;
-    box-shadow: inset 0 0 6px #48dbfb;
-    background-color: #48dbfb;
+    -webkit-box-shadow: inset 0 0 6px var(--portal-primary, #0f766e);
+    box-shadow: inset 0 0 6px var(--portal-primary, #0f766e);
+    background-color: var(--portal-primary, #0f766e);
 }
 
 body::-webkit-scrollbar-track {

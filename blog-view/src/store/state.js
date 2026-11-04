@@ -1,5 +1,21 @@
+/**
+ * 从 localStorage 恢复前台访客登录态，解析失败时视为未登录
+ */
+function restoreVisitor() {
+	try {
+		const raw = window.localStorage.getItem('visitorUser')
+		return raw ? JSON.parse(raw) : null
+	} catch (e) {
+		return null
+	}
+}
+
 export default {
 	siteInfo: '',
+	categoryList: [],
+	tagList: [],
+	// 前台访客登录态（与后台博主身份无关）
+	visitor: restoreVisitor(),
 	introduction: {
 		avatar: '',
 		name: '',

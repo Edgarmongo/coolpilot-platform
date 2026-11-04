@@ -2,11 +2,15 @@ package top.naccl.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Date;
 
@@ -14,20 +18,39 @@ import java.util.Date;
  * @Description: JWT工具类
  * @Author: Naccl
  * @Date: 2020-09-02
+ *
+ * 升级说明：jjwt 0.9.x → 0.12.x。
+ * 新版本强制校验 HMAC 密钥长度（HS512 要求 512 bit = 64 字节），
+ * 而配置项 token.secretKey 允许任意长度，直接使用会抛 WeakKeyException。
+ * 因此这里用 SHA-512 对配置值做一次摘要，派生出固定 64 字节的密钥，
+ * 既满足长度要求，也让配置值保持可读、长度不受限制。
  */
 @Component
 public class JwtUtils {
 	private static long expireTime;
-	private static String secretKey;
+	private static SecretKey signingKey;
 
 	@Value("${token.secretKey}")
 	public void setSecretKey(String secretKey) {
-		JwtUtils.secretKey = secretKey;
+		JwtUtils.signingKey = deriveKey(secretKey);
 	}
 
 	@Value("${token.expireTime}")
 	public void setExpireTime(long expireTime) {
 		JwtUtils.expireTime = expireTime;
+	}
+
+	/**
+	 * 由配置的原始密钥派生 512 位 HMAC 密钥
+	 */
+	private static SecretKey deriveKey(String rawKey) {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-512");
+			byte[] keyBytes = digest.digest(rawKey.getBytes(StandardCharsets.UTF_8));
+			return Keys.hmacShaKeyFor(keyBytes);
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException("无法初始化 JWT 签名密钥", e);
+		}
 	}
 
 	/**
@@ -47,12 +70,11 @@ public class JwtUtils {
 	 * @return
 	 */
 	public static String generateToken(String subject) {
-		String jwt = Jwts.builder()
-				.setSubject(subject)
-				.setExpiration(new Date(System.currentTimeMillis() + expireTime))
-				.signWith(SignatureAlgorithm.HS512, secretKey)
+		return Jwts.builder()
+				.subject(subject)
+				.expiration(new Date(System.currentTimeMillis() + expireTime))
+				.signWith(signingKey)
 				.compact();
-		return jwt;
 	}
 
 	/**
@@ -67,13 +89,12 @@ public class JwtUtils {
 		for (GrantedAuthority authority : authorities) {
 			sb.append(authority.getAuthority()).append(",");
 		}
-		String jwt = Jwts.builder()
-				.setSubject(subject)
-				.claim("authorities", sb)
-				.setExpiration(new Date(System.currentTimeMillis() + expireTime))
-				.signWith(SignatureAlgorithm.HS512, secretKey)
+		return Jwts.builder()
+				.subject(subject)
+				.claim("authorities", sb.toString())
+				.expiration(new Date(System.currentTimeMillis() + expireTime))
+				.signWith(signingKey)
 				.compact();
-		return jwt;
 	}
 
 	/**
@@ -84,14 +105,12 @@ public class JwtUtils {
 	 * @return
 	 */
 	public static String generateToken(String subject, long expireTime) {
-		String jwt = Jwts.builder()
-				.setSubject(subject)
-				.setExpiration(new Date(System.currentTimeMillis() + expireTime))
-				.signWith(SignatureAlgorithm.HS512, secretKey)
+		return Jwts.builder()
+				.subject(subject)
+				.expiration(new Date(System.currentTimeMillis() + expireTime))
+				.signWith(signingKey)
 				.compact();
-		return jwt;
 	}
-
 
 	/**
 	 * 获取tokenBody同时校验token是否有效（无效则会抛出异常）
@@ -100,7 +119,10 @@ public class JwtUtils {
 	 * @return
 	 */
 	public static Claims getTokenBody(String token) {
-		Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token.replace("Bearer", "")).getBody();
-		return claims;
+		return Jwts.parser()
+				.verifyWith(signingKey)
+				.build()
+				.parseSignedClaims(token.replace("Bearer", ""))
+				.getPayload();
 	}
 }

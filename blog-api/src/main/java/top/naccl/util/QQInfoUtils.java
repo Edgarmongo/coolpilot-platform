@@ -1,6 +1,5 @@
 package top.naccl.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.RestTemplate;
 import top.naccl.model.vo.QqResultVO;
 import top.naccl.model.vo.QqVO;
@@ -25,7 +24,8 @@ public class QQInfoUtils {
 	public static String getQQNickname(String qq) {
 		QqResultVO qqResultVO = restTemplate.getForObject(QQ_NICKNAME_URL, QqResultVO.class, qq);
 		if (qqResultVO != null) {
-			return new ObjectMapper().convertValue(qqResultVO.getData(), QqVO.class).getName();
+			//Jackson 3 起 ObjectMapper 不再直接 new，统一走 JacksonUtils
+			return JacksonUtils.convertValue(qqResultVO.getData(), QqVO.class).getName();
 		}
 		return "nickname";
 	}

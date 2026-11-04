@@ -1,37 +1,71 @@
+# ============================================================
+# CoolPilot Platform
+# ============================================================
+
+# ---------------- Java / Maven ----------------
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+*.class
+*.jar
+!**/maven-wrapper.jar
+hs_err_pid*
+replay_pid*
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# ---------------- Node / 前端 ----------------
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.cache/
+.eslintcache
 
-### IntelliJ IDEA ###
+# ---------------- IDE ----------------
 .idea
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+.apt_generated
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+# ---------------- 运行产物 ----------------
+# 后端日志（logging.file.name=blog-api/blog/blog-dev）
+blog-api/blog/
+logs/
+*.log
 
+# 上传目录（本地直跑时产生，容器内为数据卷）
+upload/
+data/
+
+# ---------------- 敏感配置 ----------------
+# 真实密钥只放本地，仓库里保留 .env.example
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# 本地数据库备份（含真实数据，禁止提交）
+blog-api/sql/_backup_*.sql
+
+# ---------------- 系统文件 ----------------
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# 上游遗留的临时目录
 /blog-cms-tmp
-package-lock.json

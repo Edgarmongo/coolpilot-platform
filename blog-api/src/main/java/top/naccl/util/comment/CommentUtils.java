@@ -25,7 +25,7 @@ import top.naccl.util.comment.channel.CommentNotifyChannel;
 import top.naccl.enums.CommentOpenStateEnum;
 import top.naccl.enums.CommentPageEnum;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;

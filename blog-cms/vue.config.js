@@ -24,17 +24,30 @@ module.exports = {
 	 * In most cases please use '/' !!!
 	 * Detail: https://cli.vuejs.org/config/#publicpath
 	 */
-	publicPath: '/',
+	publicPath: '/cms/',
 	outputDir: 'dist',
 	assetsDir: 'static',
 	lintOnSave: process.env.NODE_ENV === 'development',
 	productionSourceMap: false,
 	devServer: {
 		port: port,
-		open: true,
+		//Docker 内没有桌面环境，启动时不要尝试打开浏览器
+		open: false,
 		overlay: {
 			warnings: false,
 			errors: true
+		},
+		proxy: {
+			//开发环境将 /api/ 请求代理到本地后端服务
+			//request.js 中 baseURL 为 /api/admin/，改写后即 /admin/**
+			'/api': {
+				//Docker 内通过 API_TARGET=http://api:8091 指向后端容器；本机开发沿用 localhost
+				target: process.env.API_TARGET || 'http://localhost:8091',
+				changeOrigin: true,
+				pathRewrite: {
+					'^/api': ''
+				}
+			}
 		},
 	},
 	configureWebpack: {

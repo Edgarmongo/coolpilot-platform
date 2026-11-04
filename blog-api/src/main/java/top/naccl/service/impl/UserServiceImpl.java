@@ -7,11 +7,18 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import top.naccl.entity.User;
+import top.naccl.exception.BadRequestException;
 import top.naccl.exception.NotFoundException;
+import top.naccl.exception.PersistenceException;
 import top.naccl.mapper.UserMapper;
+import top.naccl.model.dto.LoginInfo;
+import top.naccl.model.dto.RegisterInfo;
 import top.naccl.service.UserService;
 import top.naccl.util.HashUtils;
 import top.naccl.util.JwtUtils;
+
+import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * @Description: 用户业务层接口实现类
@@ -20,6 +27,19 @@ import top.naccl.util.JwtUtils;
  */
 @Service
 public class UserServiceImpl implements UserService, UserDetailsService {
+	/**
+	 * 前台访客角色，与博主的 ROLE_admin 严格区分
+	 */
+	private static final String VISITOR_ROLE = "ROLE_visitor";
+	/**
+	 * 用户名：2-20 位字母、数字、下划线、点或中文
+	 */
+	private static final Pattern USERNAME_PATTERN = Pattern.compile("^[\\w\\u4e00-\\u9fa5.-]{2,20}$");
+	/**
+	 * 邮箱：宽松校验，仅拦截明显不合法的格式
+	 */
+	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
+
 	@Autowired
 	private UserMapper userMapper;
 
@@ -62,5 +82,61 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public User registerVisitor(RegisterInfo registerInfo) {
+		String username = registerInfo.getUsername() == null ? "" : registerInfo.getUsername().trim();
+		String password = registerInfo.getPassword() == null ? "" : registerInfo.getPassword();
+
+		if (!USERNAME_PATTERN.matcher(username).matches()) {
+			throw new BadRequestException("用户名需为 2-20 位字母、数字、下划线、点或中文");
+		}
+		if (password.length() < 6 || password.length() > 32) {
+			throw new BadRequestException("密码长度需为 6-32 位");
+		}
+		if (userMapper.findByUsername(username) != null) {
+			throw new BadRequestException("该用户名已被占用");
+		}
+
+		String nickname = registerInfo.getNickname() == null ? "" : registerInfo.getNickname().trim();
+		if (nickname.isEmpty()) {
+			nickname = username;
+		} else if (nickname.length() > 20) {
+			throw new BadRequestException("昵称不能超过 20 个字符");
+		}
+
+		String email = registerInfo.getEmail() == null ? "" : registerInfo.getEmail().trim();
+		if (!email.isEmpty() && !EMAIL_PATTERN.matcher(email).matches()) {
+			throw new BadRequestException("邮箱格式不正确");
+		}
+
+		Date now = new Date();
+		User user = new User();
+		user.setUsername(username);
+		user.setPassword(HashUtils.getBC(password));
+		user.setNickname(nickname);
+		user.setAvatar("/img/avatar.jpg");
+		user.setEmail(email);
+		user.setCreateTime(now);
+		user.setUpdateTime(now);
+		user.setRole(VISITOR_ROLE);
+		if (userMapper.saveUser(user) != 1) {
+			throw new PersistenceException("注册失败，请稍后重试");
+		}
+		user.setPassword(null);
+		return user;
+	}
+
+	@Override
+	public User loginVisitor(LoginInfo loginInfo) {
+		String username = loginInfo.getUsername() == null ? "" : loginInfo.getUsername().trim();
+		User user = findUserByUsernameAndPassword(username, loginInfo.getPassword());
+		// 博主账号不允许从访客入口登录，避免两套身份混用
+		if (!VISITOR_ROLE.equals(user.getRole())) {
+			throw new BadRequestException("该账号不是访客账号，请前往后台管理登录");
+		}
+		user.setPassword(null);
+		return user;
 	}
 }

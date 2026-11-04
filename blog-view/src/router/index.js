@@ -6,9 +6,10 @@ Vue.use(VueRouter)
 
 const routes = [
 	{
+		//前台访客登录/注册（注意：与 blog-cms 后台博主登录是两套身份）
 		path: '/login',
-		component: () => import('@/views/Login'),
-		meta: {title: '登录'}
+		component: () => import('@/views/visitor/Auth'),
+		meta: {title: '访客登录'}
 	},
 	{
 		path: '/',
@@ -62,6 +63,38 @@ const routes = [
 				name: 'about',
 				component: () => import('@/views/about/About'),
 				meta: {title: '关于我'}
+			},
+			{
+				//个人中心：收藏与站内消息，需登录
+				path: '/me',
+				name: 'me',
+				component: () => import('@/views/me/Me'),
+				meta: {title: '个人中心'}
+			},
+			{
+				path: '/knowledge',
+				name: 'knowledge',
+				component: () => import('@/views/knowledge/List'),
+				meta: {title: '知识付费'}
+			},
+			{
+				path: '/knowledge/:no',
+				name: 'knowledgeDetail',
+				component: () => import('@/views/knowledge/Detail'),
+				meta: {title: '商品详情'}
+			},
+			{
+				//收银台：下单后跳转，未支付/待确认/已完成都在这一页
+				path: '/order/:orderNo',
+				name: 'orderPay',
+				component: () => import('@/views/order/Pay'),
+				meta: {title: '收银台'}
+			},
+			{
+				path: '/orders',
+				name: 'myOrders',
+				component: () => import('@/views/order/Mine'),
+				meta: {title: '我的订单'}
 			}
 		]
 	}

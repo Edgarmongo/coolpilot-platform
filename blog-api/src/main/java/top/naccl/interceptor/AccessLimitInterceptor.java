@@ -3,15 +3,15 @@ package top.naccl.interceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+import org.springframework.web.servlet.HandlerInterceptor;
 import top.naccl.annotation.AccessLimit;
 import top.naccl.model.vo.Result;
 import top.naccl.service.RedisService;
 import top.naccl.util.IpAddressUtils;
 import top.naccl.util.JacksonUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 
 /**
@@ -20,7 +20,7 @@ import java.io.PrintWriter;
  * @Date: 2021-04-04
  */
 @Component
-public class AccessLimitInterceptor extends HandlerInterceptorAdapter {
+public class AccessLimitInterceptor implements HandlerInterceptor {
 	@Autowired
 	RedisService redisService;
 
