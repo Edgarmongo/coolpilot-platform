@@ -54,4 +54,20 @@ public class FeedbackService {
 		String targetStatus = (status == null || status.isEmpty()) ? "RESOLVED" : status;
 		feedbackMapper.reply(id, reply.trim(), targetStatus);
 	}
+
+	/**
+	 * 前台「我的反馈」：只返回当前用户自己提交的记录，
+	 * 匿名提交的（user_id 为空）不会出现在任何人的列表里。
+	 */
+	public PageResult<Feedback> pageByUser(Long userId, Integer pageNum, Integer pageSize) {
+		if (userId == null) {
+			throw new BadRequestException("请先登录");
+		}
+		int page = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+		int size = (pageSize == null || pageSize < 1 || pageSize > 100) ? 10 : pageSize;
+		int total = feedbackMapper.countByUser(userId);
+		List<Feedback> list = feedbackMapper.pageByUser(userId, (page - 1) * size, size);
+		int totalPage = (total + size - 1) / size;
+		return new PageResult<>(totalPage, total, list);
+	}
 }

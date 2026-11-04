@@ -3,16 +3,20 @@
 		<div class="head">
 			<div>
 				<h1 class="page-title">我的</h1>
-				<p class="page-desc">订单与已购内容</p>
+				<p class="page-desc">订单、已购内容与个人互动</p>
 			</div>
 		</div>
 
 		<div class="tabs">
-			<button :class="['tab', {active: tab === 'order'}]" @click="tab = 'order'">订单记录</button>
-			<button :class="['tab', {active: tab === 'ent'}]" @click="tab = 'ent'">我的权益</button>
+			<button v-for="item in tabList" :key="item.key"
+			        :class="['tab', {active: tab === item.key}]" @click="tab = item.key">
+				{{ item.label }}
+				<span v-if="item.key === 'msg' && unread > 0" class="badge">{{ unread }}</span>
+			</button>
 		</div>
 
 		<div class="card">
+			<!-- 订单 -->
 			<template v-if="tab === 'order'">
 				<div v-if="!orders.length" class="empty">还没有订单</div>
 				<div v-for="order in orders" :key="order.id" class="item">
@@ -27,15 +31,80 @@
 				</div>
 			</template>
 
-			<template v-else>
+			<!-- 权益 -->
+			<template v-else-if="tab === 'ent'">
 				<div v-if="!entitlements.length" class="empty">还没有已购内容</div>
 				<div v-for="ent in entitlements" :key="ent.id" class="item">
 					<NuxtLink :to="`/knowledge/${ent.productNo}`" class="item-main">
 						<strong>{{ ent.productTitle }}</strong>
-						<span class="muted">{{ ent.expireTime ? '有效期至 ' + formatDate(ent.expireTime, 'YYYY-MM-DD') : '永久有效' }}</span>
+						<span class="muted">
+							{{ ent.expireTime ? '有效期至 ' + formatDate(ent.expireTime, 'YYYY-MM-DD') : '永久有效' }}
+						</span>
 					</NuxtLink>
+					<div class="item-side"><span class="status">可访问</span></div>
+				</div>
+			</template>
+
+			<!-- 收藏 -->
+			<template v-else-if="tab === 'fav'">
+				<div v-if="!favorites.length" class="empty">还没有收藏，在文章底部点「收藏」即可</div>
+				<div v-for="fav in favorites" :key="fav.id" class="item">
+					<NuxtLink v-if="favLink(fav)" :to="favLink(fav)" class="item-main">
+						<strong>{{ fav.targetTitle || '内容已删除' }}</strong>
+						<span class="muted">{{ typeText(fav.targetType) }} · 收藏于 {{ formatDate(fav.createTime) }}</span>
+					</NuxtLink>
+					<div v-else class="item-main">
+						<strong>{{ fav.targetTitle }}</strong>
+						<span class="muted">{{ typeText(fav.targetType) }} · {{ formatDate(fav.createTime) }}</span>
+					</div>
 					<div class="item-side">
-						<span class="status">可访问</span>
+						<button class="link-btn" @click="removeFavorite(fav)">取消收藏</button>
+					</div>
+				</div>
+			</template>
+
+			<!-- 消息 -->
+			<template v-else-if="tab === 'msg'">
+				<div v-if="!messages.length" class="empty">暂无消息</div>
+				<div v-for="msg in messages" :key="msg.id" :class="['item', {unread: !msg.isRead}]"
+				     @click="readMessage(msg)">
+					<div class="item-main">
+						<strong>{{ msg.title }}</strong>
+						<span class="muted">{{ msg.content }}</span>
+					</div>
+					<div class="item-side">
+						<span class="muted">{{ formatDate(msg.createTime) }}</span>
+						<span v-if="!msg.isRead" class="dot"/>
+					</div>
+				</div>
+			</template>
+
+			<!-- 反馈 -->
+			<template v-else>
+				<div class="feedback-form">
+					<textarea v-model="feedback.content" rows="4" maxlength="2000"
+					          placeholder="遇到的问题、想要的功能，都可以写在这里（至少 5 个字）"/>
+					<div class="form-row">
+						<input v-model="feedback.contact" placeholder="联系方式（选填，方便回复你）"/>
+						<button class="btn" :disabled="submitting" @click="submitFeedback">
+							{{ submitting ? '提交中…' : '提交反馈' }}
+						</button>
+					</div>
+				</div>
+
+				<div class="sub-title">我的反馈</div>
+				<div v-if="!feedbacks.length" class="empty">还没有提交过反馈</div>
+				<div v-for="fb in feedbacks" :key="fb.id" class="fb">
+					<div class="fb-head">
+						<span class="muted">{{ formatDate(fb.createTime) }}</span>
+						<span :class="['status', fb.status === 'RESOLVED' ? 'ok' : 'wait']">
+							{{ fb.status === 'RESOLVED' ? '已回复' : '待处理' }}
+						</span>
+					</div>
+					<p class="fb-content">{{ fb.content }}</p>
+					<div v-if="fb.reply" class="fb-reply">
+						<strong>官方回复</strong>
+						<p>{{ fb.reply }}</p>
 					</div>
 				</div>
 			</template>
@@ -46,19 +115,42 @@
 <script setup lang="ts">
 const {call, isLogin} = useApi()
 
-const tab = ref<'order' | 'ent'>('order')
+const tabList = [
+	{key: 'order', label: '订单记录'},
+	{key: 'ent', label: '我的权益'},
+	{key: 'fav', label: '我的收藏'},
+	{key: 'msg', label: '消息通知'},
+	{key: 'feedback', label: '意见反馈'}
+] as const
+
+const tab = ref<'order' | 'ent' | 'fav' | 'msg' | 'feedback'>('order')
 const orders = ref<any[]>([])
 const entitlements = ref<any[]>([])
+const favorites = ref<any[]>([])
+const messages = ref<any[]>([])
+const feedbacks = ref<any[]>([])
+const unread = ref(0)
+
+const feedback = reactive({content: '', contact: ''})
+const submitting = ref(false)
 
 if (!isLogin.value) {
 	await navigateTo('/login?redirect=/me')
 } else {
-	const [orderRes, entRes] = await Promise.all([
+	const [orderRes, entRes, favRes, msgRes, badgeRes, fbRes]: any[] = await Promise.all([
 		call('/orders?pageNum=1&pageSize=50').catch(() => null),
-		call('/entitlements').catch(() => null)
+		call('/entitlements').catch(() => null),
+		call('/favorites?pageNum=1&pageSize=50').catch(() => null),
+		call('/messages?pageNum=1&pageSize=50').catch(() => null),
+		call('/messages/unread-count').catch(() => null),
+		call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null)
 	])
-	orders.value = (orderRes as any)?.data?.list || []
-	entitlements.value = (entRes as any)?.data || []
+	orders.value = orderRes?.data?.list || []
+	entitlements.value = entRes?.data || []
+	favorites.value = favRes?.data?.list || []
+	messages.value = msgRes?.data?.list || []
+	unread.value = badgeRes?.data?.count || 0
+	feedbacks.value = fbRes?.data?.list || []
 }
 
 function price(value: number) {
@@ -71,6 +163,65 @@ function statusText(status: string) {
 		CANCELLED: '已取消', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款'
 	}[status] || status
 }
+
+function typeText(type: string) {
+	return {ARTICLE: '文章', MOMENT: '动态', PRODUCT: '商品'}[type] || type
+}
+
+/**
+ * 收藏跳转：文章走 /blog/:id，动态回列表。
+ * 商品收藏暂时没有精确路由（favorite 只存 id，详情页用 productNo），先不给链接。
+ */
+function favLink(fav: any) {
+	if (fav.targetType === 'ARTICLE') return `/blog/${fav.targetId}`
+	if (fav.targetType === 'MOMENT') return '/moments'
+	return ''
+}
+
+async function removeFavorite(fav: any) {
+	const res: any = await call(`/favorite?targetType=${fav.targetType}&targetId=${fav.targetId}`, {method: 'DELETE'})
+	if (res && res.code === 200) {
+		favorites.value = favorites.value.filter(f => f.id !== fav.id)
+	}
+}
+
+async function readMessage(msg: any) {
+	if (msg.isRead) {
+		if (msg.linkUrl) await navigateTo(msg.linkUrl)
+		return
+	}
+	const res: any = await call(`/message/${msg.id}/read`, {method: 'PUT'})
+	if (res && res.code === 200) {
+		msg.isRead = true
+		unread.value = Math.max(0, unread.value - 1)
+	}
+	if (msg.linkUrl) await navigateTo(msg.linkUrl)
+}
+
+async function submitFeedback() {
+	if (feedback.content.trim().length < 5) {
+		alert('反馈内容至少 5 个字')
+		return
+	}
+	submitting.value = true
+	try {
+		const res: any = await call('/feedback', {
+			method: 'POST',
+			params: {content: feedback.content.trim(), contact: feedback.contact.trim()}
+		})
+		if (res && res.code === 200) {
+			feedback.content = ''
+			feedback.contact = ''
+			const list: any = await call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null)
+			feedbacks.value = list?.data?.list || []
+			alert('已提交，处理后会在这里显示回复')
+		} else {
+			alert((res && res.msg) || '提交失败')
+		}
+	} finally {
+		submitting.value = false
+	}
+}
 </script>
 
 <style scoped>
@@ -78,9 +229,13 @@ function statusText(status: string) {
 	display: flex;
 	gap: 8px;
 	margin-bottom: 12px;
+	flex-wrap: wrap;
 }
 
 .tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	padding: 6px 16px;
 	border: 1px solid var(--line);
 	border-radius: 8px;
@@ -97,6 +252,18 @@ function statusText(status: string) {
 	background: #eef7f5;
 }
 
+.badge {
+	min-width: 17px;
+	height: 17px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: #d97706;
+	color: #fff;
+	font-size: 11px;
+	line-height: 17px;
+	text-align: center;
+}
+
 .item {
 	display: flex;
 	align-items: center;
@@ -108,6 +275,10 @@ function statusText(status: string) {
 
 .item:last-child {
 	border-bottom: none;
+}
+
+.item.unread {
+	cursor: pointer;
 }
 
 .item-main {
@@ -140,5 +311,124 @@ function statusText(status: string) {
 	background: #eef7f5;
 	color: var(--teal);
 	font-size: 12px;
+}
+
+.status.wait {
+	background: #fef3c7;
+	color: #b45309;
+}
+
+.status.ok {
+	background: #eef7f5;
+	color: var(--teal);
+}
+
+.dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #d97706;
+}
+
+.link-btn {
+	border: none;
+	background: none;
+	color: #9ca3af;
+	font-size: 12.5px;
+	cursor: pointer;
+}
+
+.link-btn:hover {
+	color: #dc2626;
+}
+
+.feedback-form textarea {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	font-size: 14px;
+	font-family: inherit;
+	resize: vertical;
+	outline-color: var(--teal);
+}
+
+.form-row {
+	display: flex;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+.form-row input {
+	flex: 1;
+	padding: 9px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	font-size: 13.5px;
+	outline-color: var(--teal);
+}
+
+.btn {
+	padding: 9px 20px;
+	border: none;
+	border-radius: 8px;
+	background: var(--teal);
+	color: #fff;
+	font-size: 13.5px;
+	cursor: pointer;
+}
+
+.btn:disabled {
+	opacity: .6;
+	cursor: default;
+}
+
+.sub-title {
+	margin: 22px 0 10px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #606266;
+}
+
+.fb {
+	padding: 12px 0;
+	border-bottom: 1px dashed var(--line);
+}
+
+.fb:last-child {
+	border-bottom: none;
+}
+
+.fb-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+
+.fb-content {
+	margin: 0;
+	line-height: 1.7;
+	font-size: 14px;
+	white-space: pre-wrap;
+}
+
+.fb-reply {
+	margin-top: 8px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: #f6f8f9;
+	font-size: 13px;
+}
+
+.fb-reply strong {
+	color: var(--teal);
+	font-size: 12.5px;
+}
+
+.fb-reply p {
+	margin: 4px 0 0;
+	line-height: 1.7;
+	white-space: pre-wrap;
 }
 </style>

@@ -36,6 +36,12 @@ public interface FeedbackMapper {
 			"</script>")
 	int count(@Param("status") String status);
 
+	@Select("SELECT * FROM feedback WHERE user_id = #{userId} ORDER BY create_time DESC LIMIT #{offset}, #{size}")
+	List<Feedback> pageByUser(@Param("userId") Long userId, @Param("offset") int offset, @Param("size") int size);
+
+	@Select("SELECT COUNT(*) FROM feedback WHERE user_id = #{userId}")
+	int countByUser(@Param("userId") Long userId);
+
 	@Update("UPDATE feedback SET reply = #{reply}, status = #{status}, reply_time = NOW(), update_time = NOW() WHERE id = #{id}")
 	int reply(@Param("id") Long id, @Param("reply") String reply, @Param("status") String status);
 }

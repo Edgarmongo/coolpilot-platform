@@ -10,6 +10,16 @@
 					<span>· {{ blog.views || 0 }} 次阅读</span>
 				</div>
 				<div class="article" v-html="blog.content"></div>
+
+				<!--收藏与点赞：未登录时点击跳转登录-->
+				<div class="actions">
+					<button :class="['act', {active: favorited}]" @click="toggleFavorite">
+						{{ favorited ? '已收藏' : '收藏' }}
+					</button>
+					<button :class="['act', {active: liked}]" @click="toggleLike">
+						{{ liked ? '已赞' : '点赞' }}<span v-if="likeCount" class="cnt">{{ likeCount }}</span>
+					</button>
+				</div>
 			</template>
 
 			<!--需要密码-->
@@ -36,7 +46,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const {call} = useApi()
+const {call, isLogin} = useApi()
 
 const id = String(route.params.id)
 const blog = ref<any>(null)
@@ -44,6 +54,9 @@ const locked = ref(false)
 const message = ref('')
 const password = ref('')
 const unlocking = ref(false)
+const favorited = ref(false)
+const liked = ref(false)
+const likeCount = ref(0)
 // 密码凭证按文章维度存，30 天有效
 const pwdToken = useCookie<string | null>(`cp_blog_pwd_${id}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
 
@@ -93,6 +106,52 @@ async function unlock() {
 
 await fetchBlog()
 
+/**
+ * 收藏/点赞状态只对已登录用户查询。
+ * like/status 允许匿名调用（user 为 null 时 liked=false），但仍以登录态为准。
+ */
+if (blog.value && isLogin.value) {
+	const [f, l]: any[] = await Promise.all([
+		call(`/favorite/status?targetType=ARTICLE&targetId=${id}`).catch(() => null),
+		call(`/like/status?targetType=ARTICLE&targetId=${id}`).catch(() => null)
+	])
+	favorited.value = !!(f && f.data && f.data.favorited)
+	liked.value = !!(l && l.data && l.data.liked)
+	likeCount.value = (l && l.data && l.data.count) || 0
+}
+
+function requireLogin() {
+	navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+	return false
+}
+
+async function toggleFavorite() {
+	if (!isLogin.value) {
+		requireLogin()
+		return
+	}
+	const res: any = await call(`/favorite?targetType=ARTICLE&targetId=${id}`, {
+		method: favorited.value ? 'DELETE' : 'POST'
+	})
+	if (res && res.code === 200) {
+		favorited.value = !favorited.value
+	}
+}
+
+async function toggleLike() {
+	if (!isLogin.value) {
+		requireLogin()
+		return
+	}
+	const res: any = await call(`/like?targetType=ARTICLE&targetId=${id}`, {
+		method: liked.value ? 'DELETE' : 'POST'
+	})
+	if (res && res.code === 200) {
+		liked.value = !liked.value
+		likeCount.value = Math.max(0, likeCount.value + (liked.value ? 1 : -1))
+	}
+}
+
 if (blog.value) {
 	useHead({title: `${blog.value.title} - CoolSkyAI`})
 } else {
@@ -131,5 +190,44 @@ if (blog.value) {
 	border-radius: 8px;
 	font-size: 14px;
 	outline-color: var(--teal);
+}
+
+.actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 26px;
+	padding-top: 18px;
+	border-top: 1px solid var(--line);
+}
+
+.act {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 18px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--muted);
+	font-size: 13.5px;
+	cursor: pointer;
+	transition: all .15s;
+}
+
+.act:hover {
+	border-color: var(--teal);
+	color: var(--teal);
+}
+
+.act.active {
+	border-color: var(--teal);
+	background: #eef7f5;
+	color: var(--teal);
+	font-weight: 600;
+}
+
+.cnt {
+	font-size: 12px;
+	opacity: .8;
 }
 </style>
