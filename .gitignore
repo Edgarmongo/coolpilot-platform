@@ -74,3 +74,6 @@ desktop.ini
 .nuxt/
 .output/
 .data/
+
+# 本地备份产物
+backups/
