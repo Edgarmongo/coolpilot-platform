@@ -76,6 +76,26 @@ export const routes = [
 		]
 	},
 	{
+		path: '/system',
+		component: Layout,
+		redirect: '/system/account',
+		meta: {title: '系统', icon: 'Setting'},
+		children: [
+			{
+				path: 'account',
+				name: 'Account',
+				component: () => import('@/views/system/Account.vue'),
+				meta: {title: '账号设置', icon: 'User'}
+			},
+			{
+				path: 'log',
+				name: 'Logs',
+				component: () => import('@/views/log/Logs.vue'),
+				meta: {title: '日志中心', icon: 'Document'}
+			}
+		]
+	},
+	{
 		path: '/trade',
 		component: Layout,
 		redirect: '/trade/order',
