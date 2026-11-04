@@ -88,6 +88,12 @@ export const routes = [
 				meta: {title: '站点设置', icon: 'Setting'}
 			},
 			{
+				path: 'about',
+				name: 'AboutPage',
+				component: () => import('@/views/page/About.vue'),
+				meta: {title: '关于我', icon: 'InfoFilled'}
+			},
+			{
 				path: 'friend',
 				name: 'FriendList',
 				component: () => import('@/views/page/FriendList.vue'),
