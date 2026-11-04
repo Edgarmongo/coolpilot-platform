@@ -9,13 +9,19 @@
 
 ## 一、CI 做什么
 
-三个 job 并行跑，互不阻塞：
+四个 job 并行跑，互不阻塞：
 
 | Job | 环境 | 命令 | 产物 |
 |---|---|---|---|
-| `server` | Temurin JDK 21 + Maven 缓存 | `mvn test-compile` → `mvn -DskipTests package` | `server-jar` |
+| `server` | Temurin JDK 21 + Maven 缓存 | `mvn -DskipTests package` | `server-jar` |
+| `migrations` | MySQL 8 service + Flyway CLI 镜像 | `flyway migrate` + 表数断言 | — |
 | `admin` | Node 22 + npm 缓存 | `npm ci` → `npm run build` | `admin-dist` |
 | `web` | Node 22 + npm 缓存 | `npm ci` → `npm run build` | `web-output` |
+
+`migrations` 这个 job 值得单独说：**迁移脚本是表结构的唯一来源**，写错一条就等于
+发布一个起不来的版本。CI 里起一个空 MySQL，用 `flyway/flyway:11` 真跑一遍
+`V*.sql`，然后断言「业务表 39 张、site_setting ≥ 30 项」。
+脚本语法错、顺序错、忘了建表，都会在 PR 阶段红掉。
 
 几点说明：
 

@@ -1,7 +1,7 @@
 name: CI
 
-# 每次推送 main 或提交 PR 时，对三端各做一次真实构建。
-# 目的是「合并前就能知道编译不过」，而不是等部署时才发现。
+# 每次推送 main 或提交 PR 时，对三端各做一次真实构建，并在空库上真跑一遍数据库迁移。
+# 目的是「合并前就能知道编译不过 / 迁移跑不通」，而不是等部署时才发现。
 
 on:
   push:
@@ -47,6 +47,58 @@ jobs:
           name: server-jar
           path: coolpilot-server/target/*.jar
           retention-days: 7
+
+  # ---------------- 数据库迁移 ----------------
+  # 迁移脚本是表结构的唯一来源，写错一条就等于发布一个起不来的版本。
+  # 这里在一个空 MySQL 上真跑一遍，顺带断言表数量对得上。
+  migrations:
+    name: Migrations · 空库跑通
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-pass
+          MYSQL_DATABASE: coolpilot
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-pass --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    steps:
+      - uses: actions/checkout@v4
+
+      # service 容器把 3306 映射到 runner 的 localhost，
+      # Flyway 容器用 host 网络就能连上；参数与 application-dev.properties 保持一致
+      - name: Migrate empty schema
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/coolpilot-server/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:11 \
+            -url="jdbc:mysql://127.0.0.1:3306/coolpilot?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC" \
+            -user=root \
+            -password=ci-root-pass \
+            -baselineOnMigrate=true \
+            -baselineVersion=2 \
+            -validateOnMigrate=true \
+            migrate
+
+      # 表数量是最省事的健全性检查：漏了建表、脚本顺序错了都会体现出来
+      - name: Assert schema built
+        run: |
+          COUNT=$(docker run --rm --network host mysql:8.0 \
+            mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B \
+            -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='coolpilot' AND table_name <> 'flyway_schema_history'")
+          echo "业务表数量: $COUNT"
+          test "$COUNT" = "39" || { echo "期望 39 张业务表，实际 $COUNT"; exit 1; }
+
+          SEED=$(docker run --rm --network host mysql:8.0 \
+            mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B -D coolpilot \
+            -e "SELECT COUNT(*) FROM site_setting")
+          echo "站点配置项: $SEED"
+          test "$SEED" -ge 30 || { echo "种子数据缺失，site_setting 只有 $SEED 项"; exit 1; }
 
   # ---------------- 管理后台 ----------------
   admin:
