@@ -105,8 +105,8 @@ export const routes = [
 		path: '/system',
 		component: Layout,
 		redirect: '/system/account',
-		// bottom: 固定到侧栏最底部
-		meta: {title: '系统', icon: 'Setting', bottom: true},
+		// bottom: 排到菜单最后
+		meta: {title: '系统管理', icon: 'Setting', bottom: true},
 		children: [
 			{
 				path: 'account',
