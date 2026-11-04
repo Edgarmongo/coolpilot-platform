@@ -78,9 +78,15 @@ export const routes = [
 	{
 		path: '/page',
 		component: Layout,
-		redirect: '/page/friend',
+		redirect: '/page/site',
 		meta: {title: '页面管理', icon: 'Files'},
 		children: [
+			{
+				path: 'site',
+				name: 'SiteSetting',
+				component: () => import('@/views/page/SiteSetting.vue'),
+				meta: {title: '站点设置', icon: 'Setting'}
+			},
 			{
 				path: 'friend',
 				name: 'FriendList',
