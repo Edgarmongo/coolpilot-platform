@@ -196,13 +196,15 @@ coolpilot-platform/
     .requestMatchers("/admin/webTitleSuffix").permitAll()                     // 前台取标题后缀
     .requestMatchers(SecurityPaths.OWNER_ONLY).hasAuthority(Role.OWNER)       // 仅平台所有者
     .requestMatchers(SecurityPaths.AUTHENTICATED).hasAnyAuthority(Role.OWNER, Role.USER)
-    .anyRequest().permitAll()                                                 // 其余全放行
+    .requestMatchers(SecurityPaths.PUBLIC).permitAll()                        // 显式公开白名单
+    .anyRequest().denyAll()                                                   // 其余默认拒绝
 )
 ```
 
-> 路径清单集中在 `SecurityPaths`（`OWNER_ONLY` / `AUTHENTICATED`），角色常量在 `Role`（`ROLE_owner` / `ROLE_user`）。
-> **新增用户级接口时只需把路径加进 `SecurityPaths.AUTHENTICATED`**，不再需要在 `SecurityConfig` 里逐行硬编码 `hasAnyRole(...)`；
-> 漏加会被 `anyRequest().permitAll()` 静默放行，这是历史上真实踩过的坑。
+> 路径清单集中在 `SecurityPaths`（`OWNER_ONLY` / `AUTHENTICATED` / `PUBLIC`），角色常量在 `Role`（`ROLE_owner` / `ROLE_user`）。
+> **新增接口必须归入三者之一**：用户级接口加进 `AUTHENTICATED`，公开接口加进 `PUBLIC` 并写清理由。
+> 漏归类不再被静默放行，而是返回 403 —— 这是 R-03 的收口方式，宁可上线前发现缺配置，也不要把数据裸露出去。
+> 同理，未知路径现在返回 403 而不是 404，属于有意的「不暴露接口是否存在」。
 >
 > `JwtFilter` 会对**所有路径**解析 token：命中 `owner:` / `user:` 前缀（兼容历史 `admin:` / `visitor:`）才写入 `SecurityContext`，
 > 同时把 `authorities` 里的历史角色值归一化为 `ROLE_owner` / `ROLE_user`，升级当刻不会把在线用户踢下线；

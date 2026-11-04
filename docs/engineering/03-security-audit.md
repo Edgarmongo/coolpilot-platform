@@ -17,8 +17,9 @@
 
 其余：1 个 P0、5 个 P1、5 个 P2、1 个 P3。详见第七节风险登记册。
 
-> **修复状态（2026-11-04 23:40 更新）**：R-01、R-02、R-05 已修复并回归验证，记录见第十一节。
-> 当前剩余 P0 为 R-03（`anyRequest().permitAll()` 的长期治理），需在后续每新增用户接口时同步补规则。
+> **修复状态（2026-11-05 06:30 更新）**：R-01 ~ R-09 已全部修复并回归验证，
+> 其中 R-03（默认拒绝）、R-09（友链刷量）在本轮完成，记录见第十一节。
+> 剩余为 P2 的 R-10（CORS 全开）、R-11（token 不可吊销），上线后按需处理。
 
 ---
 
@@ -87,9 +88,10 @@ POST /admin/login (JSON body)
 | **伪造 admin token** | `GET /admin/dashboard` + 伪造头 | 200 | **200 + 完整数据** | ❌ **R-01 漏洞** |
 | 匿名发评论 | `POST /comment {}` | 200 | 500 参数有误 | ⚠️ 可达（R-06 错误码） |
 | 匿名验密 | `POST /checkBlogPassword {}` | 200 | 500 异常错误 | ⚠️ 可达（未捕获异常） |
-| 匿名刷友链量 | `POST /friend?nickname=x` | 200 | 500 操作失败 | ❌ R-09 |
+| 匿名刷友链量 | `POST /friend?nickname=x` | 200 | 200，同 IP 1 小时内只 +1 | ✅ 已修复（R-09） |
 | 匿名点赞 | `POST /moment/like/999999` | 200 | 500 操作失败 | ⚠️ 可达 |
-| 静态图片 | `GET /image/probe.jpg` | 200 | 500 异常错误 | ⚠️ R-08 |
+| 静态图片 | `GET /image/probe.jpg` | 200 | 404 资源不存在 | ✅ 已修复（R-08） |
+| 未知路径 | `GET /totally-unknown` | 200 | 403 请登录 | ✅ 默认拒绝（R-03） |
 
 > **注意**：所有业务错误都返回 **HTTP 200**，真实状态在 `body.code`。这是刻意设计（前端拦截器依赖），不建议改，但意味着**任何基于 HTTP 状态码的监控/网关策略都会失效**。
 
@@ -186,7 +188,10 @@ GET /admin/dashboard   Authorization: <伪造token>
 | 位置 | `config/SecurityConfig.java:80` |
 | 描述 | 只有 `/admin/**` 受保护，新增的用户级接口默认匿名可调 |
 | 影响 | 一旦忘记加规则，`/orders` 就变成"任何人可查任何人订单" |
-| 修复 | 每新增用户接口同步加 `hasAnyRole("owner","user")`；建议改为"默认拒绝 + 显式放行" |
+| 修复 | ✅ 已改为「默认拒绝 + 显式放行」：`anyRequest().denyAll()`，公开接口在 `SecurityPaths.PUBLIC` 逐条列出并注明理由，见 11.5 |
+
+> 维护约定：新增接口必须归入 `SecurityPaths.OWNER_ONLY` / `AUTHENTICATED` / `PUBLIC` 之一，
+> 漏归类会返回 403（不是匿名放行）。
 
 ### R-04【P1】后台登录无频率限制 + 默认口令
 
@@ -239,7 +244,7 @@ GET /admin/dashboard   Authorization: <伪造token>
 | 位置 | `FriendController.addViews(@RequestParam nickname)` |
 | 实测 | `POST /friend?nickname=xxx` 匿名可达 |
 | 影响 | 浏览量数据不可信；无资金损失 |
-| 修复 | 按 IP 去重（复用 Redis `identificationSet` 思路）或改为登录后计数 |
+| 修复 | ✅ 按「昵称 + 真实对端 IP」Redis 去重，1 小时一次；昵称不存在不写键，见 11.6 |
 
 ### R-10【P2】CORS 全开
 
@@ -327,11 +332,28 @@ GET /admin/dashboard   Authorization: <伪造token>
 | 迁移脚本 | `coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql`（含回滚语句） |
 | 前置 | 执行前已确认无重复用户名/重复标签/重复分类，并做了全库备份 |
 
-### 11.4 仍待处理
+### 11.4 后续批次已修复（2026-11-05）
 
-| 编号 | 原因 |
+| 编号 | 处理方式 |
 |---|---|
-| R-03 | 属于长期治理约定，需在每新增用户接口时同步补 `hasAnyRole`；建议后续改为"默认拒绝 + 显式放行" |
-| R-04 | 后台登录限流未做，需新增拦截器逻辑 |
-| R-06 | 参数校验返回 500，改动面涉及多个 Controller，建议随 V1.0 一并处理 |
-| R-07 | 敏感配置外置，需要部署方式配合（Docker/环境变量文件） |
+| R-04 | `LoginGuard` 按账号计失败（5 次锁 15 分钟）+ `/login` 加 `@AccessLimit(60s/5)`；角色不符不计失败 |
+| R-06 | `ControllerExceptionHandler` 补齐 `MethodArgumentNotValid/Bind` → 400、缺参/类型/JSON → 400、`NoResourceFound` → 404 |
+| R-07 | datasource / redis / mail / JWT 密钥全部改为环境变量注入，`.env.example` 补齐 |
+| R-08 | 私有文件落 `_private/` 前缀，`ImageGuardInterceptor` 拒绝直读；历史文件由 `PrivateFileRelocator` 搬迁 |
+
+### 11.5 R-03 默认拒绝 —— 已修复（2026-11-05）
+
+| 项 | 内容 |
+|---|---|
+| 改动 | `SecurityConfig` 末尾改为 `.anyRequest().denyAll()`；新增 `SecurityPaths.PUBLIC` 白名单（内容浏览、评论、友链、注册登录、商品展示、图片、`/file/download`、`/resource/access`、`/feedback`、`/tg/**`、`/error`） |
+| 理由 | 原设计「默认放行 + 记得加规则」，新增接口漏配就是匿名可读，只能靠人肉 review 兜底 |
+| 效果 | 未知路径与漏归类接口一律 403「请登录」，上线前就能暴露缺配置 |
+| 验证 | 17 个公开接口全部 200（`searchBlog` 是缺参数 400，说明已过鉴权）；`/me`、`/orders`、`/entitlements`、`/demands`、`/projects`、`/file/token`、`/admin/**` 匿名均 403；owner 与 user 的权限矩阵与改动前一致；前台 8 个页面 SSR 200、CMS 200 |
+
+### 11.6 R-09 友链刷量 —— 已修复（2026-11-05）
+
+| 项 | 内容 |
+|---|---|
+| 改动 | `FriendService.addViewsOnce`：先校验昵称存在（不存在直接返回，不写键），再按 `friend:view:{昵称}:{IP}` 做 1 小时 Redis 去重；接口加 `@AccessLimit(60s/30)` |
+| 额外收紧 | 去重 IP 默认取 `request.getRemoteAddr()`，**不信任** `X-Forwarded-For`（客户端可伪造，换头即换"新访客"）；部署在可信反代后把 `security.trust-forwarded-for` 打开 |
+| 验证 | 同 IP 连点 3 次 views 只 +1；换真实 IP 再 +1；伪造 3 个不同 XFF 头仍只 +1；不存在的昵称不产生 Redis 键 |

@@ -55,4 +55,9 @@
     <update id="updateViewsByNickname">
         update friend set views=views+1 where nickname=#{nickname}
     </update>
+
+    <!-- 校验昵称是否存在：不存在的昵称不写 Redis 去重键，避免被随机昵称刷爆键空间 -->
+    <select id="countByNickname" resultType="int">
+        select count(*) from friend where nickname=#{nickname}
+    </select>
 </mapper>

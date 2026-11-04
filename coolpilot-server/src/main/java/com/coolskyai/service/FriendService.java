@@ -20,6 +20,13 @@ public interface FriendService {
 
 	void updateViewsByNickname(String nickname);
 
+	/**
+	 * 浏览计数（按 IP + 昵称去重，1 小时内只算一次）
+	 *
+	 * @return true 表示本次真的 +1
+	 */
+	boolean addViewsOnce(String nickname, String ip);
+
 	FriendInfo getFriendInfo(boolean cache, boolean md);
 
 	void updateFriendInfoContent(String content);

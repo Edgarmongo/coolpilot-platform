@@ -6,7 +6,9 @@ package com.coolskyai.constant;
  * 集中在这里的唯一目的：新增接口时只改一处。
  * 之前路径与角色散落在 SecurityConfig 的链式调用里，
  * 每加一个 /xxx 接口就要记得再写一行 hasAnyRole("admin","visitor")，
- * 漏写会被 anyRequest().permitAll() 静默放行（历史上已出现过）。
+ * 漏写会被默认规则静默放行（历史上已出现过）。
+ *
+ * 2026-11-05 起默认规则改为 denyAll：漏归类 = 403，不再是匿名可读。
  *
  * 摆放顺序与匹配优先级无关（Spring Security 按注册顺序匹配，
  * SecurityConfig 里的顺序才是最终顺序），这里只做分组。
@@ -56,11 +58,37 @@ public final class SecurityPaths {
 	};
 
 	/**
-	 * 匿名可访问，但有意为之的路径：
-	 *   /feedback        允许未登录提交问题反馈
-	 *   /resource/access 未登录返回 NOT_LOGIN 而不是 401，前端据此显示"登录后购买"
-	 *   /visitor/register、/visitor/login 前台自助注册与登录
-	 *   /login           博主前台登录（历史接口）
-	 * 其余未命中上面两组的请求一律 permitAll。
+	 * 匿名可访问的路径清单（显式白名单）
+	 *
+	 * R-03 的收口方式：从「默认放行 + 需要鉴权的写规则」改成「默认拒绝 + 显式放行」。
+	 * 新增接口如果忘了归类，会得到 403 而不是静默匿名可达 —— 这是刻意的：
+	 * 宁可上线前发现缺配置，也不要把用户数据裸露出去。
+	 *
+	 * 每一项都要能说清为什么公开，说不清的就该进 AUTHENTICATED。
 	 */
+	public static final String[] PUBLIC = {
+			// 内容浏览
+			"/blogs", "/blog", "/archives", "/searchBlog", "/category", "/tag",
+			"/moments", "/about", "/site",
+			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）
+			"/comments", "/comment",
+			// 友链：匿名可看、可申请；浏览量计数在 Service 层按 IP 去重
+			"/friends", "/friend",
+			// 身份
+			"/login", "/visitor/register", "/visitor/login",
+			// 互动：点赞与文章密码校验不需要登录
+			"/moment/like/**", "/checkBlogPassword",
+			// 商品与服务展示
+			"/products", "/productCategories", "/product/**",
+			// 文件：下载靠一次性 token 自身校验；图片是公开静态资源
+			"/file/download", "/image/**",
+			// 权益探测：未登录返回 NOT_LOGIN，而不是 401
+			"/resource/access",
+			// 问题反馈：允许未登录提交
+			"/feedback",
+			// Telegram webhook：路径里带 bot token，本身就是凭证
+			"/tg/**",
+			// Spring Boot 默认错误页，不放行会把 404 变成 403
+			"/error"
+	};
 }

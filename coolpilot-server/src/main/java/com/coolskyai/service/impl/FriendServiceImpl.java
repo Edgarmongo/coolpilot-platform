@@ -14,6 +14,7 @@ import com.coolskyai.service.FriendService;
 import com.coolskyai.service.RedisService;
 import com.coolskyai.util.markdown.MarkdownUtils;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 
@@ -30,6 +31,8 @@ public class FriendServiceImpl implements FriendService {
 	SiteSettingMapper siteSettingMapper;
 	@Autowired
 	RedisService redisService;
+	@Autowired
+	org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
 	@Override
 	public List<Friend> getFriendList() {
@@ -81,6 +84,30 @@ public class FriendServiceImpl implements FriendService {
 		if (friendMapper.updateViewsByNickname(nickname) != 1) {
 			throw new PersistenceException("操作失败");
 		}
+	}
+
+	/**
+	 * 友链浏览计数（R-09）
+	 *
+	 * 原实现匿名 POST 一次就 +1，随便写个脚本就能把榜单刷歪。
+	 * 这里按「昵称 + IP」做 1 小时去重，并且先确认昵称确实存在再写去重键——
+	 * 否则攻击者用随机昵称就能无限占用 Redis 键空间。
+	 */
+	@Override
+	public boolean addViewsOnce(String nickname, String ip) {
+		if (nickname == null || nickname.trim().isEmpty() || nickname.length() > 50) {
+			return false;
+		}
+		String name = nickname.trim();
+		if (friendMapper.countByNickname(name) == 0) {
+			return false;
+		}
+		String key = RedisKeyConstants.FRIEND_VIEW_DEDUPE + name + ":" + (ip == null ? "unknown" : ip);
+		Boolean first = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(1));
+		if (!Boolean.TRUE.equals(first)) {
+			return false;
+		}
+		return friendMapper.updateViewsByNickname(name) == 1;
 	}
 
 	@Override

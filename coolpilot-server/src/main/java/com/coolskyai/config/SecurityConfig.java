@@ -85,8 +85,18 @@ public class SecurityConfig {
 						 * 漏加的请求会被 anyRequest().permitAll() 静默放行，这是历史踩过的坑。
 						 */
 						.requestMatchers(SecurityPaths.AUTHENTICATED).hasAnyAuthority(Role.OWNER, Role.USER)
-						//其它路径全部放行（含 /visitor/register、/visitor/login、/feedback、/resource/access）
-						.anyRequest().permitAll()
+						/*
+						 * 公开接口：显式白名单，每一项都在 SecurityPaths.PUBLIC 里写明理由。
+						 */
+						.requestMatchers(SecurityPaths.PUBLIC).permitAll()
+						/*
+						 * 默认拒绝（R-03 收口）。
+						 *
+						 * 之前这里是 permitAll：新增接口忘了写规则就等于匿名可读，
+						 * 只能靠人肉 review 兜底。改成 denyAll 后，漏配会直接 403，
+						 * 上线前就能暴露出来，而不是等数据被爬走才发现。
+						 */
+						.anyRequest().denyAll()
 				)
 				//自定义JWT过滤器
 				.addFilterBefore(new JwtLoginFilter(authenticationManager, loginLogService), UsernamePasswordAuthenticationFilter.class)

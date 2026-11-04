@@ -126,6 +126,31 @@ docker image prune -f                              # 清悬空镜像
 
 `up -d` 只会重建镜像变了的服务，MySQL/Redis 不受影响。**数据卷不会被动**（`mysql_data` / `upload_data`）。
 
+### 4. 反向代理与真实 IP（上线必看）
+
+限流与友链浏览去重依赖客户端 IP。默认取 TCP 对端地址，**不信任** `X-Forwarded-For` ——
+因为这个头客户端可以随便写，换一个伪造值就绕过限流与去重。
+
+放在 nginx / Caddy 之后时，必须让代理**覆盖**而不是追加该头：
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:8091/;
+    proxy_set_header Host $host;
+    # 用 $remote_addr 覆盖，不要用 $proxy_add_x_forwarded_for（那会保留伪造值）
+    proxy_set_header X-Forwarded-For $remote_addr;
+}
+```
+
+确认代理会覆盖后，再在 `.env` 里打开开关：
+
+```ini
+# 对应 application 里的 security.trust-forwarded-for，默认 false
+SECURITY_TRUST_FORWARDED_FOR=true
+```
+
+没接反代、或反代只是透传该头时保持 `false`，否则等于把限流键交给攻击者控制。
+
 ## 四、发布与回滚
 
 ### 发布

@@ -90,6 +90,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      # 是否信任 X-Forwarded-For：只有反向代理会覆盖该头时才置 true
+      SECURITY_TRUST_FORWARDED_FOR: ${SECURITY_TRUST_FORWARDED_FOR:-false}
       UPLOAD_FILE_PATH: /data/upload/
       # 图片直链的前缀。上线后应为 https://coolskyai.com（走 nginx 反代到本服务）
       BLOG_API: ${SITE_URL:-http://localhost:8091}

@@ -6,6 +6,8 @@ package com.coolskyai.constant;
  * @Date: 2020-09-27
  */
 public class RedisKeyConstants {
+	/** 友链浏览去重：friend:view:{昵称}:{IP} */
+	public static final String FRIEND_VIEW_DEDUPE = "friend:view:";
 	/**
 	 * 首页博客简介列表 分页对象key
 	 * homeBlogInfoList : {{1,"第一页的缓存"},{2,"第二页的缓存"}}

@@ -27,4 +27,6 @@ public interface FriendMapper {
 	int deleteFriend(Long id);
 
 	int updateViewsByNickname(String nickname);
+
+	int countByNickname(String nickname);
 }
