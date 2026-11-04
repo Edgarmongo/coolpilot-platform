@@ -84,6 +84,8 @@ public final class SecurityPaths {
 			"/file/download", "/image/**",
 			// 权益探测：未登录返回 NOT_LOGIN，而不是 401
 			"/resource/access",
+			// 知识库检索：公开内容可匿名搜，付费块在服务层按权益过滤
+			"/ai/search",
 			// 问题反馈：允许未登录提交
 			"/feedback",
 			// Telegram webhook：路径里带 bot token，本身就是凭证

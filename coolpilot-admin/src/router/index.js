@@ -169,6 +169,20 @@ export const routes = [
 		]
 	},
 	{
+		path: '/ai',
+		component: Layout,
+		redirect: '/ai/knowledge',
+		meta: {title: '智能检索', icon: 'MagicStick'},
+		children: [
+			{
+				path: 'knowledge',
+				name: 'KnowledgeIndex',
+				component: () => import('@/views/ai/Knowledge.vue'),
+				meta: {title: '知识库索引', icon: 'Cpu'}
+			}
+		]
+	},
+	{
 		path: '/service',
 		component: Layout,
 		redirect: '/service/demand',

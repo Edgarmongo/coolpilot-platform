@@ -225,6 +225,9 @@ curl -fsS https://coolskyai.com/api/health
 # {"time":"...","uptimeSeconds":123,"db":"UP","redis":"UP","status":"UP"}
 ```
 
+**知识库索引**：文章/商品/课时有增删改后，需要到后台 `智能检索 → 知识库索引` 点一次「重建索引」。
+全量替换，几秒完成；没重建只是搜不到新内容，不会报错。
+
 最小监控建议：
 
 - 外部探活：每 1 分钟请求 `/api/health`，连续 3 次失败告警（UptimeRobot / 阿里云监控都行）。

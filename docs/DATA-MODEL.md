@@ -665,9 +665,11 @@ CREATE TABLE `milestone` (
 
 ---
 
-## 十二、AI 域（V1.3 预留，暂不落库）
+## 十二、AI 域（V1.3 第一阶段已落库）
 
-仅给出结构意图，待 RAG 技术选型（向量库用 pgvector / Milvus / Qdrant）确定后再定 DDL。
+> **实施状态（2026-11-05）**：先落 `kb_knowledge_base` / `kb_document` / `kb_chunk` 三张表（V7），
+> 向量存 MySQL 并在进程内检索，未引入独立向量库；`ai_conversation` / `ai_message` 仍未落库。
+> 决策与迁移条件见 `docs/ADR-0001-VECTOR-STORE.md`。
 
 | 表 | 关键字段 | 说明 |
 |---|---|---|

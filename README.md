@@ -102,6 +102,7 @@ coolpilot-platform/
 | [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、Flyway 迁移、常见问题 |
 | [docs/CI-CD.md](docs/CI-CD.md) | 流水线、镜像发布、部署与回滚 |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 上线手册：gateway 分流、证书、备份恢复、排查清单 |
+| [docs/ADR-0001-VECTOR-STORE.md](docs/ADR-0001-VECTOR-STORE.md) | 知识库向量方案决策（为什么先用 MySQL） |
 
 ## CI/CD
 

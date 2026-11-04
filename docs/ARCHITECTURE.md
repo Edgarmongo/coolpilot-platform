@@ -295,6 +295,27 @@ upload.file.resources-locations=file:${upload.file.path}
 
 ---
 
+### 4.9 V1.3 知识库检索（第一阶段）
+
+模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；
+决策记录见 `docs/ADR-0001-VECTOR-STORE.md`。
+
+```
+索引：文章（跳过密码文章） / 上架商品文案 / 课时正文
+      → 清洗 Markdown → 350 字切块（60 字重叠）→ 向量化 → kb_chunk
+检索：query 向量 → 按「公开 或 已购商品」筛候选 → 余弦打分 → 文档级去重 → TopN
+```
+
+- 向量存 MySQL（`MEDIUMBLOB`，512 维 float32），进程内快照做余弦检索；1e4 块约 20MB、毫秒级
+- 权限在**打分前**过滤：付费课时只有持有权益才进入候选，避免越权召回
+- 本地哈希向量带「共同词」护栏：无任何共同词时跳过，防止哈希碰撞造成误召回；
+  接语义模型后该护栏自动失效（`tokenHashes` 返回空）
+- 接口：`GET /ai/search?q=&limit=`（公开）、`POST /admin/ai/reindex`、`GET /admin/ai/stats`
+- 后台页：`智能检索 → 知识库索引`（统计、重建、检索自测）；前台搜索页有「智能检索」区
+- 内容有增删改后需重建索引；索引是全文替换，几秒完成
+
+---
+
 ## 五、coolpilot-admin（后台）
 
 ### 5.1 技术栈
