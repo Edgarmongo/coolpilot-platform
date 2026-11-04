@@ -1,18 +1,18 @@
 # ============================================================
-# NBlog 本地开发环境
+# CoolPilot 本地开发环境
 #   docker compose up -d --build     启动
 #   docker compose logs -f api       查看后端日志
 #   docker compose down              停止（保留数据）
 #   docker compose down -v           停止并清空数据卷
 # ============================================================
 
-name: nblog
+name: coolpilot
 
 services:
   # ---------------- MySQL ----------------
   mysql:
     image: mysql:8.0
-    container_name: nblog-mysql
+    container_name: coolpilot-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -28,14 +28,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       # 初始化脚本：仅在数据卷为空（首次启动）时按文件名顺序执行
-      - ./blog-api/nblog.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./coolpilot-server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./deploy/mysql/02-seed-base.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
-      - ./blog-api/demo-data.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
-      - ./blog-api/sql/2026-11-04-indexes-and-constraints.sql:/docker-entrypoint-initdb.d/04-indexes.sql:ro
-      - ./blog-api/sql/2026-11-04-v1-0-community.sql:/docker-entrypoint-initdb.d/05-community.sql:ro
-      - ./blog-api/sql/2026-11-05-v1-1a-file-product.sql:/docker-entrypoint-initdb.d/06-file-product.sql:ro
+      - ./coolpilot-server/demo-data.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
+      - ./coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql:/docker-entrypoint-initdb.d/04-indexes.sql:ro
+      - ./coolpilot-server/sql/2026-11-04-v1-0-community.sql:/docker-entrypoint-initdb.d/05-community.sql:ro
+      - ./coolpilot-server/sql/2026-11-05-v1-1a-file-product.sql:/docker-entrypoint-initdb.d/06-file-product.sql:ro
       - ./deploy/mysql/07-seed-product.sql:/docker-entrypoint-initdb.d/07-seed-product.sql:ro
-      - ./blog-api/sql/2026-11-05-v1-1b-order-payment-entitlement.sql:/docker-entrypoint-initdb.d/08-trade.sql:ro
+      - ./coolpilot-server/sql/2026-11-05-v1-1b-order-payment-entitlement.sql:/docker-entrypoint-initdb.d/08-trade.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -46,7 +46,7 @@ services:
   # ---------------- Redis ----------------
   redis:
     image: redis:7-alpine
-    container_name: nblog-redis
+    container_name: coolpilot-redis
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -65,8 +65,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: deploy/docker/api/Dockerfile
-    container_name: nblog-api
+      dockerfile: deploy/docker/server/Dockerfile
+    container_name: coolpilot-server
     restart: unless-stopped
     depends_on:
       mysql:
@@ -77,7 +77,7 @@ services:
       TZ: Asia/Shanghai
       SPRING_PROFILES_ACTIVE: dev
       # 用环境变量覆盖 application-dev.properties 中的本机配置
-      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/nblog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/coolpilot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
@@ -99,8 +99,8 @@ services:
       context: .
       dockerfile: deploy/docker/web/Dockerfile
       args:
-        APP_DIR: blog-view
-    container_name: nblog-view
+        APP_DIR: coolpilot-web
+    container_name: coolpilot-web
     restart: unless-stopped
     depends_on:
       - api
@@ -113,7 +113,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./blog-view:/app
+      - ./coolpilot-web:/app
       # 保留镜像内已安装的依赖，不被源码挂载覆盖
       - view_node_modules:/app/node_modules
 
@@ -123,8 +123,8 @@ services:
       context: .
       dockerfile: deploy/docker/web/Dockerfile
       args:
-        APP_DIR: blog-cms
-    container_name: nblog-cms
+        APP_DIR: coolpilot-admin
+    container_name: coolpilot-admin
     restart: unless-stopped
     depends_on:
       - api
@@ -136,7 +136,7 @@ services:
     ports:
       - "8079:8079"
     volumes:
-      - ./blog-cms:/app
+      - ./coolpilot-admin:/app
       - cms_node_modules:/app/node_modules
 
 volumes:

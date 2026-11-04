@@ -12,7 +12,7 @@
                           浏览器
         ┌───────────────────┴───────────────────┐
         │                                       │
-   :8081 blog-view                        :8079/cms blog-cms
+   :8081 coolpilot-web                        :8079/cms coolpilot-admin
    前台（访客可见）                        后台（仅博主）
    Vue 2 SPA                              Vue 2 SPA
         │                                       │
@@ -21,22 +21,22 @@
                             │ 开发期：vue.config.js devServer.proxy
                             │ 生产期：nginx 反向代理
                             ▼
-                 :8091 blog-api  Spring Boot 4.1.2
+                 :8091 coolpilot-server  Spring Boot 4.1.2
                  无状态 REST 服务，不提供任何页面
                             │
               ┌─────────────┴─────────────┐
               ▼                           ▼
       MySQL 8.0 :3306              Redis :6379
-      nblog 库，19 张表             缓存 + PV/UV 计数 + 访问者标识
+      coolpilot 库，19 张表             缓存 + PV/UV 计数 + 访问者标识
 ```
 
 **职责边界**
 
 | 端 | 面向对象 | 认证方式 | 是否可写 |
 |---|---|---|---|
-| blog-view | 访客 / 读者 | `visitor:*` JWT（访客自助注册） | 仅评论、友链申请、点赞、注册登录 |
-| blog-cms | 博主本人 | `admin:*` JWT | 全量增删改查 |
-| blog-api | 上述两端 | 见鉴权矩阵 | — |
+| coolpilot-web | 访客 / 读者 | `visitor:*` JWT（访客自助注册） | 仅评论、友链申请、点赞、注册登录 |
+| coolpilot-admin | 博主本人 | `admin:*` JWT | 全量增删改查 |
+| coolpilot-server | 上述两端 | 见鉴权矩阵 | — |
 
 ---
 
@@ -47,7 +47,7 @@
 | JDK | Temurin **21.0.5 LTS** | `maven.compiler.release=21`，字节码 major version 65 |
 | Maven | 3.9.9 | — |
 | Node / npm | 22.22.2 / 10.9.7 | 两个前端共用 |
-| MySQL | 8.0.40 | 库名 `nblog`，字符集 utf8mb4 |
+| MySQL | 8.0.40 | 库名 `coolpilot`，字符集 utf8mb4 |
 | Redis | 5.0.14.1 | 用于缓存与计数，非持久化关键路径 |
 | Spring Boot | **4.1.2** | 内含 Spring Framework 7 + Tomcat 11 |
 | Spring Security | 7.x（随 Boot 4） | 已迁移为 `SecurityFilterChain` 编程式配置 |
@@ -58,7 +58,7 @@
 
 ```
 coolpilot-platform/
-├── blog-api/                 Spring Boot 后端（211 个 Java 文件）
+├── coolpilot-server/                 Spring Boot 后端（211 个 Java 文件）
 │   ├── src/main/java/top/naccl/
 │   ├── src/main/resources/
 │   │   ├── mapper/           18 个 MyBatis XML
@@ -67,13 +67,13 @@ coolpilot-platform/
 │   │   ├── application.properties      仅一行：spring.profiles.active=dev
 │   │   ├── application-dev.properties   全部实际配置
 │   │   └── logback-spring.xml
-│   ├── nblog.sql             建库建表 + 初始数据
+│   ├── schema.sql             建库建表 + 初始数据
 │   ├── demo-data.sql         演示文章（5 篇，本地预览用）
 │   └── pom.xml
-├── blog-cms/                 Vue 2 后台（38 个 .vue，25 个业务页）
+├── coolpilot-admin/                 Vue 2 后台（38 个 .vue，25 个业务页）
 │   ├── src/{api,components,layout,router,store,util,views,icons}
 │   └── vue.config.js         publicPath '/cms/' + devServer.proxy
-├── blog-view/                Vue 2 前台（28 个 .vue，10 个页面，17 个组件）
+├── coolpilot-web/                Vue 2 前台（28 个 .vue，10 个页面，17 个组件）
 │   ├── src/{api,assets,components,plugins,router,store,util,views}
 │   │   └── assets/css/       portal.css / portal-content.css / base.css / typo.css
 │   └── vue.config.js         devServer.proxy
@@ -84,7 +84,7 @@ coolpilot-platform/
 
 ---
 
-## 四、blog-api（后端）
+## 四、coolpilot-server（后端）
 
 ### 4.1 分层结构
 
@@ -236,7 +236,7 @@ coolpilot-platform/
 ```properties
 server.port=8091
 blog.api=http://localhost:${server.port}
-spring.datasource.url=jdbc:mysql://localhost:3306/nblog?...
+spring.datasource.url=jdbc:mysql://localhost:3306/coolpilot?...
 spring.data.redis.host=localhost
 spring.data.redis.password=***
 upload.channel=local
@@ -247,7 +247,7 @@ upload.file.resources-locations=file:${upload.file.path}
 
 ---
 
-## 五、blog-cms（后台）
+## 五、coolpilot-admin（后台）
 
 ### 5.1 技术栈
 
@@ -304,7 +304,7 @@ baseURL: '/api/admin/'
 
 ---
 
-## 六、blog-view（前台）
+## 六、coolpilot-web（前台）
 
 ### 6.1 技术栈
 
@@ -425,16 +425,16 @@ net start MySQL80
 redis-server.exe --requirepass <pwd> --port 6379
 
 # 2. 后端（务必禁用 devtools，避免随机重启端口与宿主冲突）
-cd blog-api
+cd coolpilot-server
 mvn -DskipTests package
-java -jar target/blog-api-0.0.1.jar --server.port=8091 --spring.devtools.restart.enabled=false
+java -jar target/coolpilot-server-0.0.1.jar --server.port=8091 --spring.devtools.restart.enabled=false
 
 # 3. 后台
-cd blog-cms && npx vue-cli-service serve --port 8079
+cd coolpilot-admin && npx vue-cli-service serve --port 8079
 # 访问 http://localhost:8079/cms/
 
 # 4. 前台
-cd blog-view && npx vue-cli-service serve --port 8081
+cd coolpilot-web && npx vue-cli-service serve --port 8081
 # 访问 http://localhost:8081/home
 ```
 
@@ -449,15 +449,15 @@ cd blog-view && npx vue-cli-service serve --port 8081
 | # | 问题 | 位置 | 影响 | 建议 |
 |---|---|---|---|---|
 | 1 | Vue 2.6 已 EOL（2023-12 停止维护），构建链为 webpack 4 | 两个前端 | 无法获得安全补丁；新依赖生态不兼容 | 评估 Vue 3 + Vite 迁移，两前端可分批 |
-| 2 | Semantic UI 约 530KB CSS 仍在打包，实际仅少量类在用 | blog-view `main.js` | 首屏体积与样式冲突风险 | 逐类替换为 portal.css 后移除依赖 |
-| 3 | 后端仅 1 个空壳测试类（`BlogApiApplicationTests`） | blog-api `src/test` | 升级/重构无回归网，问题只能靠翻日志定位 | 优先覆盖登录鉴权、文章 CRUD、缓存读写 |
+| 2 | Semantic UI 约 530KB CSS 仍在打包，实际仅少量类在用 | coolpilot-web `main.js` | 首屏体积与样式冲突风险 | 逐类替换为 portal.css 后移除依赖 |
+| 3 | 后端仅 1 个空壳测试类（`BlogApiApplicationTests`） | coolpilot-server `src/test` | 升级/重构无回归网，问题只能靠翻日志定位 | 优先覆盖登录鉴权、文章 CRUD、缓存读写 |
 | 4 | `upload.file.path` 指向 `/Users/naccl/Desktop/upload/` | application-dev.properties | QQ 头像转存功能在 Windows 下失效 | 改为本机绝对路径或切换 GitHub 渠道 |
-| 5 | 图床凭据仅存浏览器 localStorage | blog-cms 图床管理 | 换机/清缓存即丢失；多人无法共用 | 如需多人，改为服务端加密存储 |
+| 5 | 图床凭据仅存浏览器 localStorage | coolpilot-admin 图床管理 | 换机/清缓存即丢失；多人无法共用 | 如需多人，改为服务端加密存储 |
 | 6 | 仓库内无生产 nginx 配置 | — | 部署链路不可追溯，`/api` 反代需手工搭建 | 补 `deploy/nginx.conf` 纳入版本管理 |
 | 7 | 数据库密码、Redis 密码、默认口令明文入库 | application-dev.properties | 凭据泄露风险 | 外置为环境变量或改用 `.env`（不入库） |
 | 8 | Tomcat 11 严格校验请求行，未编码中文参数直接 400 | 后端 | 手工调用脚本易踩坑（应用自身不受影响） | 已在 README 说明编码写法 |
 | 9 | Jackson 3 默认把日期序列化为 ISO 字符串 | 全局 | 旧格式（时间戳）调用方需适配 | 前端已兼容；如需旧行为加 `write-dates-as-timestamps=true` |
-| 10 | 后台所有错误返回 HTTP 200，错误码放 body | blog-api | 不符合 REST 语义，但被前端拦截器依赖 | **不要"顺手规范化"**，会丢中文提示 |
+| 10 | 后台所有错误返回 HTTP 200，错误码放 body | coolpilot-server | 不符合 REST 语义，但被前端拦截器依赖 | **不要"顺手规范化"**，会丢中文提示 |
 
 ---
 

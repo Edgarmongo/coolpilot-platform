@@ -13,7 +13,7 @@
 | # | 规则 |
 |---|---|
 | 1 | 不得执行 `DROP TABLE` / `TRUNCATE` / 无 `WHERE` 的 `DELETE` / `UPDATE` |
-| 2 | 不得清库、不得重置 `nblog` 数据库；验证用临时库，用完立即 `DROP DATABASE` |
+| 2 | 不得清库、不得重置 `coolpilot` 数据库；验证用临时库，用完立即 `DROP DATABASE` |
 | 3 | 不得修改 `application-dev.properties` 中的数据库连接与密码，除非任务明确要求 |
 | 4 | 不得替换 JWT secret、不得改默认后台账号密码 |
 | 5 | 不得把支付、退款相关接口直接暴露到公网前不做验签 |
@@ -88,7 +88,7 @@
 
 ### T-102 数据库 V1.0 迁移
 
-> 状态：**索引与唯一约束部分已完成**（`blog-api/sql/2026-11-04-indexes-and-constraints.sql`）；
+> 状态：**索引与唯一约束部分已完成**（`coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql`）；
 > 4 张新表（`favorite`/`like_record`/`message`/`feedback`）与 6 表加列尚未执行，待 T-104 起随功能落地。
 
 | 项 | 内容 |
@@ -105,7 +105,7 @@
 | 项 | 内容 |
 |---|---|
 | 目标 | `ROLE_admin → ROLE_owner`、`ROLE_visitor → ROLE_user` |
-| 改动 | 数据迁移 SQL；`SecurityConfig` 改 `hasAnyRole("owner","admin")` 过渡；`VisitorAuthController` 写入新角色；`blog-cms` 路由守卫；`blog-view` 顶栏判断 |
+| 改动 | 数据迁移 SQL；`SecurityConfig` 改 `hasAnyRole("owner","admin")` 过渡；`VisitorAuthController` 写入新角色；`coolpilot-admin` 路由守卫；`coolpilot-web` 顶栏判断 |
 | 关键约束 | **先兼容后收口**：第一次发布用 `hasAnyRole`，跑通一轮后再改成 `hasRole("owner")` |
 | 验收 | OWNER 能登录后台；USER 只能访问前台；旧 token（若存在）不导致 500 |
 | 测试 | 两种角色分别访问 `/admin/**` 与用户接口，权限矩阵逐格验证 |
@@ -203,7 +203,7 @@
 > `/file/token` 已接入权益判断；退款三段式（APPLIED→APPROVED→SUCCESS）在确认打款后才撤销权益。
 > 详细设计、接口清单与实测记录见 `docs/V1.1B-TRADE.md`。
 >
-> 已知缺口：blog-cms 尚无商品管理页（V1.1a 遗留），商品上下架与资源绑定目前只能用接口操作。
+> 已知缺口：coolpilot-admin 尚无商品管理页（V1.1a 遗留），商品上下架与资源绑定目前只能用接口操作。
 
 | 编号 | 任务 | 核心内容 | 验收标准 |
 |---|---|---|---|

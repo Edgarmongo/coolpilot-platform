@@ -17,7 +17,7 @@ rebuild_one() {
 	local service="$1"
 	echo "==> 重建 ${service}（先清理容器与 node_modules 卷）"
 	docker compose rm -sf "${service}" >/dev/null 2>&1 || true
-	docker volume rm "nblog_${service}_node_modules" >/dev/null 2>&1 || true
+	docker volume rm "coolpilot_${service}_node_modules" >/dev/null 2>&1 || true
 	docker compose up -d --build "${service}"
 }
 

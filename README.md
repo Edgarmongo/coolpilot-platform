@@ -38,8 +38,8 @@
 |---|---|
 | 后端 | Java 21、Spring Boot 4.1、Spring Security + JWT、MyBatis、PageHelper |
 | 数据库 | MySQL 8.0、Redis 7 |
-| 前台 | Nuxt 3 + Vue 3.5 + TypeScript（`blog-view`，SSR） |
-| 后台 | Vue 3.5 + Vite + Element Plus + Pinia（`blog-cms`） |
+| 前台 | Nuxt 3 + Vue 3.5 + TypeScript（`coolpilot-web`，SSR） |
+| 后台 | Vue 3.5 + Vite + Element Plus + Pinia（`coolpilot-admin`） |
 | 构建 | Maven、Vite、Nuxt、Docker Compose |
 
 > 前端已于 2026-11-05 从 Vue 2 迁移到 Vue 3 / Nuxt 3，旧的 Vue 2 版本保留在 `v0.1.0-baseline` 标签中，迁移分批进行，进度见 [docs/FRONTEND-MIGRATION.md](docs/FRONTEND-MIGRATION.md)。
@@ -71,14 +71,14 @@ docker compose up -d --build
 
 ```
 coolpilot-platform/
-├── blog-api/            # Java 后端（Spring Boot）
+├── coolpilot-server/            # Java 后端（Spring Boot）
 │   ├── src/main/java/top/naccl/
 │   │   ├── controller/  # 上游接口
 │   │   ├── modules/     # 自建业务模块：account / community / file / product / trade / entitlement
 │   │   └── ...
 │   └── sql/             # 增量迁移脚本（按日期命名）
-├── blog-cms/            # 管理后台（Vue 2）
-├── blog-view/           # 用户前台（Vue 2）
+├── coolpilot-admin/            # 管理后台（Vue 2）
+├── coolpilot-web/           # 用户前台（Vue 2）
 ├── deploy/              # 构建与部署资产（Dockerfile、MySQL 种子）
 ├── scripts/             # 工程脚本（启停、重建、进库）
 ├── docs/                # 架构、PRD、数据模型、接口与任务卡

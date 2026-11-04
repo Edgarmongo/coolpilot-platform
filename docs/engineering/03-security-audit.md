@@ -135,7 +135,7 @@ POST /admin/login (JSON body)
 | 同文件 | `spring.datasource.password`、`spring.data.redis.password` | P1，明文入库 |
 | 同文件 `tg.bot.token` | 形如 `1234567890:qwerty...` | P1，若为真实 token 则 Bot 可被接管 |
 | 同文件 | `upload.github.token=ghp_xxxx...` | 占位符，未泄露 |
-| `blog-cms` 前端 | 图床凭据存 localStorage（GitHub token / 又拍云 / 腾讯云密钥） | P2，XSS 即可窃取 |
+| `coolpilot-admin` 前端 | 图床凭据存 localStorage（GitHub token / 又拍云 / 腾讯云密钥） | P2，XSS 即可窃取 |
 | `README.md` | 默认后台账号 `Admin / 123456` | P1，配合 R-04 无暴力破解防护 |
 
 ---
@@ -146,7 +146,7 @@ POST /admin/login (JSON body)
 
 | 项 | 内容 |
 |---|---|
-| 位置 | `blog-api/src/main/resources/application-dev.properties:41` |
+| 位置 | `coolpilot-server/src/main/resources/application-dev.properties:41` |
 | 描述 | `token.secretKey=abcdefghijklmnopqrstuvwxyz`，是上游项目的默认占位值，且已进 Git。`JwtUtils` 用它做 SHA-512 派生后签 HS512 |
 | 复现条件 | 拿到仓库或该字符串即可。无需登录、无需知道密码 |
 | 影响 | **完全接管后台**：读全部订单、改站点配置、删文章、看用户数据 |
@@ -324,7 +324,7 @@ GET /admin/dashboard   Authorization: <伪造token>
 |---|---|
 | 改动 | `ALTER TABLE user ADD UNIQUE INDEX uk_username(username)` |
 | 附带 | 同批补齐 `comment(blog_id)`、`comment(is_published,create_time)`、`blog_tag` 复合主键 + `tag_id`、四张日志表 `create_time`、`tag/category` 名称唯一 |
-| 迁移脚本 | `blog-api/sql/2026-11-04-indexes-and-constraints.sql`（含回滚语句） |
+| 迁移脚本 | `coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql`（含回滚语句） |
 | 前置 | 执行前已确认无重复用户名/重复标签/重复分类，并做了全库备份 |
 
 ### 11.4 仍待处理

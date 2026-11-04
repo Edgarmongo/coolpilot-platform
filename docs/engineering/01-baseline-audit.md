@@ -12,9 +12,9 @@
 |---|---|
 | 项目 | NBlog 二次开发（个人技术知识与服务平台） |
 | 形态 | 前后端分离，三端同仓 |
-| 后端 | `blog-api`，Spring Boot 4.1.2，端口 8091 |
-| 前台 | `blog-view`，Vue 2.6.11，端口 8081 |
-| 后台 | `blog-cms`，Vue 2.6.11，端口 8079（`publicPath=/cms/`） |
+| 后端 | `coolpilot-server`，Spring Boot 4.1.2，端口 8091 |
+| 前台 | `coolpilot-web`，Vue 2.6.11，端口 8081 |
+| 后台 | `coolpilot-admin`，Vue 2.6.11，端口 8079（`publicPath=/cms/`） |
 | 数据库 | MySQL 8.0.40，库 `nblog`，19 张表 |
 | 缓存 | Redis 5.0.14.1，端口 6379 |
 | 版本管理 | Git，仓库根 `NBlog/` |
@@ -23,9 +23,9 @@
 
 | 端 | 度量 |
 |---|---|
-| blog-api | 211 个 `.java`、18 个 mapper XML、81 个 HTTP 接口 |
-| blog-cms | 38 个 `.vue`（25 个业务页）、19 个 api 模块 |
-| blog-view | 28 个 `.vue`（10 个页面、17 个组件）、11 个 api 模块 |
+| coolpilot-server | 211 个 `.java`、18 个 mapper XML、81 个 HTTP 接口 |
+| coolpilot-admin | 38 个 `.vue`（25 个业务页）、19 个 api 模块 |
+| coolpilot-web | 28 个 `.vue`（10 个页面、17 个组件）、11 个 api 模块 |
 
 ---
 
@@ -78,7 +78,7 @@ com.coolskyai
 
 ## 03 前端结构
 
-### 3.1 blog-view（前台）
+### 3.1 coolpilot-web（前台）
 
 ```
 src/
@@ -95,7 +95,7 @@ src/
 
 **技术特征**：Semantic UI CSS 2.4.1 + Element UI 2.13.2 + 自研 `portal.css` 三套样式共存；`Header.vue` 为弃用残留。
 
-### 3.2 blog-cms（后台）
+### 3.2 coolpilot-admin（后台）
 
 ```
 src/
@@ -173,7 +173,7 @@ src/
 
 ### 5.2 前端
 
-| blog-cms | 版本 | blog-view | 版本 |
+| coolpilot-admin | 版本 | coolpilot-web | 版本 |
 |---|---|---|---|
 | vue | 2.6.11 | vue | 2.6.11 |
 | element-ui | 2.13.2 | element-ui | 2.13.2 |
@@ -198,7 +198,7 @@ src/
 | `echarts` 4.9 | API 兼容 | 建议升 5.x |
 | `@vue/cli-service` 4.x | webpack 4 | 换 Vite，`require()` 全改 ESM |
 
-> `blog-cms` 用了 4 处 `require('@/assets/...')`（`settings.js` 已改），迁移时注意 CommonJS 残留。
+> `coolpilot-admin` 用了 4 处 `require('@/assets/...')`（`settings.js` 已改），迁移时注意 CommonJS 残留。
 
 ---
 
@@ -221,10 +221,10 @@ src/
 net start MySQL80
 redis-server.exe --requirepass *** --port 6379
 # 后端（必须禁用 devtools，否则随机重启端口会与宿主进程冲突）
-java -jar blog-api/target/blog-api-0.0.1.jar --server.port=8091 --spring.devtools.restart.enabled=false
+java -jar coolpilot-server/target/coolpilot-server-0.0.1.jar --server.port=8091 --spring.devtools.restart.enabled=false
 # 前端
-cd blog-cms && npx vue-cli-service serve --port 8079
-cd blog-view && npx vue-cli-service serve --port 8081
+cd coolpilot-admin && npx vue-cli-service serve --port 8079
+cd coolpilot-web && npx vue-cli-service serve --port 8081
 ```
 
 ---

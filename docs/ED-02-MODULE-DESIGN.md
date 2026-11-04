@@ -1,7 +1,7 @@
 # ED-02：系统架构与后端模块设计
 
 > 版本：v1.0 ｜ 日期：2026-11-04
-> 基线：blog-api 211 个 Java 文件 / 81 个接口 / 19 张表（Spring Boot 4.1.2 + JDK 21）
+> 基线：coolpilot-server 211 个 Java 文件 / 81 个接口 / 19 张表（Spring Boot 4.1.2 + JDK 21）
 > 关联文档：`ARCHITECTURE.md`（现状）、`PRD-V1.md`（需求）、`DATA-MODEL.md`（数据）
 
 ---
@@ -241,8 +241,8 @@ JwtFilter 改为：所有路径都尝试解析 token
 | `SecurityConfig` | `hasRole("admin")` → `hasRole("owner")` |
 | `JwtConstants` | 前缀 `admin:` 可保留（语义是"博主 token"），不必改 |
 | `VisitorAuthController` | 写入 `ROLE_user` |
-| `blog-cms` | 路由守卫里 `role !== 'ROLE_admin'` 的判断 |
-| `blog-view` | 顶栏登录态判断 |
+| `coolpilot-admin` | 路由守卫里 `role !== 'ROLE_admin'` 的判断 |
+| `coolpilot-web` | 顶栏登录态判断 |
 
 > 建议：**先加兼容**（`hasAnyRole("admin","owner")`），灰度跑一轮后再收口成 `hasRole("owner")`。这样数据迁移和代码发布可以解耦。
 

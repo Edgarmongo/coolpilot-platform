@@ -15,14 +15,14 @@ mkdir -p "$OUT"
 set -a; . ./.env; set +a
 
 echo "==> 导出数据库"
-docker exec nblog-mysql mysqldump -uroot -p"${MYSQL_ROOT_PASSWORD}" \
-  --single-transaction --routines --triggers --default-character-set=utf8mb4 nblog \
+docker exec coolpilot-mysql mysqldump -uroot -p"${MYSQL_ROOT_PASSWORD}" \
+  --single-transaction --routines --triggers --default-character-set=utf8mb4 coolpilot \
   | gzip > "${OUT}/db-${STAMP}.sql.gz"
 
 echo "==> 打包上传目录"
 # Git Bash 会把容器内路径改写成 Windows 路径，这里禁用转换
 HOST_OUT="$(cygpath -w "$(cd "$OUT" && pwd)" 2>/dev/null || echo "$(cd "$OUT" && pwd)")"
-MSYS_NO_PATHCONV=1 docker run --rm -v nblog_upload_data:/data:ro -v "${HOST_OUT}:/backup" alpine \
+MSYS_NO_PATHCONV=1 docker run --rm -v coolpilot_upload_data:/data:ro -v "${HOST_OUT}:/backup" alpine \
   tar czf "/backup/upload-${STAMP}.tar.gz" -C /data .
 
 ls -lh "${OUT}" | tail -3

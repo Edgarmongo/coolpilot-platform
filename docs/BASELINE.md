@@ -37,7 +37,7 @@ tag     v0.1.0-baseline
 |---|---|
 | 工程化 | JDK 21、Spring Boot 4.1、Maven 阿里云镜像、Docker Compose 五服务编排、`.env` 外置密钥 |
 | 安全修复 | JWT 密钥 64 位强随机、`SecurityFilterChain` 重写、后台越权漏洞修复、Tomcat 11 参数校验适配 |
-| 数据 | 39 张表；增量脚本 `blog-api/sql/` 按日期命名，初始化顺序见 `docs/DOCKER.md` |
+| 数据 | 39 张表；增量脚本 `coolpilot-server/sql/` 按日期命名，初始化顺序见 `docs/DOCKER.md` |
 | 业务 | `modules/account` `community` `file` `product` `trade` `entitlement` |
 | 前端 | 前台门户改版；后台新增「交易管理」 |
 | 文档 | `docs/` 下架构、PRD、数据模型、接口、任务卡、Docker、交易闭环 |
@@ -118,7 +118,7 @@ feat(trade): 人工确认收款后自动发放权益
 
 1. 一个提交只做一件事；混入无关格式化会被要求拆开。
 2. 每个提交都必须能编译（前端能 build，后端能 package）。
-3. 数据库变更与使用它的代码**同一个提交**，脚本放 `blog-api/sql/YYYY-MM-DD-描述.sql`，只用 `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` 之类的幂等写法。
+3. 数据库变更与使用它的代码**同一个提交**，脚本放 `coolpilot-server/sql/YYYY-MM-DD-描述.sql`，只用 `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` 之类的幂等写法。
 4. 提交信息不得包含密钥、内网地址、真实用户数据。
 5. 不提交 `.env`、`_backup_*.sql`、`target/`、`node_modules/`、`dist/`。
 
@@ -131,13 +131,13 @@ feat(trade): 人工确认收款后自动发放权益
 **纳入版本控制**
 
 - 三端源码、`deploy/` 构建资产、`scripts/` 工程脚本、`docs/` 文档
-- `blog-api/sql/` 增量迁移脚本与种子数据
+- `coolpilot-server/sql/` 增量迁移脚本与种子数据
 - `.env.example`（只有占位值）
 
 **禁止纳入**
 
-- `.env`（真实密钥）、`blog-api/sql/_backup_*.sql`（含真实数据）
-- `target/`、`node_modules/`、`dist/`、`blog-api/blog/`（日志）
+- `.env`（真实密钥）、`coolpilot-server/sql/_backup_*.sql`（含真实数据）
+- `target/`、`node_modules/`、`dist/`、`coolpilot-server/blog/`（日志）
 - IDE 配置（`.idea`、`.vscode`）
 
 ## 八、已知事项
@@ -145,6 +145,6 @@ feat(trade): 人工确认收款后自动发放权益
 | 项 | 说明 |
 |---|---|
 | 本地目录名 | 2026-11-05 已重命名为 `coolpilot-platform`；若 IDE 仍是旧路径，关闭后以新路径重新打开 |
-| 容器与前缀命名 | `docker-compose.yml` 的 `name: nblog` 与容器名 `nblog-*` 暂未改。改动会导致数据卷名变化（`nblog_mysql_data` → `coolpilot-platform_mysql_data`），等同于清库，需单独安排迁移，不在本次范围 |
+| 容器与前缀命名 | 2026-11-05 已统一为 `coolpilot`：compose 项目名、容器名、数据卷、数据库名全部迁移，旧 `nblog_*` 卷与旧库已删除 |
 | `package-lock.json` | 上游 `.gitignore` 忽略了 lock 文件。本次基线已取消该忽略并提交前端 lock，保证依赖可复现；后续升级依赖时请一并提交 lock 变更 |
 | 本项目许可证 | 未定，见 `docs/LICENSE-REVIEW.md` |

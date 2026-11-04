@@ -12,7 +12,7 @@ WORKDIR /app
 ENV CHOKIDAR_USEPOLLING=true \
     TZ=Asia/Shanghai
 
-ARG APP_DIR=blog-view
+ARG APP_DIR=coolpilot-web
 COPY ${APP_DIR}/package*.json ./
 RUN npm install --no-audit --no-fund
 

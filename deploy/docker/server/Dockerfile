@@ -8,14 +8,14 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # 使用阿里云镜像加速依赖下载（不影响宿主机 Maven 配置）
-COPY deploy/docker/api/settings.xml /build/settings.xml
+COPY deploy/docker/server/settings.xml /build/settings.xml
 
 # 先只拷 pom，利用层缓存避免每次改代码都重新下载依赖
-COPY blog-api/pom.xml .
+COPY coolpilot-server/pom.xml .
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q -s /build/settings.xml -DskipTests dependency:go-offline || true
 
-COPY blog-api/src ./src
+COPY coolpilot-server/src ./src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -s /build/settings.xml -DskipTests package
 

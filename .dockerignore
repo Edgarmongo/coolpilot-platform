@@ -1,8 +1,8 @@
 node_modules
 **/node_modules
 **/dist
-blog-api/target
-blog-api/sql/_backup_*.sql
+coolpilot-server/target
+coolpilot-server/sql/_backup_*.sql
 .git
 .idea
 .vscode

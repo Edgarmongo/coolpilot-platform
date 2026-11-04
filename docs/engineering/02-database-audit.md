@@ -241,7 +241,7 @@ blog 1──N blog           (无)
 
 ### 7.3 关于 Flyway
 
-当前项目**未使用** Flyway/Liquibase，表结构靠 `nblog.sql` 手工导入。建议 V1.0 引入 Flyway：
+当前项目**未使用** Flyway/Liquibase，表结构靠 `schema.sql` 手工导入。建议 V1.0 引入 Flyway：
 
 ```
 src/main/resources/db/migration/

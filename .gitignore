@@ -43,8 +43,8 @@ yarn-error.log*
 /.nb-gradle/
 
 # ---------------- 运行产物 ----------------
-# 后端日志（logging.file.name=blog-api/blog/blog-dev）
-blog-api/blog/
+# 后端日志（logging.file.name=coolpilot-server/blog/blog-dev）
+coolpilot-server/blog/
 logs/
 *.log
 
@@ -60,7 +60,7 @@ data/
 !.env.example
 
 # 本地数据库备份（含真实数据，禁止提交）
-blog-api/sql/_backup_*.sql
+coolpilot-server/sql/_backup_*.sql
 
 # ---------------- 系统文件 ----------------
 .DS_Store

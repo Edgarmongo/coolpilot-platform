@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>top.naccl</groupId>
-    <artifactId>blog-api</artifactId>
+    <artifactId>coolpilot-server</artifactId>
     <version>0.0.1</version>
-    <name>blog-api</name>
+    <name>coolpilot-server</name>
     <url>https://naccl.top/</url>
     <description>Blog API</description>
 

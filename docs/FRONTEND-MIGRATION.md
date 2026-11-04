@@ -1,7 +1,7 @@
 # 前端技术栈迁移方案（Vue 2 → Vue 3）
 
 > 决策日期：2026-11-05
-> 目标：`blog-cms` 改为 Vue 3 + Vite + Element Plus；`blog-view` 改为 Nuxt 3 + Vue 3 + TypeScript
+> 目标：`coolpilot-admin` 改为 Vue 3 + Vite + Element Plus；`coolpilot-web` 改为 Nuxt 3 + Vue 3 + TypeScript
 > 原则：**迁移期间旧版本必须保持可运行**，不做「半成品替换」
 
 ---
@@ -10,8 +10,8 @@
 
 | 端 | 页面/组件 | 代码量 | 主要难点 |
 |---|---|---|---|
-| `blog-cms` | 28 个页面 | 约 6,000 行 | Element UI → Element Plus 的 API 差异、`mavon-editor` 需换成 md 编辑器、ECharts 图表页 |
-| `blog-view` | 30 个组件/页面 | 约 5,500 行 | Vuex → Pinia、`filters` 全局移除、评论/密码弹窗、需要 SSR 适配（`window`/`localStorage` 不能在服务端执行） |
+| `coolpilot-admin` | 28 个页面 | 约 6,000 行 | Element UI → Element Plus 的 API 差异、`mavon-editor` 需换成 md 编辑器、ECharts 图表页 |
+| `coolpilot-web` | 30 个组件/页面 | 约 5,500 行 | Vuex → Pinia、`filters` 全局移除、评论/密码弹窗、需要 SSR 适配（`window`/`localStorage` 不能在服务端执行） |
 
 两端合计约 11,500 行，且大量依赖旧生态（`vue-cli`、`vuex`、`element-ui`、`tocbot`、`mavon-editor`）。一次性替换会让站点在数天内处于不可用状态。
 
@@ -26,7 +26,7 @@
 
 ## 二、技术映射
 
-### blog-cms
+### coolpilot-admin
 
 | 旧 | 新 | 说明 |
 |---|---|---|
@@ -39,7 +39,7 @@
 | `echarts` + 手写 | `echarts` + `vue-echarts` | 仪表盘图表 |
 | `js-cookie` | 沿用 | 无变化 |
 
-### blog-view
+### coolpilot-web
 
 | 旧 | 新 | 说明 |
 |---|---|---|

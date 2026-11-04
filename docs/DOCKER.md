@@ -75,11 +75,11 @@ docker compose logs -f api
 
 | 容器 | 镜像 | 说明 |
 |---|---|---|
-| `nblog-mysql` | mysql:8.0 | 首次启动执行初始化 SQL |
-| `nblog-redis` | redis:7-alpine | 开启密码，关闭 AOF |
-| `nblog-api` | 本地构建（Maven + JRE21） | 多阶段构建，产出可执行 jar |
-| `nblog-view` | 本地构建（node:22-alpine） | 依赖在镜像内，源码 bind mount |
-| `nblog-cms` | 同上，`APP_DIR=blog-cms` | 与 view 共用 Dockerfile |
+| `coolpilot-mysql` | mysql:8.0 | 首次启动执行初始化 SQL |
+| `coolpilot-redis` | redis:7-alpine | 开启密码，关闭 AOF |
+| `ncoolpilot-server` | 本地构建（Maven + JRE21） | 多阶段构建，产出可执行 jar |
+| `ncoolpilot-web` | 本地构建（node:22-alpine） | 依赖在镜像内，源码 bind mount |
+| `ncoolpilot-admin` | 同上，`APP_DIR=coolpilot-admin` | 与 view 共用 Dockerfile |
 
 ---
 
@@ -123,14 +123,14 @@ MySQL 官方镜像**只在数据卷为空时**执行 `/docker-entrypoint-initdb.
 
 | 顺序 | 文件 | 作用 |
 |---|---|---|
-| 01 | `blog-api/nblog.sql` | 建表 + 站点配置 |
+| 01 | `coolpilot-server/schema.sql` | 建表 + 站点配置 |
 | 02 | `deploy/mysql/02-seed-base.sql` | 分类、标签种子（上游脚本不含） |
-| 03 | `blog-api/demo-data.sql` | 5 篇演示文章 |
-| 04 | `blog-api/sql/2026-11-04-indexes-and-constraints.sql` | 索引与唯一约束 |
-| 05 | `blog-api/sql/2026-11-04-v1-0-community.sql` | 社区模块 4 张表 |
-| 06 | `blog-api/sql/2026-11-05-v1-1a-file-product.sql` | 文件服务 + 商品域 10 张表 |
+| 03 | `coolpilot-server/demo-data.sql` | 5 篇演示文章 |
+| 04 | `coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql` | 索引与唯一约束 |
+| 05 | `coolpilot-server/sql/2026-11-04-v1-0-community.sql` | 社区模块 4 张表 |
+| 06 | `coolpilot-server/sql/2026-11-05-v1-1a-file-product.sql` | 文件服务 + 商品域 10 张表 |
 | 07 | `deploy/mysql/07-seed-product.sql` | 演示商品、课程、课时 |
-| 08 | `blog-api/sql/2026-11-05-v1-1b-order-payment-entitlement.sql` | 交易域 + 权益域 6 张表，以及收款配置项 |
+| 08 | `coolpilot-server/sql/2026-11-05-v1-1b-order-payment-entitlement.sql` | 交易域 + 权益域 6 张表，以及收款配置项 |
 
 > **修改初始化脚本后不会自动重跑**。需要重建：
 > `docker compose down -v && docker compose up -d`
@@ -142,7 +142,7 @@ MySQL 官方镜像**只在数据卷为空时**执行 `/docker-entrypoint-initdb.
 
 ### 前端（热更新）
 
-`./blog-view`、`./blog-cms` 以 bind mount 挂到容器 `/app`，改 `src` 下任何文件都会触发热更新。
+`./coolpilot-web`、`./coolpilot-admin` 以 bind mount 挂到容器 `/app`，改 `src` 下任何文件都会触发热更新。
 
 如果热更新不生效（Windows 常见），已通过 `CHOKIDAR_USEPOLLING=true` 兜底；仍无反应时：
 
@@ -178,7 +178,7 @@ docker compose ps                      # 状态
 docker compose logs -f --tail=100 api  # 后端日志
 docker compose restart view            # 重启单个服务
 docker compose exec api sh             # 进后端容器
-docker compose exec mysql mysql -uroot -p nblog   # 进数据库
+docker compose exec mysql mysql -uroot -p coolpilot   # 进数据库
 docker compose exec redis redis-cli -a "$REDIS_PASSWORD"
 docker compose build --progress=plain  # 排查构建问题时看详细输出
 ```
@@ -199,7 +199,7 @@ docker compose build --progress=plain  # 排查构建问题时看详细输出
 ```powershell
 # 停本机后端与前端 dev server
 Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -like '*blog-api-0.0.1.jar*' -or $_.CommandLine -like '*vue-cli-service*' } |
+  Where-Object { $_.CommandLine -like '*coolpilot-server-0.0.1.jar*' -or $_.CommandLine -like '*vue-cli-service*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 ```
 
