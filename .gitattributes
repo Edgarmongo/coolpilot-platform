@@ -1,0 +1,16 @@
+# 统一换行符：仓库里一律存 LF
+#
+# 必须项：shell 脚本、Dockerfile、nginx 配置带 CRLF 会在 Linux 容器里直接报
+#   /bin/sh^M: bad interpreter
+# 这是 Windows 开发、Linux 部署时最常见的坑，钉死 eol=lf 可以避免。
+* text=auto
+
+*.sh       text eol=lf
+Dockerfile text eol=lf
+*.conf     text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.sql      text eol=lf
+
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
