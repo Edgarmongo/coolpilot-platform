@@ -47,9 +47,11 @@
 
 <script setup lang="ts">
 const router = useRouter()
-const {isLogin, user, clearSession} = useApi()
+const {call, isLogin, user, clearSession} = useApi()
 
-function logout() {
+async function logout() {
+	// 先让服务端吊销 token（递增版本号），失败也要清本地，不能卡住用户
+	await call('/me/logout', {method: 'POST'}).catch(() => null)
 	clearSession()
 	router.push('/')
 }

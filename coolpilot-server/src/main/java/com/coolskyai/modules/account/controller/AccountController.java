@@ -2,6 +2,7 @@ package com.coolskyai.modules.account.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +49,16 @@ public class AccountController {
 		Long userId = accountService.requireUserId();
 		User user = accountService.updateProfile(userId, dto);
 		return Result.ok("保存成功", AccountVO.of(user));
+	}
+
+	/**
+	 * 登出：吊销当前身份的全部 token。
+	 * 前端即使不调用也能"看起来登出"，但调用后旧 token 才真的失效。
+	 */
+	@PostMapping("/me/logout")
+	public Result logout() {
+		accountService.logoutCurrent();
+		return Result.ok("已退出登录", null);
 	}
 
 	/**

@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.coolskyai.constant.Role;
 import com.coolskyai.constant.SecurityPaths;
+import com.coolskyai.modules.account.service.TokenVersionService;
 import com.coolskyai.service.LoginLogService;
 import com.coolskyai.service.impl.UserServiceImpl;
 
@@ -32,15 +33,18 @@ public class SecurityConfig {
 	private final LoginLogService loginLogService;
 	private final MyAuthenticationEntryPoint myAuthenticationEntryPoint;
 	private final MyAccessDeniedHandler myAccessDeniedHandler;
+	private final TokenVersionService tokenVersionService;
 
 	public SecurityConfig(UserServiceImpl userService,
 	                      LoginLogService loginLogService,
 	                      MyAuthenticationEntryPoint myAuthenticationEntryPoint,
-	                      MyAccessDeniedHandler myAccessDeniedHandler) {
+	                      MyAccessDeniedHandler myAccessDeniedHandler,
+	                      TokenVersionService tokenVersionService) {
 		this.userService = userService;
 		this.loginLogService = loginLogService;
 		this.myAuthenticationEntryPoint = myAuthenticationEntryPoint;
 		this.myAccessDeniedHandler = myAccessDeniedHandler;
+		this.tokenVersionService = tokenVersionService;
 	}
 
 	@Bean
@@ -99,8 +103,8 @@ public class SecurityConfig {
 						.anyRequest().denyAll()
 				)
 				//自定义JWT过滤器
-				.addFilterBefore(new JwtLoginFilter(authenticationManager, loginLogService), UsernamePasswordAuthenticationFilter.class)
-				.addFilterBefore(new JwtFilter(), UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(new JwtLoginFilter(authenticationManager, loginLogService, tokenVersionService), UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(new JwtFilter(tokenVersionService), UsernamePasswordAuthenticationFilter.class)
 				//未登录时返回“请登录”，已登录但权限不足返回“无权限访问”，均保持统一 JSON 结构
 				.exceptionHandling(exception -> exception
 						.authenticationEntryPoint(myAuthenticationEntryPoint)

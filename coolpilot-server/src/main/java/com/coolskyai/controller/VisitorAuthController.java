@@ -13,6 +13,7 @@ import com.coolskyai.entity.User;
 import com.coolskyai.model.dto.LoginInfo;
 import com.coolskyai.model.dto.RegisterInfo;
 import com.coolskyai.model.vo.Result;
+import com.coolskyai.modules.account.service.TokenVersionService;
 import com.coolskyai.service.UserService;
 import com.coolskyai.util.JwtUtils;
 
@@ -31,6 +32,8 @@ import java.util.Map;
 public class VisitorAuthController {
 	@Autowired
 	private UserService userService;
+	@Autowired
+	private TokenVersionService tokenVersionService;
 
 	/**
 	 * 访客自助注册，注册成功后直接返回登录态
@@ -62,8 +65,9 @@ public class VisitorAuthController {
 	 * 组装返回给前端的登录结果
 	 */
 	private Map<String, Object> buildLoginResult(User user) {
-		String token = JwtUtils.generateToken(JwtConstants.USER_PREFIX + user.getId(),
-				AuthorityUtils.createAuthorityList(Role.USER));
+		String subject = JwtConstants.USER_PREFIX + user.getId();
+		String token = JwtUtils.generateToken(subject, AuthorityUtils.createAuthorityList(Role.USER),
+				tokenVersionService.current(subject));
 		Map<String, Object> map = new HashMap<>(4);
 		map.put("user", user);
 		map.put("token", token);

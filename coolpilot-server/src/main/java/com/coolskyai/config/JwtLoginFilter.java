@@ -15,6 +15,7 @@ import com.coolskyai.entity.LoginLog;
 import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.Result;
+import com.coolskyai.modules.account.service.TokenVersionService;
 import com.coolskyai.service.LoginLogService;
 import com.coolskyai.util.IpAddressUtils;
 import com.coolskyai.util.JacksonUtils;
@@ -39,13 +40,16 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	private static final String LOGIN_PROCESSES_URL = "/admin/login";
 
 	LoginLogService loginLogService;
+	TokenVersionService tokenVersionService;
 	ThreadLocal<String> currentUsername = new ThreadLocal<>();
 
-	protected JwtLoginFilter(AuthenticationManager authenticationManager, LoginLogService loginLogService) {
+	protected JwtLoginFilter(AuthenticationManager authenticationManager, LoginLogService loginLogService,
+	                         TokenVersionService tokenVersionService) {
 		// Spring Security 7 已废弃 AntPathRequestMatcher，这里改用函数式 RequestMatcher
 		super(request -> LOGIN_PROCESSES_URL.equals(request.getServletPath()));
 		setAuthenticationManager(authenticationManager);
 		this.loginLogService = loginLogService;
+		this.tokenVersionService = tokenVersionService;
 	}
 
 	@Override
@@ -82,7 +86,9 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	@Override
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 	                                        FilterChain chain, Authentication authResult) throws IOException {
-		String jwt = JwtUtils.generateToken(JwtConstants.OWNER_PREFIX + authResult.getName(), authResult.getAuthorities());
+		String subject = JwtConstants.OWNER_PREFIX + authResult.getName();
+		// 带上当前版本号：改密码/登出后这张 token 会被立刻判为失效
+		String jwt = JwtUtils.generateToken(subject, authResult.getAuthorities(), tokenVersionService.current(subject));
 		response.setContentType("application/json;charset=utf-8");
 		User user = (User) authResult.getPrincipal();
 		user.setPassword(null);

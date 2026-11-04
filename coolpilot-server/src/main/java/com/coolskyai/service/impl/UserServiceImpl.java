@@ -6,7 +6,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import com.coolskyai.constant.JwtConstants;
 import com.coolskyai.constant.Role;
+import com.coolskyai.modules.account.service.TokenVersionService;
 import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.exception.NotFoundException;
@@ -43,6 +45,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
 	@Autowired
 	private UserMapper userMapper;
+	@Autowired
+	private TokenVersionService tokenVersionService;
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -74,13 +78,67 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		return user;
 	}
 
+	/**
+	 * 后台「账号设置」保存。
+	 *
+	 * 修过的两个老问题：
+	 *   1. token 的 subject 是 owner:用户名，直接拿去 where username 查库永远匹配不到，
+	 *      所以这个接口之前必然返回「修改失败」。现在用 JwtConstants.ownerName 拆前缀。
+	 *   2. 原 SQL 只更新 username/password，昵称/头像/邮箱改了不生效；
+	 *      且 password 传空时会把密码覆盖成 null 的哈希。
+	 *      现在密码留空 = 不改，其它资料留空 = 保留原值。
+	 */
 	@Override
 	public boolean changeAccount(User user, String jwt) {
-		String username = JwtUtils.getTokenBody(jwt).getSubject();
-		user.setPassword(HashUtils.getBC(user.getPassword()));
-		if (userMapper.updateUserByUsername(username, user) != 1) {
+		String oldUsername = JwtConstants.ownerName(JwtUtils.getTokenBody(jwt).getSubject());
+		if (oldUsername == null) {
+			return false;
+		}
+		User existing = userMapper.findByUsername(oldUsername);
+		if (existing == null) {
+			return false;
+		}
+
+		String newUsername = user.getUsername() == null ? "" : user.getUsername().trim();
+		if (newUsername.isEmpty()) {
+			newUsername = oldUsername;
+		}
+		if (!USERNAME_PATTERN.matcher(newUsername).matches()) {
+			throw new BadRequestException("用户名需为 2-20 位字母、数字、下划线、点或中文");
+		}
+		boolean usernameChanged = !newUsername.equals(oldUsername);
+		if (usernameChanged && userMapper.findByUsername(newUsername) != null) {
+			throw new BadRequestException("该用户名已被占用");
+		}
+
+		boolean passwordChanged = user.getPassword() != null && !user.getPassword().isEmpty();
+		if (passwordChanged && (user.getPassword().length() < 6 || user.getPassword().length() > 32)) {
+			throw new BadRequestException("密码长度需为 6-32 位");
+		}
+
+		user.setUsername(newUsername);
+		user.setPassword(passwordChanged ? HashUtils.getBC(user.getPassword()) : existing.getPassword());
+		if (user.getNickname() == null || user.getNickname().trim().isEmpty()) {
+			user.setNickname(existing.getNickname());
+		}
+		if (user.getAvatar() == null || user.getAvatar().trim().isEmpty()) {
+			user.setAvatar(existing.getAvatar());
+		}
+		if (user.getEmail() == null) {
+			user.setEmail(existing.getEmail());
+		}
+
+		if (userMapper.updateUserByUsername(oldUsername, user) != 1) {
 			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
 			return false;
+		}
+
+		// 只改资料不动登录态；改了密码或用户名才吊销
+		if (passwordChanged || usernameChanged) {
+			tokenVersionService.bump(JwtConstants.OWNER_PREFIX + oldUsername);
+			if (usernameChanged) {
+				tokenVersionService.bump(JwtConstants.OWNER_PREFIX + newUsername);
+			}
 		}
 		return true;
 	}

@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.Role;
 import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.mapper.UserMapper;
@@ -32,6 +34,8 @@ public class AccountService {
 	private UserMapper userMapper;
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
+	@Autowired
+	private TokenVersionService tokenVersionService;
 
 	/**
 	 * 当前登录用户，未登录返回 null
@@ -117,6 +121,34 @@ public class AccountService {
 			throw new BadRequestException("新密码不能与原密码相同");
 		}
 		userMapper.updatePassword(userId, passwordEncoder.encode(newPassword));
+		/*
+		 * 改完密码立刻吊销该身份的旧 token（R-11）：
+		 * 否则别人拿到的 token 还能继续用满 3 天，"改密码"就只是心理安慰。
+		 * 所有设备（含后台 CMS）都会因此掉线，属于预期行为。
+		 */
+		tokenVersionService.bump(subjectOf(user));
+	}
+
+	/**
+	 * 主动登出：吊销该身份的全部 token
+	 *
+	 * 无状态 JWT 本来没有"登出"概念，前端删掉本地 token 只是眼不见为净。
+	 * 这里递增版本号，让服务端真正不认这张 token。
+	 */
+	public void logoutCurrent() {
+		User user = currentUser();
+		if (user != null) {
+			tokenVersionService.bump(subjectOf(user));
+		}
+	}
+
+	/**
+	 * 身份对应的 token subject
+	 */
+	private String subjectOf(User user) {
+		return Role.isOwner(user.getRole())
+				? JwtConstants.OWNER_PREFIX + user.getUsername()
+				: JwtConstants.USER_PREFIX + user.getId();
 	}
 
 	/**

@@ -70,8 +70,19 @@ public class JwtUtils {
 	 * @return
 	 */
 	public static String generateToken(String subject) {
+		return generateTokenWithVersion(subject, 0L);
+	}
+
+	/**
+	 * 生成不带权限、只带版本的 token（/login 的平台所有者前台身份）
+	 *
+	 * 注意不能重载成 generateToken(String, long)：会和「自定义过期时间」的
+	 * generateToken(String, long) 签名冲突（参数都是 String + long）。
+	 */
+	public static String generateTokenWithVersion(String subject, long version) {
 		return Jwts.builder()
 				.subject(subject)
+				.claim("tv", version)
 				.expiration(new Date(System.currentTimeMillis() + expireTime))
 				.signWith(signingKey)
 				.compact();
@@ -85,6 +96,19 @@ public class JwtUtils {
 	 * @return
 	 */
 	public static String generateToken(String subject, Collection<? extends GrantedAuthority> authorities) {
+		return generateToken(subject, authorities, 0L);
+	}
+
+	/**
+	 * 生成带角色权限与令牌版本的 token
+	 *
+	 * tv 是身份版本号（见 TokenVersionService）：版本一变，旧 token 立即失效。
+	 *
+	 * @param subject     身份（owner:用户名 / user:ID）
+	 * @param authorities 角色
+	 * @param version     当前版本号
+	 */
+	public static String generateToken(String subject, Collection<? extends GrantedAuthority> authorities, long version) {
 		StringBuilder sb = new StringBuilder();
 		for (GrantedAuthority authority : authorities) {
 			sb.append(authority.getAuthority()).append(",");
@@ -92,9 +116,18 @@ public class JwtUtils {
 		return Jwts.builder()
 				.subject(subject)
 				.claim("authorities", sb.toString())
+				.claim("tv", version)
 				.expiration(new Date(System.currentTimeMillis() + expireTime))
 				.signWith(signingKey)
 				.compact();
+	}
+
+	/**
+	 * 读取 token 里的版本号，缺失按 0 处理
+	 */
+	public static long tokenVersion(io.jsonwebtoken.Claims claims) {
+		Object value = claims.get("tv");
+		return value instanceof Number ? ((Number) value).longValue() : 0L;
 	}
 
 	/**

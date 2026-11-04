@@ -12,8 +12,18 @@
     </select>
 
     <!--按username修改-->
+    <!-- 后台账号设置：用户名/密码/资料一起更新。
+         password 由 Service 决定（没改就沿用原值），这里不做非空判断，
+         避免「只改昵称也把密码覆盖成 null」。 -->
     <update id="updateUserByUsername">
-        update user set username=#{user.username}, password=#{user.password}, update_time=now() where username=#{username}
+        update user
+        set username = #{user.username},
+            password = #{user.password},
+            nickname = #{user.nickname},
+            avatar   = #{user.avatar},
+            email    = #{user.email},
+            update_time = now()
+        where username = #{username}
     </update>
 
     <!--新增用户（前台访客注册）-->

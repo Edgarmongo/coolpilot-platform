@@ -213,6 +213,8 @@ coolpilot-platform/
 - 无状态，不建 Session，token 通过 `Authorization` 头传递
 - token 前缀区分身份：`owner:用户名` / `user:用户ID`（`JwtConstants`），历史前缀 `admin:` / `visitor:` 仍可解析
 - 未登录 → `{"code":403,"msg":"请登录"}`；已登录但越权 → `{"code":403,"msg":"无权限访问"}`
+- token 带 `tv`（身份版本号）：改密码、`POST /me/logout` 会递增 Redis 里的版本，旧 token 立即失效（R-11）；
+  Redis 不可用时按 0 处理（fail-open），避免整站被踢下线
 - **注意**：曾允许 `visitor` 只读 `/admin/**`（演示账号用途），开放访客自助注册后已收紧，否则构成越权漏洞
 
 ### 4.5 Redis 缓存键（11 个）

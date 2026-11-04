@@ -29,7 +29,7 @@
 					<el-button type="primary" :loading="saving" @click="submit">保存</el-button>
 				</el-form-item>
 			</el-form>
-			<p class="muted tip">密码修改后，当前登录状态仍然有效；下次登录请使用新密码。</p>
+			<p class="muted tip">修改密码会立即让所有已登录的 token 失效（含当前后台），保存后需要重新登录。</p>
 		</div>
 	</div>
 </template>
@@ -40,6 +40,7 @@ import {ElMessage} from 'element-plus'
 import {updateAccount} from '@/api/account'
 import {useUserStore} from '@/store/user'
 
+const router = useRouter()
 const userStore = useUserStore()
 const saving = ref(false)
 const form = reactive({username: '', nickname: '', email: '', avatar: '', password: ''})
@@ -58,6 +59,13 @@ async function submit() {
 			avatar: form.avatar,
 			password: form.password || undefined
 		})
+		// 改密码后旧 token 已被服务端吊销，必须重新登录
+		if (form.password) {
+			ElMessage.success('密码已修改，请重新登录')
+			userStore.logout()
+			router.push('/login')
+			return
+		}
 		ElMessage.success('修改成功')
 		// 同步本地缓存的展示信息
 		const user = {...(userStore.user || {}), nickname: form.nickname, email: form.email, avatar: form.avatar}

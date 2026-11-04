@@ -69,6 +69,7 @@ import {useRoute, useRouter} from 'vue-router'
 import {ArrowDown, Expand, Fold} from '@element-plus/icons-vue'
 import {routes} from '@/router'
 import {useUserStore} from '@/store/user'
+import {logout as logoutApi} from '@/api/account'
 
 const route = useRoute()
 const router = useRouter()
@@ -134,8 +135,11 @@ const breadcrumbs = computed(() => route.matched
 
 function onCommand(command) {
 	if (command === 'logout') {
-		userStore.logout()
-		router.push('/login')
+		// 让后端吊销 token（递增版本号），失败也照样清本地
+		logoutApi().catch(() => null).finally(() => {
+			userStore.logout()
+			router.push('/login')
+		})
 		return
 	}
 	if (command === 'view') {

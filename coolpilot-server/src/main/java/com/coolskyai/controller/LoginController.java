@@ -12,6 +12,7 @@ import com.coolskyai.entity.User;
 import com.coolskyai.model.dto.LoginInfo;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.service.LoginGuard;
+import com.coolskyai.modules.account.service.TokenVersionService;
 import com.coolskyai.service.UserService;
 import com.coolskyai.util.JwtUtils;
 
@@ -29,6 +30,8 @@ public class LoginController {
 	UserService userService;
 	@Autowired
 	LoginGuard loginGuard;
+	@Autowired
+	TokenVersionService tokenVersionService;
 
 	/**
 	 * 登录成功后，签发博主身份Token
@@ -67,7 +70,8 @@ public class LoginController {
 		}
 		loginGuard.onSuccess(loginInfo.getUsername());
 		user.setPassword(null);
-		String jwt = JwtUtils.generateToken(JwtConstants.OWNER_PREFIX + user.getUsername());
+		String subject = JwtConstants.OWNER_PREFIX + user.getUsername();
+		String jwt = JwtUtils.generateTokenWithVersion(subject, tokenVersionService.current(subject));
 		Map<String, Object> map = new HashMap<>(4);
 		map.put("user", user);
 		map.put("token", jwt);
