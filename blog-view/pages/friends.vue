@@ -6,12 +6,12 @@
 		<div v-if="info" class="card intro article" v-html="info"></div>
 
 		<div class="grid">
-			<a v-for="friend in friends" :key="friend.url" :href="friend.url" target="_blank" rel="noopener"
+			<a v-for="friend in friends" :key="friend.website || friend.url" :href="friend.website || friend.url" target="_blank" rel="noopener"
 			   class="card friend">
 				<img v-if="friend.avatar" :src="friend.avatar" class="avatar" alt="">
 				<div>
 					<strong>{{ friend.nickname }}</strong>
-					<p class="muted">{{ friend.description || friend.url }}</p>
+					<p class="muted">{{ friend.description || friend.website }}</p>
 				</div>
 			</a>
 		</div>

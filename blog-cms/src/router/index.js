@@ -76,6 +76,20 @@ export const routes = [
 		]
 	},
 	{
+		path: '/page',
+		component: Layout,
+		redirect: '/page/friend',
+		meta: {title: '页面管理', icon: 'Files'},
+		children: [
+			{
+				path: 'friend',
+				name: 'FriendList',
+				component: () => import('@/views/page/FriendList.vue'),
+				meta: {title: '友链管理', icon: 'Link'}
+			}
+		]
+	},
+	{
 		path: '/system',
 		component: Layout,
 		redirect: '/system/account',
