@@ -167,7 +167,7 @@ feat(trade): 人工确认收款后自动发放权益
 
 | 项 | 说明 |
 |---|---|
-| 本地目录名 | 工作区目录当前仍是 `NBlog`（IDE 占用导致无法重命名）。关闭 IDE 后执行 `mv NBlog coolpilot-platform` 即可，仓库内外路径不受影响 |
+| 本地目录名 | 已于 2026-11-05 将工作区目录由 `NBlog` 更名为 `coolpilot-platform`。若 IDE 仍是旧路径，请关闭后以新路径重新打开 |
 | 容器与前缀命名 | `docker-compose.yml` 的 `name: nblog` 与容器名 `nblog-*` 暂未改。改动会导致数据卷名变化（`nblog_mysql_data` → `coolpilot-platform_mysql_data`），等同于清库，需单独安排迁移，不在本次范围 |
 | `package-lock.json` | 上游 `.gitignore` 忽略了 lock 文件。本次基线已取消该忽略并提交前端 lock，保证依赖可复现；后续升级依赖时请一并提交 lock 变更 |
 | 本项目许可证 | 未定，见 `docs/LICENSE-REVIEW.md` |
