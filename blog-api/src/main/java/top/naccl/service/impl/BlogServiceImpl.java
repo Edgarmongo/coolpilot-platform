@@ -266,9 +266,11 @@ public class BlogServiceImpl implements BlogService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void deleteBlogTagByBlogId(Long blogId) {
-		if (blogMapper.deleteBlogTagByBlogId(blogId) == 0) {
-			throw new PersistenceException("维护博客标签关联表失败");
-		}
+		/*
+		 * 删除 0 行是合法情况：文章本来就没有标签（或更新时把标签全清空）。
+		 * 早期实现把 0 行当失败抛出，导致「无标签文章无法删除 / 无法清空标签」。
+		 */
+		blogMapper.deleteBlogTagByBlogId(blogId);
 	}
 
 	@Transactional(rollbackFor = Exception.class)
