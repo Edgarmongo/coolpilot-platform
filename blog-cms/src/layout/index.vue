@@ -5,9 +5,29 @@
 				<span class="layout-logo-mark">CP</span>
 				<span v-show="!collapsed" class="layout-logo-text">CoolPilot</span>
 			</div>
-			<el-menu :default-active="activeMenu" :collapse="collapsed" router
+			<el-menu :default-active="activeMenu" :collapse="collapsed" router class="layout-menu"
 			         background-color="#1f2d3d" text-color="#bfcbd9" active-text-color="#4ec9b0">
-				<template v-for="item in menuList" :key="item.path">
+				<template v-for="item in topMenus" :key="item.path">
+					<el-sub-menu v-if="item.children" :index="item.path">
+						<template #title>
+							<el-icon><component :is="item.icon"/></el-icon>
+							<span>{{ item.title }}</span>
+						</template>
+						<el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">
+							<el-icon><component :is="child.icon"/></el-icon>
+							<span>{{ child.title }}</span>
+						</el-menu-item>
+					</el-sub-menu>
+					<el-menu-item v-else :index="item.path">
+						<el-icon><component :is="item.icon"/></el-icon>
+						<span>{{ item.title }}</span>
+					</el-menu-item>
+				</template>
+
+				<!--弹性占位：把底部菜单压到侧栏最低端-->
+				<div class="menu-spacer"/>
+
+				<template v-for="item in bottomMenus" :key="'bottom-' + item.path">
 					<el-sub-menu v-if="item.children" :index="item.path">
 						<template #title>
 							<el-icon><component :is="item.icon"/></el-icon>
@@ -82,7 +102,7 @@ const username = computed(() => userStore.username)
  * 由路由表生成菜单：顶层没有子项时直接渲染，有子项时折叠成二级菜单。
  * 新增模块只需要在 router 里加路由，菜单会自动出现。
  */
-const menuList = computed(() => {
+const allMenus = computed(() => {
 	const result = []
 	for (const item of routes) {
 		if (item.meta && item.meta.hidden) {
@@ -94,7 +114,12 @@ const menuList = computed(() => {
 		const children = (item.children || []).filter(child => child.meta && child.meta.title && !child.meta.hidden)
 		if (item.path === '/') {
 			children.forEach(child => {
-				result.push({path: '/' + child.path, title: child.meta.title, icon: child.meta.icon || 'Menu'})
+				result.push({
+					path: '/' + child.path,
+					title: child.meta.title,
+					icon: child.meta.icon || 'Menu',
+					bottom: !!(child.meta && child.meta.bottom)
+				})
 			})
 			continue
 		}
@@ -103,6 +128,7 @@ const menuList = computed(() => {
 				path: item.path,
 				title: (item.meta && item.meta.title) || item.path,
 				icon: (item.meta && item.meta.icon) || 'Menu',
+				bottom: !!(item.meta && item.meta.bottom),
 				children: children.map(child => ({
 					path: item.path + '/' + child.path,
 					title: child.meta.title,
@@ -113,6 +139,10 @@ const menuList = computed(() => {
 	}
 	return result
 })
+
+// 标了 meta.bottom 的模块（系统/设置类）始终固定在侧栏最下方
+const bottomMenus = computed(() => allMenus.value.filter(item => item.bottom))
+const topMenus = computed(() => allMenus.value.filter(item => !item.bottom))
 
 const activeMenu = computed(() => route.path)
 
@@ -175,6 +205,17 @@ function onCommand(command) {
 
 .layout-aside :deep(.el-menu) {
 	border-right: none;
+}
+
+.layout-menu {
+	display: flex;
+	flex-direction: column;
+	height: calc(100% - 56px);
+}
+
+.menu-spacer {
+	flex: 1 1 auto;
+	min-height: 12px;
 }
 
 .layout-header {

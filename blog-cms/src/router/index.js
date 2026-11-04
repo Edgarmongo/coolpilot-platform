@@ -105,7 +105,8 @@ export const routes = [
 		path: '/system',
 		component: Layout,
 		redirect: '/system/account',
-		meta: {title: '系统', icon: 'Setting'},
+		// bottom: 固定到侧栏最底部
+		meta: {title: '系统', icon: 'Setting', bottom: true},
 		children: [
 			{
 				path: 'account',
