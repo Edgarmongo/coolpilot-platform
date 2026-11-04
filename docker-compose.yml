@@ -77,6 +77,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      # 允许跨域的来源：生产收紧到站点域名，多个用逗号分隔
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8081,http://localhost:8079,http://127.0.0.1:8081,http://127.0.0.1:8079}
       # 是否信任 X-Forwarded-For：只有反向代理会覆盖该头时才置 true
       SECURITY_TRUST_FORWARDED_FOR: ${SECURITY_TRUST_FORWARDED_FOR:-false}
       # 上传目录改为容器内路径（原配置指向开发者本机 Mac 路径）

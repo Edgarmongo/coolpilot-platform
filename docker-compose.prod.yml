@@ -90,6 +90,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      # 允许跨域的来源：生产收紧到站点域名，多个用逗号分隔
+      CORS_ALLOWED_ORIGINS: ${SITE_URL:-https://coolskyai.com}
       # 生产固定走 gateway，而 gateway 会用 $remote_addr 覆盖该头，
       # 所以这里默认 true，让限流/去重按真实客户端 IP 计算
       SECURITY_TRUST_FORWARDED_FOR: ${SECURITY_TRUST_FORWARDED_FOR:-true}

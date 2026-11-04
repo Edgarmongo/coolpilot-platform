@@ -17,9 +17,9 @@
 
 其余：1 个 P0、5 个 P1、5 个 P2、1 个 P3。详见第七节风险登记册。
 
-> **修复状态（2026-11-05 07:00 更新）**：R-01 ~ R-09、R-11 已修复并回归验证，
-> 其中 R-03（默认拒绝）、R-09（友链刷量）、R-11（token 吊销）在最近两轮完成，记录见第十一节。
-> 剩余为 P2 的 R-10（CORS 全开）与 P2/P3 的 R-12、R-13。
+> **修复状态（2026-11-05 07:10 更新）**：R-01 ~ R-11 已全部修复并回归验证，
+> 最近两轮完成 R-03（默认拒绝）、R-09（友链刷量）、R-10（CORS 收紧）、R-11（token 吊销），记录见第十一节。
+> 剩余 R-12（密码文章 token 语义）、R-13（图床凭据存 localStorage）。
 
 ---
 
@@ -248,7 +248,11 @@ GET /admin/dashboard   Authorization: <伪造token>
 
 ### R-10【P2】CORS 全开
 
-`allowedOrigins("*")` 且未开 `allowCredentials`。由于认证靠 `Authorization` 头而非 Cookie，实际风险低。若未来引入 Cookie 会话，必须收紧。
+`allowedOrigins("*")` 且未开 `allowCredentials`。由于认证靠 `Authorization` 头而非 Cookie，实际风险低。
+
+| 项 | 内容 |
+|---|---|
+| 修复 | ✅ 改为可配置白名单 `cors.allowed-origins`：开发列出本地端口，生产由 `CORS_ALLOWED_ORIGINS` 注入站点域名，见 11.8 |
 
 ### R-11【P2】token 3 天有效且不可吊销
 
@@ -376,3 +380,11 @@ GET /admin/dashboard   Authorization: <伪造token>
 | 兼容 | 旧 token 没有 `tv` 声明，按 0 处理，与未 bump 的身份一致，升级当刻不掉线 |
 | 验证 | 同一账号两个会话 → 改密后两个都 403；旧密码登录 401；新密码正常；`/me/logout` 后原 token 403；只改昵称不影响登录态；后台改密后 CMS 旧 token 403 |
 | 顺带修复 | 后台「账号设置」保存此前**必然失败**：token subject 是 `owner:用户名`，被直接当 `where username` 条件；且原 SQL 只更新用户名/密码，昵称头像邮箱改了不生效。现改为拆前缀 + 按需改密 + 资料兜底 |
+
+### 11.8 R-10 CORS 收紧 —— 已修复（2026-11-05）
+
+| 项 | 内容 |
+|---|---|
+| 改动 | `WebConfig` 读 `cors.allowed-origins`（逗号分隔，空/缺省回落到 `*`）；开发默认 `localhost:8081/8079`，生产 `CORS_ALLOWED_ORIGINS=${SITE_URL}` |
+| 验证 | 许可来源预检 200 且回显该 Origin；`https://evil.example` 预检 403 且无 `Access-Control-Allow-Origin`；无 Origin 的普通请求不受影响；前台/CMS 页面正常 |
+| 说明 | 前端正常访问都走同源代理，不依赖 CORS；收紧只影响「第三方站点直接调接口」 |
