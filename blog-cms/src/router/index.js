@@ -26,6 +26,56 @@ export const routes = [
 		]
 	},
 	{
+		path: '/blog',
+		component: Layout,
+		redirect: '/blog/list',
+		meta: {title: '内容管理', icon: 'Document'},
+		children: [
+			{
+				path: 'list',
+				name: 'BlogList',
+				component: () => import('@/views/blog/BlogList.vue'),
+				meta: {title: '文章列表', icon: 'List'}
+			},
+			{
+				path: 'write',
+				name: 'WriteBlog',
+				component: () => import('@/views/blog/WriteBlog.vue'),
+				meta: {title: '写文章', icon: 'EditPen'}
+			},
+			{
+				path: 'edit/:id',
+				name: 'EditBlog',
+				component: () => import('@/views/blog/WriteBlog.vue'),
+				meta: {title: '编辑文章', hidden: true}
+			},
+			{
+				path: 'category',
+				name: 'CategoryList',
+				component: () => import('@/views/blog/CategoryList.vue'),
+				meta: {title: '分类管理', icon: 'Folder'}
+			},
+			{
+				path: 'tag',
+				name: 'TagList',
+				component: () => import('@/views/blog/TagList.vue'),
+				meta: {title: '标签管理', icon: 'CollectionTag'}
+			},
+			{
+				path: 'moment',
+				name: 'MomentList',
+				component: () => import('@/views/blog/MomentList.vue'),
+				meta: {title: '动态管理', icon: 'ChatDotRound'}
+			},
+			{
+				path: 'comment',
+				name: 'CommentList',
+				component: () => import('@/views/blog/CommentList.vue'),
+				meta: {title: '评论管理', icon: 'ChatLineSquare'}
+			}
+		]
+	},
+	{
 		path: '/trade',
 		component: Layout,
 		redirect: '/trade/order',
