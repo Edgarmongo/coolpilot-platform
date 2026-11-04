@@ -1,4 +1,5 @@
 <template>
+	<div>
 	<div class="card">
 		<template v-if="blog">
 			<h1 class="page-title">{{ blog.title }}</h1>
@@ -10,6 +11,8 @@
 			<div class="article" v-html="blog.content"></div>
 		</template>
 		<div v-else class="empty">文章不存在或已被删除</div>
+	</div>
+	<CommentSection v-if="blog" :blog-id="Number(route.params.id)"/>
 	</div>
 </template>
 
