@@ -228,7 +228,7 @@ JwtFilter 改为：所有路径都尝试解析 token
 |---|---|
 | 当前用户 | 新增 `CurrentUser` 工具类：`getUserId()` / `getRole()` / `isOwner()`，从 `SecurityContext` 取，取不到返回 null |
 | 前台接口鉴权 | `SecurityConfig` 增加 `.requestMatchers("/favorite/**","/orders/**","/messages/**","/demands/**","/entitlements/**").hasAnyRole("owner","user")` —— **注意必须 `hasAnyRole`**，因为 OWNER 的角色是 `ROLE_owner`，不包含 `ROLE_user` |
-| 兼容 | `subject` 仍以 `admin:` / `visitor:` 前缀区分，解析时拆前缀取真实用户名/ID；不能破坏 `BlogController` 现有的密码文章校验逻辑 |
+| 兼容 | `subject` 以 `owner:` / `user:` 前缀区分（历史 `admin:` / `visitor:` 仍可解析），统一走 `JwtConstants.ownerName()` / `userId()` 取真实身份；不能破坏 `BlogController` 现有的密码文章校验逻辑 |
 
 > 不做这一步，收藏、订单、消息全部只能"写死用户"或"信任前端传 userId"，后者是越权漏洞。
 
@@ -238,13 +238,15 @@ JwtFilter 改为：所有路径都尝试解析 token
 
 | 位置 | 改动 |
 |---|---|
-| `SecurityConfig` | `hasRole("admin")` → `hasRole("owner")` |
-| `JwtConstants` | 前缀 `admin:` 可保留（语义是"博主 token"），不必改 |
-| `VisitorAuthController` | 写入 `ROLE_user` |
-| `coolpilot-admin` | 路由守卫里 `role !== 'ROLE_admin'` 的判断 |
-| `coolpilot-web` | 顶栏登录态判断 |
+| `SecurityConfig` | `hasRole("admin")` → `hasAuthority(Role.OWNER)`，用户级路径收敛到 `SecurityPaths.AUTHENTICATED` |
+| `JwtConstants` | 前缀改 `owner:` / `user:`，保留 `LEGACY_ADMIN_PREFIX` / `LEGACY_VISITOR_PREFIX` 读取兼容 |
+| `VisitorAuthController` | 写入 `ROLE_user`，签发 `user:` 前缀 token |
+| `coolpilot-admin` | 实测无角色判断，仅校验 token 存在 |
+| `coolpilot-web` | 实测无角色判断，仅存 token |
 
-> 建议：**先加兼容**（`hasAnyRole("admin","owner")`），灰度跑一轮后再收口成 `hasRole("owner")`。这样数据迁移和代码发布可以解耦。
+> **实施结果（2026-11-05）**：已一次性完成，未采用"先 `hasAnyRole` 灰度"的两步走，
+> 而是用 `Role.normalize()` 在读取侧归一化——旧 token 的 `ROLE_admin`/`ROLE_visitor` 在 `JwtFilter` 里即时转成新值，
+> 因此发布当刻无需等待数据迁移与 token 过期，也没有过渡期的双写。库内数据由 `V5__role_rename.sql` 收敛。
 
 ---
 

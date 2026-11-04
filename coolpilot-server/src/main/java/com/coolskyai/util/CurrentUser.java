@@ -4,12 +4,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.Role;
 
 /**
  * @Description: 当前登录用户上下文
  *
  * 身份来源：JwtFilter 解析 token 后写入 SecurityContext，principal 为完整 subject
- * （博主：admin:用户名；访客：visitor:用户ID）。
+ * （平台所有者：owner:用户名；前台用户：user:用户ID），
+ * 历史 token 的 admin: / visitor: 前缀同样可用。
  *
  * 注意：不要用 ThreadLocal 自行保存用户名。
  * 历史上 JwtLoginFilter 曾用 ThreadLocal 记录登录名，异常分支未 remove 导致线程复用串号，已修复。
@@ -33,14 +35,11 @@ public final class CurrentUser {
 		}
 		String subject = (String) principal;
 		// 匿名过滤器会写入 anonymousUser，必须排除，否则会被误判为已登录
-		if (subject.startsWith(JwtConstants.ADMIN_PREFIX) || subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
-			return subject;
-		}
-		return null;
+		return JwtConstants.isAuthSubject(subject) ? subject : null;
 	}
 
 	/**
-	 * 是否已登录（博主或访客）
+	 * 是否已登录（所有者或前台用户）
 	 */
 	public static boolean isLogin() {
 		return subject() != null;
@@ -48,6 +47,8 @@ public final class CurrentUser {
 
 	/**
 	 * 是否平台所有者
+	 *
+	 * 兼容旧 token 里的 ROLE_admin，读入时归一化，不再直接比较历史字面量。
 	 */
 	public static boolean isOwner() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -55,7 +56,7 @@ public final class CurrentUser {
 			return false;
 		}
 		for (GrantedAuthority authority : authentication.getAuthorities()) {
-			if ("ROLE_admin".equals(authority.getAuthority())) {
+			if (Role.isOwner(authority.getAuthority())) {
 				return true;
 			}
 		}
@@ -63,36 +64,24 @@ public final class CurrentUser {
 	}
 
 	/**
-	 * 博主用户名，非博主登录返回 null
+	 * 平台所有者用户名，非所有者登录返回 null
 	 */
 	public static String ownerUsername() {
-		String subject = subject();
-		if (subject != null && subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
-			return subject.substring(JwtConstants.ADMIN_PREFIX.length());
-		}
-		return null;
+		return JwtConstants.ownerName(subject());
 	}
 
 	/**
-	 * 访客ID，非访客登录返回 null
+	 * 前台注册用户ID，非前台用户登录返回 null
 	 */
-	public static Long visitorId() {
-		String subject = subject();
-		if (subject != null && subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
-			try {
-				return Long.parseLong(subject.substring(JwtConstants.VISITOR_PREFIX.length()));
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		}
-		return null;
+	public static Long userId() {
+		return JwtConstants.userId(subject());
 	}
 
 	/**
-	 * 当前用户ID：访客直接取 token 中的ID；博主需要通过用户名查库
+	 * 当前用户ID：前台用户直接取 token 中的ID；所有者需要通过用户名查库
 	 * 统一的取用户方法放在业务层，避免工具类依赖 Mapper
 	 */
 	public static Long userIdOrNull() {
-		return visitorId();
+		return userId();
 	}
 }

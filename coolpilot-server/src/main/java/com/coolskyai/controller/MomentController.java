@@ -47,9 +47,9 @@ public class MomentController {
 		if (JwtUtils.judgeTokenIsExist(jwt)) {
 			try {
 				String subject = JwtUtils.getTokenBody(jwt).getSubject();
-				if (subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
+				if (JwtConstants.isOwnerSubject(subject)) {
 					//博主身份Token
-					String username = subject.replace(JwtConstants.ADMIN_PREFIX, "");
+					String username = JwtConstants.ownerName(subject);
 					User admin = (User) userService.loadUserByUsername(username);
 					if (admin != null) {
 						adminIdentity = true;

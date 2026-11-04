@@ -82,7 +82,7 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	@Override
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 	                                        FilterChain chain, Authentication authResult) throws IOException {
-		String jwt = JwtUtils.generateToken(JwtConstants.ADMIN_PREFIX + authResult.getName(), authResult.getAuthorities());
+		String jwt = JwtUtils.generateToken(JwtConstants.OWNER_PREFIX + authResult.getName(), authResult.getAuthorities());
 		response.setContentType("application/json;charset=utf-8");
 		User user = (User) authResult.getPrincipal();
 		user.setPassword(null);

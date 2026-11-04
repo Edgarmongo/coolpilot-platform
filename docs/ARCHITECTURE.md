@@ -151,7 +151,7 @@ coolpilot-platform/
 | POST | `/comment` | 提交评论 |
 | POST | `/friend` | 申请友链 |
 | POST | `/moment/like/{id}` | 动态点赞 |
-| POST | `/login` | 博主登录（仅 `ROLE_admin`，前台已不再使用） |
+| POST | `/login` | 平台所有者登录（仅 `ROLE_owner`，前台已不再使用） |
 | POST | `/visitor/register` | **访客注册**（限流 60s/3 次） |
 | POST | `/visitor/login` | **访客登录**（限流 60s/10 次） |
 | POST/DELETE | `/favorite` | 收藏/取消收藏（幂等，需登录） |
@@ -193,18 +193,23 @@ coolpilot-platform/
 
 ```java
 .authorizeHttpRequests(auth -> auth
-    .requestMatchers("/admin/webTitleSuffix").permitAll()   // 前台取标题后缀
-    .requestMatchers("/admin/**").hasRole("admin")          // 仅博主，访客一律 403
-    .requestMatchers("/me", "/me/**").hasAnyRole("admin", "visitor")  // 前台用户级接口
-    .anyRequest().permitAll()                               // 其余全放行
+    .requestMatchers("/admin/webTitleSuffix").permitAll()                     // 前台取标题后缀
+    .requestMatchers(SecurityPaths.OWNER_ONLY).hasAuthority(Role.OWNER)       // 仅平台所有者
+    .requestMatchers(SecurityPaths.AUTHENTICATED).hasAnyAuthority(Role.OWNER, Role.USER)
+    .anyRequest().permitAll()                                                 // 其余全放行
 )
 ```
 
-> `JwtFilter` 会对**所有路径**解析 token：命中 `admin:` / `visitor:` 前缀才写入 `SecurityContext`；非后台路径遇到非法 token 按匿名放行（避免误判密码文章 token），后台路径仍立即返回 403。
-> **新增用户级接口时必须在 `SecurityConfig` 同步补 `hasAnyRole("admin","visitor")`**，否则会被 `anyRequest().permitAll()` 放行。
+> 路径清单集中在 `SecurityPaths`（`OWNER_ONLY` / `AUTHENTICATED`），角色常量在 `Role`（`ROLE_owner` / `ROLE_user`）。
+> **新增用户级接口时只需把路径加进 `SecurityPaths.AUTHENTICATED`**，不再需要在 `SecurityConfig` 里逐行硬编码 `hasAnyRole(...)`；
+> 漏加会被 `anyRequest().permitAll()` 静默放行，这是历史上真实踩过的坑。
+>
+> `JwtFilter` 会对**所有路径**解析 token：命中 `owner:` / `user:` 前缀（兼容历史 `admin:` / `visitor:`）才写入 `SecurityContext`，
+> 同时把 `authorities` 里的历史角色值归一化为 `ROLE_owner` / `ROLE_user`，升级当刻不会把在线用户踢下线；
+> 非后台路径遇到非法 token 按匿名放行（避免误判密码文章 token），后台路径仍立即返回 403。
 
 - 无状态，不建 Session，token 通过 `Authorization` 头传递
-- token 前缀区分身份：`admin:` / `visitor:`（`JwtConstants`）
+- token 前缀区分身份：`owner:用户名` / `user:用户ID`（`JwtConstants`），历史前缀 `admin:` / `visitor:` 仍可解析
 - 未登录 → `{"code":403,"msg":"请登录"}`；已登录但越权 → `{"code":403,"msg":"无权限访问"}`
 - **注意**：曾允许 `visitor` 只读 `/admin/**`（演示账号用途），开放访客自助注册后已收紧，否则构成越权漏洞
 
@@ -366,7 +371,7 @@ Nav 已登录：头像 + 昵称 + 退出
 | | `friend` | 友链（含审核状态） |
 | 页面 | `about` | 关于我（多语言条目） |
 | | `site_setting` | 站点配置，按 `type` 分组：1=基础 2=资料卡 4=友链页 |
-| 账号 | `user` | `ROLE_admin`（博主）/ `ROLE_visitor`（前台访客） |
+| 账号 | `user` | `ROLE_owner`（平台所有者）/ `ROLE_user`（前台用户） |
 | 统计 | `visit_log` | 访问明细 |
 | | `visitor` | 访客标识（UV 去重） |
 | | `city_visitor` / `visit_record` | 地域聚合、访问记录 |
@@ -411,8 +416,8 @@ POST /api/comment
 POST /api/visitor/register
   → 限流校验（60s/3 次）
   → 用户名格式 + 密码长度校验 → BCrypt 加密
-  → user 表插入 role=ROLE_visitor
-  → 签发 visitor: 前缀 JWT 返回
+  → user 表插入 role=ROLE_user
+  → 签发 user: 前缀 JWT 返回
 ```
 
 ---
@@ -472,6 +477,6 @@ cd coolpilot-web && npx vue-cli-service serve --port 8081
 | Security 配置 | `WebSecurityConfigurerAdapter` | `SecurityFilterChain` Bean |
 | 前台形态 | 三栏博客布局 | 文档门户布局（自研 portal 主题） |
 | 前台登录 | 博主登录（复用 `/login`） | 访客注册/登录（`/visitor/*`） |
-| 后台鉴权 | 允许 visitor 只读 `/admin/**` | 仅 `ROLE_admin` |
+| 后台鉴权 | 允许 visitor 只读 `/admin/**` | 仅 `ROLE_owner` |
 | 开发代理 | 无（依赖生产 nginx） | 两前端均补 `devServer.proxy` |
 | 首页背景图 | 3 张 1.5MB 图打包进产物 | 已移除，产物减约 4.5MB |

@@ -11,6 +11,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.coolskyai.constant.Role;
+import com.coolskyai.constant.SecurityPaths;
 import com.coolskyai.service.LoginLogService;
 import com.coolskyai.service.impl.UserServiceImpl;
 
@@ -70,41 +72,20 @@ public class SecurityConfig {
 						//放行获取网页标题后缀的请求
 						.requestMatchers("/admin/webTitleSuffix").permitAll()
 						/*
-						 * 任何 /admin 开头的路径下的请求都需要经过JWT验证，且仅限博主本人。
-						 * 注意：这里不再对 visitor 角色开放读权限。
-						 * 因为前台已支持访客自助注册（ROLE_visitor），若保留
-						 * hasAnyRole("admin","visitor")，任何注册用户都能读取后台接口数据。
-						 */
-						.requestMatchers("/admin/**").hasRole("admin")
-						/*
-						 * 前台用户级接口：必须是已登录用户（博主或访客）。
-						 * 注意必须用 hasAnyRole 而不是 hasRole("visitor")：
-						 * 博主角色是 ROLE_admin，不包含 ROLE_visitor，但博主同样可以使用这些功能。
+						 * 后台管理接口：仅平台所有者（ROLE_owner）。
 						 *
-						 * 新增用户级接口时，务必在此处补充路径，否则默认会被 anyRequest().permitAll() 放行。
+						 * 绝不能再对 ROLE_user 开放任何 /admin/** 读权限：
+						 * 前台支持自助注册，一旦放行，任何注册用户都能读到后台数据。
 						 */
-						.requestMatchers("/me", "/me/**").hasAnyRole("admin", "visitor")
+						.requestMatchers(SecurityPaths.OWNER_ONLY).hasAuthority(Role.OWNER)
 						/*
-						 * 以上是 V1.0 社区模块的用户级接口：收藏、点赞、站内消息。
-						 * 新增同类接口时必须同步补充，否则会被 anyRequest().permitAll() 放行。
-						 * /feedback 有意保持在下方放行列表中：允许未登录用户提交问题反馈。
+						 * 前台用户级接口：登录即可（所有者与前台用户同权）。
+						 *
+						 * 路径清单集中在 SecurityPaths.AUTHENTICATED，新增接口只改那一处；
+						 * 漏加的请求会被 anyRequest().permitAll() 静默放行，这是历史踩过的坑。
 						 */
-						.requestMatchers("/favorite", "/favorite/**", "/favorites").hasAnyRole("admin", "visitor")
-						.requestMatchers("/like", "/like/**").hasAnyRole("admin", "visitor")
-						.requestMatchers("/messages", "/messages/**", "/message/**").hasAnyRole("admin", "visitor")
-						//文件：换下载凭证、用户上传凭证都需要登录；/file/download 靠 token 自身校验，保持放行
-						.requestMatchers("/file/token", "/file/upload").hasAnyRole("admin", "visitor")
-						/*
-						 * V1.1b 交易与权益：下单、支付、退款、我的权益都必须登录。
-						 * 归属校验（只能看自己的订单）在 Service 层做，这里只挡未登录请求。
-						 * /resource/access 有意放行：未登录时返回 NOT_LOGIN 而不是 401，
-						 * 前端可以据此直接显示"登录后购买"。
-						 */
-						.requestMatchers("/order", "/orders", "/order/**").hasAnyRole("admin", "visitor")
-						.requestMatchers("/payment", "/payment/**").hasAnyRole("admin", "visitor")
-						.requestMatchers("/refund", "/refunds", "/refund/**").hasAnyRole("admin", "visitor")
-						.requestMatchers("/entitlements").hasAnyRole("admin", "visitor")
-						//其它路径全部放行（含 /visitor/register、/visitor/login、/feedback）
+						.requestMatchers(SecurityPaths.AUTHENTICATED).hasAnyAuthority(Role.OWNER, Role.USER)
+						//其它路径全部放行（含 /visitor/register、/visitor/login、/feedback、/resource/access）
 						.anyRequest().permitAll()
 				)
 				//自定义JWT过滤器

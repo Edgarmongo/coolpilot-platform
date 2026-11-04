@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.Role;
 import com.coolskyai.entity.User;
 import com.coolskyai.model.dto.LoginInfo;
 import com.coolskyai.model.vo.Result;
@@ -60,13 +61,13 @@ public class LoginController {
 			}
 			throw e;
 		}
-		if (!"ROLE_admin".equals(user.getRole())) {
+		if (!Role.isOwner(user.getRole())) {
 			// 角色不对不算密码错误，不计入锁定，避免误锁访客账号
 			return Result.create(403, "无权限");
 		}
 		loginGuard.onSuccess(loginInfo.getUsername());
 		user.setPassword(null);
-		String jwt = JwtUtils.generateToken(JwtConstants.ADMIN_PREFIX + user.getUsername());
+		String jwt = JwtUtils.generateToken(JwtConstants.OWNER_PREFIX + user.getUsername());
 		Map<String, Object> map = new HashMap<>(4);
 		map.put("user", user);
 		map.put("token", jwt);

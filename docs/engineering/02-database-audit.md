@@ -70,7 +70,7 @@ blog_id, parent_comment_id(非空，-1 表示根), website, qq
 id, username, password, nickname, avatar, email, create_time, update_time, role
 ```
 
-- `role` 为字符串，当前存 `ROLE_admin` / `ROLE_visitor`
+- `role` 为字符串，当前存 `ROLE_owner`（平台所有者）/ `ROLE_user`（前台用户），默认值 `ROLE_user`（V5 迁移）
 - **`username` 无唯一索引**
 - 无 `status`（禁用）、`bio`、`last_login_time`
 

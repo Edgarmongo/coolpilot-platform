@@ -42,9 +42,9 @@ public class AccountService {
 			if (ownerUsername != null) {
 				return (User) userServiceImpl.loadUserByUsername(ownerUsername);
 			}
-			Long visitorId = CurrentUser.visitorId();
-			if (visitorId != null) {
-				return userService.findUserById(visitorId);
+			Long userId = CurrentUser.userId();
+			if (userId != null) {
+				return userService.findUserById(userId);
 			}
 		} catch (UsernameNotFoundException | IllegalArgumentException e) {
 			return null;

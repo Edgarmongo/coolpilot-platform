@@ -397,8 +397,18 @@ public class BlogServiceImpl implements BlogService {
 		 * 这里如果出现异常，查看第 152 行注释说明
 		 * @see BlogServiceImpl#setBlogViewsFromRedisToPageResult
 		 */
-		int view = (int) redisService.getValueByHashKey(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId());
-		blog.setViews(view);
+		/*
+		 * 与列表页同样的兜底：浏览量 hash 可能因缓存清空/Redis 重启而缺失，
+		 * 直接强转会抛 NPE 让详情页 500。缺失时用库里的值并回填缓存。
+		 */
+		Object cachedView = redisService.getValueByHashKey(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId());
+		if (cachedView == null) {
+			int dbView = blog.getViews() == null ? 0 : blog.getViews();
+			redisService.saveKVToHash(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId(), dbView);
+			blog.setViews(dbView);
+		} else {
+			blog.setViews((int) cachedView);
+		}
 		return blog;
 	}
 

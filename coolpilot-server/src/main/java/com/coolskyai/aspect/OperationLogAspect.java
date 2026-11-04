@@ -70,10 +70,12 @@ public class OperationLogAspect {
 		ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 		HttpServletRequest request = attributes.getRequest();
 		String subject = JwtUtils.getTokenBody(request.getHeader("Authorization")).getSubject();
-		// token 的 subject 带身份前缀（admin: / visitor:），落库时去掉前缀只存用户名
-		String username = subject.startsWith(JwtConstants.ADMIN_PREFIX)
-				? subject.substring(JwtConstants.ADMIN_PREFIX.length())
-				: subject;
+		// token 的 subject 带身份前缀（owner: / user:），落库时去掉前缀
+		String username = JwtConstants.ownerName(subject);
+		if (username == null) {
+			Long userId = JwtConstants.userId(subject);
+			username = userId == null ? subject : "user#" + userId;
+		}
 		String uri = request.getRequestURI();
 		String method = request.getMethod();
 		String description = operationLogger.value();

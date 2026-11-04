@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.Role;
 import com.coolskyai.entity.User;
 import com.coolskyai.model.dto.LoginInfo;
 import com.coolskyai.model.dto.RegisterInfo;
@@ -21,7 +22,7 @@ import java.util.Map;
 /**
  * @Description: 前台访客认证（自助注册 / 登录）
  * 与后台管理登录（/admin/login）完全分离：
- * 访客只拿到 ROLE_visitor 身份，不具备任何后台数据访问权限。
+ * 前台用户只拿到 ROLE_user 身份，不具备任何后台数据访问权限。
  *
  * @Author: CoolSkyAI
  */
@@ -61,8 +62,8 @@ public class VisitorAuthController {
 	 * 组装返回给前端的登录结果
 	 */
 	private Map<String, Object> buildLoginResult(User user) {
-		String token = JwtUtils.generateToken(JwtConstants.VISITOR_PREFIX + user.getId(),
-				AuthorityUtils.createAuthorityList("ROLE_visitor"));
+		String token = JwtUtils.generateToken(JwtConstants.USER_PREFIX + user.getId(),
+				AuthorityUtils.createAuthorityList(Role.USER));
 		Map<String, Object> map = new HashMap<>(4);
 		map.put("user", user);
 		map.put("token", token);

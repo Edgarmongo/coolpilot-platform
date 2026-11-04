@@ -100,15 +100,17 @@
 | 验收 | 迁移脚本可在空库与现有库各跑一次；重复执行不报错（`ADD COLUMN IF NOT EXISTS` 或先查 `information_schema`） |
 | 测试 | 迁移后 19+4=23 张表齐全；`SELECT COUNT(*)` 各表数据量与迁移前一致 |
 
-### T-103 角色迁移（与 T-101 同批或紧随）
+### T-103 角色迁移 ✅ 已完成（2026-11-05）
 
 | 项 | 内容 |
 |---|---|
 | 目标 | `ROLE_admin → ROLE_owner`、`ROLE_visitor → ROLE_user` |
-| 改动 | 数据迁移 SQL；`SecurityConfig` 改 `hasAnyRole("owner","admin")` 过渡；`VisitorAuthController` 写入新角色；`coolpilot-admin` 路由守卫；`coolpilot-web` 顶栏判断 |
-| 关键约束 | **先兼容后收口**：第一次发布用 `hasAnyRole`，跑通一轮后再改成 `hasRole("owner")` |
-| 验收 | OWNER 能登录后台；USER 只能访问前台；旧 token（若存在）不导致 500 |
-| 测试 | 两种角色分别访问 `/admin/**` 与用户接口，权限矩阵逐格验证 |
+| 状态 | **已完成并回归**，HEAD 提交「refactor(security): 角色语义迁移」 |
+| 落地方式 | ① 新增 `Role`（`ROLE_owner`/`ROLE_user` + `normalize`）与 `SecurityPaths`（`OWNER_ONLY` / `AUTHENTICATED`）；② `SecurityConfig` 改为 `hasAuthority(Role.OWNER)` / `hasAnyAuthority(Role.OWNER, Role.USER)`；③ token 前缀改 `owner:` / `user:`，`JwtFilter` 归一化旧 token 的 `ROLE_admin`/`ROLE_visitor`，升级不踢人；④ `CurrentUser` 提供 `isOwner()` / `ownerUsername()` / `userId()`，控制器不再手工拆前缀；⑤ Flyway `V5__role_rename.sql` 收敛库内数据并给 `role` 加默认值 `ROLE_user` |
+| 关键约束 | **先兼容后收口**：`Role.normalize` / `JwtConstants.LEGACY_*` 保留旧值读取分支，新代码只允许引用常量 |
+| 验收 | OWNER 能登录后台；USER 只能访问前台；旧 token（`admin:` + `ROLE_admin`）仍可正常使用且不 500 |
+| 测试 | 已实测：owner token → `/admin/blogs` 200、`/me` 200；user token → `/admin/blogs` 403、`/me` 200；匿名 → 403 请登录；伪造旧 `admin:`/`visitor:` token 均按新角色放行 |
+| 后续 | 旧 token 全部过期（3 天）后可删除 `LEGACY_*` 兼容分支，并同步删除 `Role` 里的历史值映射 |
 
 ### 其余 V1.0 卡（表格式）
 

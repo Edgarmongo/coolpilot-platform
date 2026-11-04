@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import com.coolskyai.constant.Role;
 import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.exception.NotFoundException;
@@ -28,9 +29,9 @@ import java.util.regex.Pattern;
 @Service
 public class UserServiceImpl implements UserService, UserDetailsService {
 	/**
-	 * 前台访客角色，与博主的 ROLE_admin 严格区分
+	 * 前台用户角色，与所有者 ROLE_owner 严格区分
 	 */
-	private static final String VISITOR_ROLE = "ROLE_visitor";
+	private static final String USER_ROLE = Role.USER;
 	/**
 	 * 用户名：2-20 位字母、数字、下划线、点或中文
 	 */
@@ -120,7 +121,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		user.setEmail(email);
 		user.setCreateTime(now);
 		user.setUpdateTime(now);
-		user.setRole(VISITOR_ROLE);
+		user.setRole(USER_ROLE);
 		if (userMapper.saveUser(user) != 1) {
 			throw new PersistenceException("注册失败，请稍后重试");
 		}
@@ -132,9 +133,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 	public User loginVisitor(LoginInfo loginInfo) {
 		String username = loginInfo.getUsername() == null ? "" : loginInfo.getUsername().trim();
 		User user = findUserByUsernameAndPassword(username, loginInfo.getPassword());
-		// 博主账号不允许从访客入口登录，避免两套身份混用
-		if (!VISITOR_ROLE.equals(user.getRole())) {
-			throw new BadRequestException("该账号不是访客账号，请前往后台管理登录");
+		// 平台所有者账号不允许从前台入口登录，避免两套身份混用
+		if (!Role.isUser(user.getRole())) {
+			throw new BadRequestException("该账号是平台所有者账号，请前往后台登录");
 		}
 		user.setPassword(null);
 		return user;

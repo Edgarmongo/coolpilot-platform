@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.GenericFilterBean;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.Role;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.util.JacksonUtils;
 import com.coolskyai.util.JwtUtils;
@@ -30,7 +31,8 @@ import java.util.List;
  * 没有任何地方消费，SecurityContext 始终为空，无法实现"我的收藏/订单/消息"等用户级功能。
  *
  * 现改为：所有路径都尝试解析 token。
- * - 命中合法业务 token（admin: / visitor: 前缀）→ 写入 SecurityContext
+ * - 命中合法业务 token（owner: / user: 前缀，兼容历史 admin: / visitor:）→ 写入 SecurityContext，
+ *   并顺带把 authorities 里的历史角色值归一化为 ROLE_owner / ROLE_user
  * - 未携带 token → 放行，按匿名处理
  * - token 非法/过期 → /admin 路径返回 403（保持原行为）；其他路径按匿名放行，
  *   避免把历史的"密码文章 token"（subject 是 blogId）误判为登录态
@@ -52,11 +54,11 @@ public class JwtFilter extends GenericFilterBean {
 				Claims claims = JwtUtils.getTokenBody(jwt);
 				String subject = claims.getSubject();
 				// 只有带业务前缀的 token 才代表登录身份；密码文章 token 的 subject 是文章ID，不参与身份识别
-				if (subject != null
-						&& (subject.startsWith(JwtConstants.ADMIN_PREFIX) || subject.startsWith(JwtConstants.VISITOR_PREFIX))) {
+				if (JwtConstants.isAuthSubject(subject)) {
 					String authoritiesClaim = (String) claims.get("authorities");
 					List<GrantedAuthority> authorities = AuthorityUtils
-							.commaSeparatedStringToAuthorityList(authoritiesClaim == null ? "" : authoritiesClaim);
+							.commaSeparatedStringToAuthorityList(
+									Role.normalizeAuthorities(authoritiesClaim));
 					UsernamePasswordAuthenticationToken authentication =
 							new UsernamePasswordAuthenticationToken(subject, null, authorities);
 					authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

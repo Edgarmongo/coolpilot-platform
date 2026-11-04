@@ -41,6 +41,19 @@ jobs:
         working-directory: coolpilot-server
         run: mvn -B -ntp -DskipTests package
 
+      # 角色语义守卫（T-103）：
+      # 角色字面量只允许出现在 constant/Role.java 的兼容映射里，
+      # 业务代码一律引用 Role.OWNER / Role.USER。
+      # 否则下次又要靠人肉 review 才发现某处还在写 hasRole("admin")。
+      - name: 角色字面量检查
+        working-directory: coolpilot-server
+        run: |
+          if grep -rn --include=*.java -E '"ROLE_(admin|visitor)"' src/main/java | grep -v 'constant/Role.java'; then
+            echo "::error::发现历史角色字面量，请改用 Role.OWNER / Role.USER（兼容映射只能存在于 constant/Role.java）"
+            exit 1
+          fi
+          echo "角色字面量检查通过"
+
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:

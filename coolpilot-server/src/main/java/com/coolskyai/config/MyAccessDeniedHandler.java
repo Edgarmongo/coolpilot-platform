@@ -13,7 +13,7 @@ import java.io.PrintWriter;
 
 /**
  * @Description: 已登录但权限不足时返回统一的 JSON 结构
- * 例如访客（ROLE_visitor）持有效 token 访问 /admin/** 时，
+ * 例如前台用户（ROLE_user）持有效 token 访问 /admin/** 时，
  * 若不处理会落到 Spring Security 默认的 403 页面，前端拿不到 msg 字段。
  *
  * @Author: CoolSkyAI

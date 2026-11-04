@@ -83,9 +83,13 @@ public class BlogController {
 			if (JwtUtils.judgeTokenIsExist(jwt)) {
 				try {
 					String subject = JwtUtils.getTokenBody(jwt).getSubject();
-					if (subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
-						//博主身份Token
-						String username = subject.replace(JwtConstants.ADMIN_PREFIX, "");
+					if (JwtConstants.isUserSubject(subject)) {
+						//前台用户 token 不含文章密码信息，不能当作密码凭证使用
+						return Result.create(403, "此文章受密码保护，请验证密码！");
+					}
+					if (JwtConstants.isOwnerSubject(subject)) {
+						//所有者身份Token，不受文章密码限制
+						String username = JwtConstants.ownerName(subject);
 						User admin = (User) userService.loadUserByUsername(username);
 						if (admin == null) {
 							return Result.create(403, "博主身份Token已失效，请重新登录！");

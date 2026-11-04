@@ -75,9 +75,9 @@ public class CommentController {
 				if (JwtUtils.judgeTokenIsExist(jwt)) {
 					try {
 						String subject = JwtUtils.getTokenBody(jwt).getSubject();
-						if (subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
+						if (JwtConstants.isOwnerSubject(subject)) {
 							//博主身份Token
-							String username = subject.replace(JwtConstants.ADMIN_PREFIX, "");
+							String username = JwtConstants.ownerName(subject);
 							User admin = (User) userService.loadUserByUsername(username);
 							if (admin == null) {
 								return Result.create(403, "博主身份Token已失效，请重新登录！");
@@ -171,16 +171,16 @@ public class CommentController {
 						return Result.create(403, "Token已失效，请重新验证密码！");
 					}
 					//博主评论，不受密码保护限制，根据博主信息设置评论属性
-					if (subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
+					if (JwtConstants.isOwnerSubject(subject)) {
 						//Token验证通过，获取Token中用户名
-						String username = subject.replace(JwtConstants.ADMIN_PREFIX, "");
+						String username = JwtConstants.ownerName(subject);
 						User admin = (User) userService.loadUserByUsername(username);
 						if (admin == null) {
 							return Result.create(403, "博主身份Token已失效，请重新登录！");
 						}
 						commentUtils.setAdminComment(comment, request, admin);
 						isVisitorComment = false;
-					} else if (subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
+					} else if (JwtConstants.isUserSubject(subject)) {
 						/*
 						 * 登录访客的 token 不含文章密码信息。
 						 * 之前这里直接 Long.parseLong(subject)，遇到 visitor:2 会抛异常变成 500。
@@ -216,24 +216,22 @@ public class CommentController {
 						return Result.create(403, "Token已失效，请重新验证密码");
 					}
 					//博主评论，根据博主信息设置评论属性
-					if (subject.startsWith(JwtConstants.ADMIN_PREFIX)) {
+					if (JwtConstants.isOwnerSubject(subject)) {
 						//Token验证通过，获取Token中用户名
-						String username = subject.replace(JwtConstants.ADMIN_PREFIX, "");
+						String username = JwtConstants.ownerName(subject);
 						User admin = (User) userService.loadUserByUsername(username);
 						if (admin == null) {
 							return Result.create(403, "博主身份Token已失效，请重新登录！");
 						}
 						commentUtils.setAdminComment(comment, request, admin);
 						isVisitorComment = false;
-					} else if (subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
+					} else if (JwtConstants.isUserSubject(subject)) {
 						/*
 						 * 登录访客评论：记录账号ID（用于「我的评论」），
 						 * 昵称/邮箱缺省时用账号资料补齐，避免前端不传就报「参数有误」。
 						 */
-						Long visitorId;
-						try {
-							visitorId = Long.parseLong(subject.replace(JwtConstants.VISITOR_PREFIX, ""));
-						} catch (NumberFormatException e) {
+						Long visitorId = JwtConstants.userId(subject);
+						if (visitorId == null) {
 							return Result.create(403, "登录状态异常，请重新登录");
 						}
 						User visitor = userService.findUserById(visitorId);
