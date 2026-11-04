@@ -252,6 +252,45 @@ upload.file.resources-locations=file:${upload.file.path}
 
 ---
 
+### 4.8 V1.2 技术服务与需求中心
+
+模块：`com.coolskyai.modules.service`（entity / mapper / service / controller）。
+表：`service_item` `demand` `quote` `project` `milestone` `delivery` + `service_event`（状态流水），
+迁移见 `V6__service_demand.sql`。
+
+**流程**
+
+```
+用户提交需求(PENDING_REVIEW) → 后台审核 → PENDING_QUOTE → 报价(草稿→发送)
+→ 用户确认(PENDING_CONFIRM → IN_PROGRESS，自动生成项目 + 首个里程碑)
+→ 交付(DELIVERED) → 验收(ACCEPTED) → 全部里程碑通过 → 项目/需求 COMPLETED
+异常分支：拒绝报价回到 PENDING_QUOTE（可出 v2 报价）、验收打回回到 IN_PROGRESS、用户取消
+```
+
+**接口**
+
+| 端 | 路径 | 说明 |
+|---|---|---|
+| 前台 | `POST /demand`、`GET /demands`、`GET /demand/{no}`、`POST /demand/{no}/cancel` | 提交 / 我的需求 / 详情 / 取消 |
+| 前台 | `POST /quote/{id}/accept`、`POST /quote/{id}/reject` | 确认或拒绝报价 |
+| 前台 | `GET /projects`、`GET /project/{no}`、`POST /milestone/{id}/accept|reject` | 项目进度与验收 |
+| 后台 | `GET /admin/demands`、`GET /admin/demand/{no}`、`POST /admin/demand/{no}/review`、`PUT /admin/demand/{no}/status` | 需求池与审核 |
+| 后台 | `POST /admin/quote`、`PUT /admin/quote/{id}`、`POST /admin/quote/{id}/send` | 报价（版本化） |
+| 后台 | `GET /admin/projects`、`GET /admin/project/{no}`、`POST /admin/project`、`PUT /admin/project/{no}/status` | 项目 |
+| 后台 | `POST /admin/milestone`、`PUT /admin/milestone/{id}`、`POST /admin/milestone/{id}/deliver` | 里程碑与交付 |
+| 后台 | `GET/PUT /admin/serviceItem/{productId}` | 服务商品扩展信息 |
+
+**约束**
+
+- 权限：`/demand**`、`/quote/**`、`/projects`、`/project/**`、`/milestone/**` 在 `SecurityPaths.AUTHENTICATED`；
+  `/admin/**` 仅 `ROLE_owner`。归属校验在 Service 层（用户只能看自己的需求/项目）。
+- 隐私：`demand.contact` 仅所有者可见，用户视角详情里被置空。
+- 并发：状态流转全部带原状态条件（`WHERE status = #{from}`），抢不到就报「状态已变化」。
+- 交付文件：私有存储，`FileService.resolveForDownload` 增加「交付物所属项目的客户可下载」一条通路。
+- 固定价服务不建独立订单表：复用 `orders` + `payment` + `refund`，`project.order_no` 关联。
+
+---
+
 ## 五、coolpilot-admin（后台）
 
 ### 5.1 技术栈

@@ -233,6 +233,35 @@
 					</el-form>
 					<p class="hint">绑定后，持有该商品权益的用户才能在「我的权益」里下载；后台与本人可随时预览。</p>
 				</el-tab-pane>
+
+				<!-- 服务信息（仅技术服务类商品） -->
+				<el-tab-pane v-if="form.id && form.productType === 'SERVICE'" label="服务信息" name="service">
+					<el-form :model="serviceForm" label-width="92px" size="small">
+						<el-form-item label="交付周期">
+							<el-input-number v-model="serviceForm.deliveryDays" :min="0" :max="365"
+							                 controls-position="right"/>
+							<span class="hint inline">天，填 0 表示面议</span>
+						</el-form-item>
+						<el-form-item label="服务范围">
+							<el-input v-model="serviceForm.scope" type="textarea" :rows="4"
+							          placeholder="包含什么、不包含什么，越具体越少扯皮"/>
+						</el-form-item>
+						<el-form-item label="服务流程">
+							<el-input v-model="serviceForm.process" type="textarea" :rows="4"
+							          placeholder="评估 → 报价 → 确认 → 实施 → 交付 → 验收"/>
+						</el-form-item>
+						<el-form-item label="常见问题">
+							<el-input v-model="serviceForm.faq" type="textarea" :rows="4"
+							          placeholder="付款方式、素材由谁提供、售后范围等"/>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" :loading="serviceSaving" @click="saveServiceInfo">
+								保存服务信息
+							</el-button>
+							<span class="hint inline">前台服务详情页会展示这些内容</span>
+						</el-form-item>
+					</el-form>
+				</el-tab-pane>
 			</el-tabs>
 		</el-drawer>
 	</div>
@@ -254,6 +283,7 @@ import {
 	updateProduct,
 	uploadFile
 } from '@/api/product'
+import {getServiceItem, saveServiceItem} from '@/api/service'
 
 const typeOptions = [
 	{value: 'DOC', label: '文档'},
@@ -348,6 +378,8 @@ const tab = ref('base')
 const saving = ref(false)
 const uploading = ref(false)
 const detail = ref({course: null, lessons: [], resources: []})
+const serviceForm = reactive({deliveryDays: 0, scope: '', process: '', faq: ''})
+const serviceSaving = ref(false)
 
 const emptyForm = () => ({
 	id: null,
@@ -405,10 +437,40 @@ async function loadDetail(id) {
 		lessons: res.data.lessons || [],
 		resources: res.data.resources || []
 	}
+	Object.assign(serviceForm, {deliveryDays: 0, scope: '', process: '', faq: ''})
+	if (p.productType === 'SERVICE') {
+		const serviceRes = await getServiceItem(p.id).catch(() => null)
+		if (serviceRes && serviceRes.data) {
+			Object.assign(serviceForm, {
+				deliveryDays: serviceRes.data.deliveryDays || 0,
+				scope: serviceRes.data.scope || '',
+				process: serviceRes.data.process || '',
+				faq: serviceRes.data.faq || ''
+			})
+		}
+	}
+}
+
+async function saveServiceInfo() {
+	serviceSaving.value = true
+	try {
+		const res = await saveServiceItem(form.id, {
+			deliveryDays: serviceForm.deliveryDays || 0,
+			scope: serviceForm.scope,
+			process: serviceForm.process,
+			faq: serviceForm.faq
+		})
+		ElMessage.success(res.msg || '已保存')
+	} catch (e) {
+		ElMessage.error(e?.response?.data?.msg || e?.message || '保存失败')
+	} finally {
+		serviceSaving.value = false
+	}
 }
 
 function resetDrawer() {
 	tab.value = 'base'
+	Object.assign(serviceForm, {deliveryDays: 0, scope: '', process: '', faq: ''})
 	resetLessonForm()
 	Object.assign(resourceForm, {fileId: null, displayName: '', version: 'v1', isLatest: true})
 }

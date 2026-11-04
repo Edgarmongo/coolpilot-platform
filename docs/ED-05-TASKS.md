@@ -225,7 +225,14 @@
 
 ---
 
-## 五、V1.2：技术服务与需求（5 张卡）
+## 五、V1.2：技术服务与需求（5 张卡）✅ 已完成（2026-11-05）
+
+> **实施记录**：T-301 ~ T-305 一次性落地，迁移脚本 `V6__service_demand.sql`。
+> 与计划的差异：**没有建 `service_order`**——固定价服务的支付复用 `orders` + `payment` + `refund`
+> （再建一张订单表只会让对账分叉），`project.order_no` 用于关联已支付订单；
+> 另加 `service_event` 记录状态流水，满足 DoD 第 3 条（原计划的 `operation_log` 记不了用户侧动作）。
+> 代码位置：`modules/service`（entity / mapper / service / controller），后台页 `views/service/*`，
+> 前台页 `/service`、`/demand/new`、`/demand/[no]`、`/project/[no]`。
 
 ### T-301 服务商品
 

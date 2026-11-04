@@ -56,6 +56,8 @@ public class FileService {
 	@Autowired
 	private ProductResourceMapper productResourceMapper;
 	@Autowired
+	private com.coolskyai.modules.service.mapper.DeliveryMapper deliveryMapper;
+	@Autowired
 	private com.coolskyai.modules.entitlement.service.EntitlementService entitlementService;
 
 	@Value("${upload.file.path}")
@@ -197,6 +199,10 @@ public class FileService {
 				return info;
 			}
 			throw new BadRequestException("该文件属于付费商品，购买后即可下载");
+		}
+		// 交付物：项目客户本人可下载（交付文件是私有上传，没有商品权益可依托）
+		if (userId != null && deliveryMapper.countByFileAndUser(fileId, userId) > 0) {
+			return info;
 		}
 		throw new BadRequestException("无权下载该文件");
 	}

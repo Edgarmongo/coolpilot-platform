@@ -169,6 +169,26 @@ export const routes = [
 		]
 	},
 	{
+		path: '/service',
+		component: Layout,
+		redirect: '/service/demand',
+		meta: {title: '技术服务', icon: 'Suitcase'},
+		children: [
+			{
+				path: 'demand',
+				name: 'DemandManage',
+				component: () => import('@/views/service/DemandList.vue'),
+				meta: {title: '需求管理', icon: 'ChatLineSquare'}
+			},
+			{
+				path: 'project',
+				name: 'ProjectManage',
+				component: () => import('@/views/service/ProjectList.vue'),
+				meta: {title: '项目管理', icon: 'Files'}
+			}
+		]
+	},
+	{
 		path: '/:pathMatch(.*)*',
 		redirect: '/dashboard'
 	}

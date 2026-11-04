@@ -31,6 +31,39 @@
 				</div>
 			</template>
 
+			<!-- 我的需求 -->
+			<template v-else-if="tab === 'demand'">
+				<div v-if="!demands.length" class="empty">
+					还没有提交过需求。<NuxtLink to="/service" class="link">看看技术服务 →</NuxtLink>
+				</div>
+				<div v-for="item in demands" :key="item.id" class="item">
+					<NuxtLink :to="`/demand/${item.demandNo}`" class="item-main">
+						<strong>{{ item.title }}</strong>
+						<span class="muted">{{ item.demandNo }} · {{ formatDate(item.createTime) }}</span>
+					</NuxtLink>
+					<div class="item-side">
+						<span class="status">{{ demandStatusText(item.status) }}</span>
+					</div>
+				</div>
+			</template>
+
+			<!-- 我的项目 -->
+			<template v-else-if="tab === 'project'">
+				<div v-if="!projects.length" class="empty">还没有进行中的项目，确认报价后会自动立项</div>
+				<div v-for="item in projects" :key="item.id" class="item">
+					<NuxtLink :to="`/project/${item.projectNo}`" class="item-main">
+						<strong>{{ item.name }}</strong>
+						<span class="muted">
+							{{ item.projectNo }} · 里程碑 {{ item.acceptedCount || 0 }}/{{ item.milestoneCount || 0 }} 已验收
+						</span>
+					</NuxtLink>
+					<div class="item-side">
+						<span class="amount">¥{{ price(item.amount) }}</span>
+						<span class="status">{{ projectStatusText(item.status) }}</span>
+					</div>
+				</div>
+			</template>
+
 			<!-- 权益 -->
 			<template v-else-if="tab === 'ent'">
 				<div v-if="!entitlements.length" class="empty">还没有已购内容</div>
@@ -176,6 +209,8 @@ const {call, isLogin, user, setSession, clearSession} = useApi()
 
 const tabList = [
 	{key: 'order', label: '订单记录'},
+	{key: 'demand', label: '我的需求'},
+	{key: 'project', label: '我的项目'},
 	{key: 'ent', label: '我的权益'},
 	{key: 'fav', label: '我的收藏'},
 	{key: 'msg', label: '消息通知'},
@@ -184,8 +219,10 @@ const tabList = [
 	{key: 'setting', label: '账户设置'}
 ] as const
 
-const tab = ref<'order' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'>('order')
+const tab = ref<'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'>('order')
 const orders = ref<any[]>([])
+const demands = ref<any[]>([])
+const projects = ref<any[]>([])
 const entitlements = ref<any[]>([])
 const favorites = ref<any[]>([])
 const messages = ref<any[]>([])
@@ -204,9 +241,11 @@ const savingPwd = ref(false)
 if (!isLogin.value) {
 	await navigateTo('/login?redirect=/me')
 } else {
-	const [meRes, orderRes, entRes, favRes, msgRes, badgeRes, fbRes, cmRes]: any[] = await Promise.all([
+	const [meRes, orderRes, demandRes, projectRes, entRes, favRes, msgRes, badgeRes, fbRes, cmRes]: any[] = await Promise.all([
 		call('/me').catch(() => null),
 		call('/orders?pageNum=1&pageSize=50').catch(() => null),
+		call('/demands?pageNum=1&pageSize=50').catch(() => null),
+		call('/projects?pageNum=1&pageSize=50').catch(() => null),
 		call('/entitlements').catch(() => null),
 		call('/favorites?pageNum=1&pageSize=50').catch(() => null),
 		call('/messages?pageNum=1&pageSize=50').catch(() => null),
@@ -215,6 +254,8 @@ if (!isLogin.value) {
 		call('/me/comments?pageNum=1&pageSize=50').catch(() => null)
 	])
 	orders.value = orderRes?.data?.list || []
+	demands.value = demandRes?.data?.list || []
+	projects.value = projectRes?.data?.list || []
 	entitlements.value = entRes?.data || []
 	favorites.value = favRes?.data?.list || []
 	messages.value = msgRes?.data?.list || []
@@ -235,6 +276,21 @@ function statusText(status: string) {
 	return {
 		PENDING_PAY: '待支付', PENDING_CONFIRM: '待确认', PAID: '已支付', COMPLETED: '已完成',
 		CANCELLED: '已取消', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款'
+	}[status] || status
+}
+
+function demandStatusText(status: string) {
+	return {
+		PENDING_REVIEW: '待审核', PENDING_CONTACT: '待联系', EVALUATING: '评估中', PENDING_QUOTE: '待报价',
+		PENDING_CONFIRM: '待确认报价', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收', COMPLETED: '已完成',
+		REJECTED: '未通过', CANCELLED: '已取消', DISPUTED: '有争议'
+	}[status] || status
+}
+
+function projectStatusText(status: string) {
+	return {
+		NOT_STARTED: '未开始', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收',
+		COMPLETED: '已完成', ARCHIVED: '已归档'
 	}[status] || status
 }
 

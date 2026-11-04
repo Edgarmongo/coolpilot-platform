@@ -47,7 +47,12 @@ public final class SecurityPaths {
 			"/order", "/orders", "/order/**",
 			"/payment", "/payment/**",
 			"/refund", "/refunds", "/refund/**",
-			"/entitlements"
+			"/entitlements",
+			// V1.2 技术服务：需求提交/报价确认/项目验收
+			"/demand", "/demands", "/demand/**",
+			"/quote/**",
+			"/projects", "/project/**",
+			"/milestone/**"
 	};
 
 	/**

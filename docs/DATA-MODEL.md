@@ -525,6 +525,11 @@ CREATE TABLE `entitlement_log` (
 
 ## 十、DDL：V1.2 服务域
 
+> **实施状态（2026-11-05）**：以下 DDL 已落到 `V6__service_demand.sql`，但与本文有三处差异，以迁移脚本为准：
+> 1. **不建 `service_order`**：固定价服务的支付复用 `orders` + `payment` + `refund`，避免两套订单对账分叉；
+> 2. `project` 增加 `order_no`，`demand_id` 允许为空（固定价服务可直接从订单立项）；
+> 3. `demand` 增加 `product_id`（来源服务商品），并新增 `service_event`（状态流水，见第十一节末）。
+
 ```sql
 CREATE TABLE `service_item` (
   `id`            bigint(0)    NOT NULL AUTO_INCREMENT,

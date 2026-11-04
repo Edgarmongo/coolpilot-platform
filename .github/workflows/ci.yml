@@ -98,14 +98,24 @@ jobs:
             -validateOnMigrate=true \
             migrate
 
-      # 表数量是最省事的健全性检查：漏了建表、脚本顺序错了都会体现出来
+      # 表数量是最省事的健全性检查：漏了建表、脚本顺序错了都会体现出来。
+      # 用下限而不是等值：后续版本还会加表，等值断言每加一张表就要改 CI。
       - name: Assert schema built
         run: |
           COUNT=$(docker run --rm --network host mysql:8.0 \
             mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B \
             -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='coolpilot' AND table_name <> 'flyway_schema_history'")
           echo "业务表数量: $COUNT"
-          test "$COUNT" = "39" || { echo "期望 39 张业务表，实际 $COUNT"; exit 1; }
+          test "$COUNT" -ge 46 || { echo "期望至少 46 张业务表，实际 $COUNT"; exit 1; }
+
+          # 关键表逐个点名：数量对得上但少了某张表的情况也要拦住
+          for T in user blog product orders payment refund entitlement demand quote project milestone delivery service_item service_event; do
+            EXISTS=$(docker run --rm --network host mysql:8.0 \
+              mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B \
+              -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='coolpilot' AND table_name='$T'")
+            test "$EXISTS" = "1" || { echo "缺少表: $T"; exit 1; }
+          done
+          echo "关键表检查通过"
 
           SEED=$(docker run --rm --network host mysql:8.0 \
             mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B -D coolpilot \
