@@ -1,43 +1,24 @@
 {
-  "name": "blog-cms",
-  "version": "2.0.0",
-  "description": "CoolSkyAI cms",
-  "author": "Naccl <i@naccl.top>",
+  "name": "coolpilot-cms",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "0.24.0",
-    "core-js": "3.6.5",
-    "cos-js-sdk-v5": "^1.4.10",
-    "echarts": "4.9.0",
-    "element-ui": "2.13.2",
-    "lodash": "4.17.19",
-    "mavon-editor": "2.9.1",
-    "moment": "2.27.0",
-    "normalize.css": "7.0.0",
-    "nprogress": "0.2.0",
-    "v-viewer": "1.5.1",
-    "vue": "2.6.11",
-    "vue-router": "3.3.4",
-    "vuex": "3.5.1"
+    "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.21.0",
+    "dayjs": "^1.11.23",
+    "element-plus": "^2.14.7",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "4.5.0",
-    "@vue/cli-plugin-router": "4.5.0",
-    "@vue/cli-plugin-vuex": "4.5.0",
-    "@vue/cli-service": "4.5.0",
-    "sass": "1.26.8",
-    "sass-loader": "8.0.2",
-    "svg-sprite-loader": "4.1.3",
-    "svgo": "1.2.2",
-    "vue-template-compiler": "2.6.11"
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ]
+    "@vitejs/plugin-vue": "^6.0.10",
+    "vite": "^8.3.5"
+  }
 }

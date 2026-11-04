@@ -1,45 +1,22 @@
-import Vue from 'vue'
+import {createApp} from 'vue'
+import ElementPlus from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import 'element-plus/dist/index.css'
+
 import App from './App.vue'
 import router from './router'
-import store from './store'
+import {createPinia} from 'pinia'
+import './styles/index.css'
 
-//normalize.css
-import 'normalize.css/normalize.css' // A modern alternative to CSS resets
-//element-ui
-import Element from 'element-ui'
-import 'element-ui/lib/theme-chalk/index.css'
-//global css
-import '@/assets/styles/index.scss'
-//icon
-import '@/icons'
+const app = createApp(App)
 
-//moment
-import './util/dateTimeFormatUtils.js'
-//mavonEditor
-import mavonEditor from 'mavon-editor'
-import 'mavon-editor/dist/css/index.css'
-//v-viewer
-import 'viewerjs/dist/viewer.css'
-import Viewer from 'v-viewer'
-// directive
-import './util/directive'
-
-Vue.use(mavonEditor)
-Vue.use(Element)
-Vue.use(Viewer)
-
-Vue.prototype.msgSuccess = function (msg) {
-	this.$message.success(msg)
+// 图标全量注册，模板里可直接 <el-icon><Edit/></el-icon>
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+	app.component(key, component)
 }
 
-Vue.prototype.msgError = function (msg) {
-	this.$message.error(msg)
-}
-
-Vue.config.productionTip = false
-
-new Vue({
-	router,
-	store,
-	render: h => h(App)
-}).$mount('#app')
+app.use(createPinia())
+app.use(router)
+app.use(ElementPlus, {locale: zhCn})
+app.mount('#app')

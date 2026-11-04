@@ -1,57 +1,59 @@
 import axios from 'axios'
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
-import {Message} from 'element-ui'
+import {ElMessage} from 'element-plus'
 
+/**
+ * 后台请求实例
+ * baseURL 已经包含 /admin/，所以 api 层写 'orders' 即可，不要再写 admin
+ */
 const request = axios.create({
-	// baseURL: 'http://localhost:8091/admin/',
-	baseURL: '/api/admin/',//生产
-	timeout: 5000
+	baseURL: '/api/admin/',
+	timeout: 15000
 })
 
-let CancelToken = axios.CancelToken
-
-// 请求拦截
 request.interceptors.request.use(config => {
-		//对于访客模式，除GET请求外，都拦截并提示
-		const userJson = window.localStorage.getItem('user') || '{}'
-		const user = JSON.parse(userJson)
-		if (userJson !== '{}' && user.role !== 'ROLE_admin' && config.method !== 'get') {
-			config.cancelToken = new CancelToken(function executor(cancel) {
-				cancel('演示模式，不允许操作')
-			})
-			return config
-		}
-
-		NProgress.start()
-		const token = window.localStorage.getItem('token')
-		if (token) {
-			config.headers.Authorization = token
-		}
-		return config
-	},
-	error => {
-		console.info(error)
-		return Promise.reject(error)
+	const token = localStorage.getItem('token')
+	if (token) {
+		config.headers.Authorization = token
 	}
-)
+	return config
+}, error => Promise.reject(error))
 
-// 响应拦截
 request.interceptors.response.use(response => {
-		NProgress.done()
-		const res = response.data
-		if (res.code !== 200) {
-			let msg = res.msg || 'Error'
-			Message.error(msg)
-			return Promise.reject(new Error(msg))
-		}
-		return res
-	},
-	error => {
-		console.info(error)
-		Message.error(error.message)
-		return Promise.reject(error)
+	const res = response.data
+	if (res.code !== 200) {
+		ElMessage.error(res.msg || '请求失败')
+		return Promise.reject(new Error(res.msg || '请求失败'))
 	}
-)
+	return res
+}, error => {
+	// 401 统一回登录页，避免过期 token 反复报错
+	if (error.response && error.response.status === 401) {
+		localStorage.removeItem('token')
+		localStorage.removeItem('user')
+		if (!location.hash.includes('/login')) {
+			location.href = '/cms/login'
+		}
+	}
+	ElMessage.error(error.message || '网络异常')
+	return Promise.reject(error)
+})
+
+/**
+ * 裸实例：用于 /file/** 这类不在 /admin 下的接口
+ */
+export const rawRequest = axios.create({
+	baseURL: '/api/',
+	timeout: 15000
+})
+
+rawRequest.interceptors.request.use(config => {
+	const token = localStorage.getItem('token')
+	if (token) {
+		config.headers.Authorization = token
+	}
+	return config
+})
+
+rawRequest.interceptors.response.use(response => response.data)
 
 export default request

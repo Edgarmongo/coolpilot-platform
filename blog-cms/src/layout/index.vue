@@ -1,93 +1,224 @@
 <template>
-  <div :class="classObj" class="app-wrapper">
-    <div v-if="device==='mobile'&&sidebar.opened" class="drawer-bg" @click="handleClickOutside" />
-    <sidebar class="sidebar-container" />
-    <div class="main-container">
-      <div :class="{'fixed-header':fixedHeader}">
-        <navbar />
-      </div>
-      <app-main />
-    </div>
-  </div>
+	<el-container class="layout">
+		<el-aside :width="collapsed ? '64px' : '216px'" class="layout-aside">
+			<div class="layout-logo">
+				<span class="layout-logo-mark">CP</span>
+				<span v-show="!collapsed" class="layout-logo-text">CoolPilot</span>
+			</div>
+			<el-menu :default-active="activeMenu" :collapse="collapsed" router
+			         background-color="#1f2d3d" text-color="#bfcbd9" active-text-color="#4ec9b0">
+				<template v-for="item in menuList" :key="item.path">
+					<el-sub-menu v-if="item.children" :index="item.path">
+						<template #title>
+							<el-icon><component :is="item.icon"/></el-icon>
+							<span>{{ item.title }}</span>
+						</template>
+						<el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">
+							<el-icon><component :is="child.icon"/></el-icon>
+							<span>{{ child.title }}</span>
+						</el-menu-item>
+					</el-sub-menu>
+					<el-menu-item v-else :index="item.path">
+						<el-icon><component :is="item.icon"/></el-icon>
+						<span>{{ item.title }}</span>
+					</el-menu-item>
+				</template>
+			</el-menu>
+		</el-aside>
+
+		<el-container>
+			<el-header class="layout-header">
+				<div class="layout-header-left">
+					<el-icon class="layout-collapse" @click="collapsed = !collapsed">
+						<Expand v-if="collapsed"/>
+						<Fold v-else/>
+					</el-icon>
+					<el-breadcrumb separator="/">
+						<el-breadcrumb-item v-for="item in breadcrumbs" :key="item">{{ item }}</el-breadcrumb-item>
+					</el-breadcrumb>
+				</div>
+				<div class="layout-header-right">
+					<el-dropdown @command="onCommand">
+						<span class="layout-user">
+							<el-avatar :size="26" :src="user && user.avatar">{{ (username || 'A').slice(0, 1) }}</el-avatar>
+							<span class="layout-user-name">{{ username || '未登录' }}</span>
+							<el-icon><ArrowDown/></el-icon>
+						</span>
+						<template #dropdown>
+							<el-dropdown-menu>
+								<el-dropdown-item command="view" :disabled="!user">前台首页</el-dropdown-item>
+								<el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+							</el-dropdown-menu>
+						</template>
+					</el-dropdown>
+				</div>
+			</el-header>
+
+			<el-main class="layout-main">
+				<router-view v-slot="{Component}">
+					<component :is="Component"/>
+				</router-view>
+			</el-main>
+		</el-container>
+	</el-container>
 </template>
 
-<script>
-import { Navbar, Sidebar, AppMain } from './components'
-import ResizeMixin from './mixin/ResizeHandler'
+<script setup>
+import {computed, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ArrowDown, Expand, Fold} from '@element-plus/icons-vue'
+import {routes} from '@/router'
+import {useUserStore} from '@/store/user'
 
-export default {
-  name: 'Layout',
-  components: {
-    Navbar,
-    Sidebar,
-    AppMain
-  },
-  mixins: [ResizeMixin],
-  computed: {
-    sidebar() {
-      return this.$store.state.app.sidebar
-    },
-    device() {
-      return this.$store.state.app.device
-    },
-    fixedHeader() {
-      return this.$store.state.settings.fixedHeader
-    },
-    classObj() {
-      return {
-        hideSidebar: !this.sidebar.opened,
-        openSidebar: this.sidebar.opened,
-        withoutAnimation: this.sidebar.withoutAnimation,
-        mobile: this.device === 'mobile'
-      }
-    }
-  },
-  methods: {
-    handleClickOutside() {
-      this.$store.dispatch('app/closeSideBar', { withoutAnimation: false })
-    }
-  }
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+
+const collapsed = ref(false)
+const user = computed(() => userStore.user)
+const username = computed(() => userStore.username)
+
+/**
+ * 由路由表生成菜单：顶层没有子项时直接渲染，有子项时折叠成二级菜单。
+ * 新增模块只需要在 router 里加路由，菜单会自动出现。
+ */
+const menuList = computed(() => {
+	const result = []
+	for (const item of routes) {
+		if (item.meta && item.meta.hidden) {
+			continue
+		}
+		if (item.path.includes(':') || item.path === '/login') {
+			continue
+		}
+		const children = (item.children || []).filter(child => child.meta && child.meta.title && !child.meta.hidden)
+		if (item.path === '/') {
+			children.forEach(child => {
+				result.push({path: '/' + child.path, title: child.meta.title, icon: child.meta.icon || 'Menu'})
+			})
+			continue
+		}
+		if (children.length) {
+			result.push({
+				path: item.path,
+				title: (item.meta && item.meta.title) || item.path,
+				icon: (item.meta && item.meta.icon) || 'Menu',
+				children: children.map(child => ({
+					path: item.path + '/' + child.path,
+					title: child.meta.title,
+					icon: child.meta.icon || 'Menu'
+				}))
+			})
+		}
+	}
+	return result
+})
+
+const activeMenu = computed(() => route.path)
+
+const breadcrumbs = computed(() => route.matched
+	.filter(item => item.meta && item.meta.title)
+	.map(item => item.meta.title))
+
+function onCommand(command) {
+	if (command === 'logout') {
+		userStore.logout()
+		router.push('/login')
+		return
+	}
+	if (command === 'view') {
+		window.open('http://localhost:8081', '_blank')
+	}
 }
 </script>
 
-<style lang="scss" scoped>
-  @import "~@/assets/styles/mixin.scss";
-  @import "~@/assets/styles/variables.scss";
+<style scoped>
+.layout {
+	height: 100%;
+}
 
-  .app-wrapper {
-    @include clearfix;
-    position: relative;
-    height: 100%;
-    width: 100%;
-    &.mobile.openSidebar{
-      position: fixed;
-      top: 0;
-    }
-  }
-  .drawer-bg {
-    background: #000;
-    opacity: 0.3;
-    width: 100%;
-    top: 0;
-    height: 100%;
-    position: absolute;
-    z-index: 1702;//999 mavon-editor最高z-index: 1600
-  }
+.layout-aside {
+	background: #1f2d3d;
+	transition: width .2s;
+	overflow: hidden;
+}
 
-  .fixed-header {
-    position: fixed;
-    top: 0;
-    right: 0;
-    z-index: 1701;//9 mavon-editor最高z-index: 1600
-    width: calc(100% - #{$sideBarWidth});
-    transition: width 0.28s;
-  }
+.layout-logo {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 16px;
+	color: #fff;
+	border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
 
-  .hideSidebar .fixed-header {
-    width: calc(100% - 54px)
-  }
+.layout-logo-mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 7px;
+	background: #4ec9b0;
+	color: #12332e;
+	font-weight: 700;
+	font-size: 13px;
+	flex-shrink: 0;
+}
 
-  .mobile .fixed-header {
-    width: 100%;
-  }
+.layout-logo-text {
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: .5px;
+}
+
+.layout-aside :deep(.el-menu) {
+	border-right: none;
+}
+
+.layout-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 56px;
+	background: #fff;
+	border-bottom: 1px solid #e4e7ed;
+}
+
+.layout-header-left {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.layout-collapse {
+	font-size: 18px;
+	cursor: pointer;
+	color: #606266;
+}
+
+.layout-header-right {
+	display: flex;
+	align-items: center;
+}
+
+.layout-user {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	color: #303133;
+	outline: none;
+}
+
+.layout-user-name {
+	font-size: 13px;
+}
+
+.layout-main {
+	padding: 16px;
+	background: #f5f7fa;
+	overflow-y: auto;
+}
 </style>
