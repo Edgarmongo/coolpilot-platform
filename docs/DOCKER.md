@@ -223,7 +223,7 @@ Get-CimInstance Win32_Process |
 
 | 场景 | 建议 |
 |---|---|
-| 生产部署 | 单独 `docker-compose.prod.yml`：前端改 Nginx 静态站点，API 用同一镜像、只暴露内网 |
+| 生产部署 | 已落地 `docker-compose.prod.yml`：只拉 GHCR 镜像、前端 Nginx 静态、API 不对外暴露，见 [CI-CD.md](CI-CD.md) |
 | 文件存储 | 现在挂 `upload_data`；后续可换 MinIO 容器并切换 `storage_type` |
 | AI 服务 | 增加 `ai` 服务（Python FastAPI），通过 `http://ai:8000` 互访 |
 | 数据库迁移 | 引入 Flyway，把 `sql/*.sql` 收编为版本化脚本，替代 initdb 顺序约定 |
