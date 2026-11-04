@@ -166,5 +166,5 @@ docker build -f deploy/docker/web/Dockerfile.prod -t coolpilot-web:test .
 
 - **CI 不跑测试**：唯一一个 `@SpringBootTest` 需要真实 MySQL/Redis。要跑起来得加 `services: mysql/redis` 或 Testcontainers，属于独立一件事。目前靠人工回归 + 构建校验兜底。
 - **没有前端 lint/typecheck**：两端都没配 ESLint，Nuxt 的 `typescript.strict` 也是 `false`。加 lint 会先炸出一堆历史问题，要单独一轮清理。
-- **没有自动数据库迁移**：表结构变更仍是手写 `coolpilot-server/sql/日期-描述.sql` 并手动执行。生产环境升级前**必须先跑 SQL 再上镜像**，顺序反了会因缺列报错。这一块建议后续引入 Flyway。
+- **数据库迁移在应用启动时执行**：Flyway 已接入，表结构变更写成 `db/migration/V3__xxx.sql`，随镜像一起发布、随容器启动自动执行。这意味着升级顺序天然正确（先迁移后对外提供服务），不需要再手工跑 SQL。但**回滚镜像不会回滚数据库**，涉及破坏性变更（删列、改类型）时要单独准备逆向脚本。
 - **部署不健康检查**：`up -d` 返回成功不代表服务真的起来了。需要的话可以在 SSH 脚本末尾加 `curl -f http://127.0.0.1:8081/` 之类的探活。

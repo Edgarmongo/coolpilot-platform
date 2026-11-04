@@ -71,6 +71,18 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- 数据库版本化迁移：启动时按 src/main/resources/db/migration 下的 V*.sql 顺序执行，
+             已执行的记录在 flyway_schema_history 表里，不会重复跑 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <!-- Flyway 10 起把各数据库支持拆成独立模块，缺这个会报
+             Unsupported Database: MySQL 8.0 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
         <!-- lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

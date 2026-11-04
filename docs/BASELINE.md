@@ -37,7 +37,7 @@ tag     v0.1.0-baseline
 |---|---|
 | 工程化 | JDK 21、Spring Boot 4.1、Maven 阿里云镜像、Docker Compose 五服务编排、`.env` 外置密钥 |
 | 安全修复 | JWT 密钥 64 位强随机、`SecurityFilterChain` 重写、后台越权漏洞修复、Tomcat 11 参数校验适配 |
-| 数据 | 39 张表；增量脚本 `coolpilot-server/sql/` 按日期命名，初始化顺序见 `docs/DOCKER.md` |
+| 数据 | 39 张表；结构由 Flyway 管理（`db/migration/V1__init_schema.sql`），后续变更按 `V3__xxx.sql` 追加 |
 | 业务 | `modules/account` `community` `file` `product` `trade` `entitlement` |
 | 前端 | 前台门户改版；后台新增「交易管理」 |
 | 文档 | `docs/` 下架构、PRD、数据模型、接口、任务卡、Docker、交易闭环 |

@@ -37,7 +37,7 @@
 | 层 | 选型 |
 |---|---|
 | 后端 | Java 21、Spring Boot 4.1、Spring Security + JWT、MyBatis、PageHelper |
-| 数据库 | MySQL 8.0、Redis 7 |
+| 数据库 | MySQL 8.0（Flyway 版本化迁移）、Redis 7 |
 | 前台 | Nuxt 3 + Vue 3.5 + TypeScript（`coolpilot-web`，SSR） |
 | 后台 | Vue 3.5 + Vite + Element Plus + Pinia（`coolpilot-admin`） |
 | 构建 | Maven、Vite、Nuxt、Docker Compose |
@@ -60,7 +60,7 @@ docker compose up -d --build
 | 服务 | 地址 | 说明 |
 |---|---|---|
 | 前台 | http://localhost:8081 | 访客侧，支持注册登录 |
-| 后台 | http://localhost:8079/cms/ | 站长侧，账号 `admin`，密码见 `deploy/mysql/02-seed-base.sql` |
+| 后台 | http://localhost:8079/cms/ | 站长侧，账号 `admin`，密码见 `db/migration/V2__init_seed.sql` |
 | 接口 | http://localhost:8091 | Spring Boot API（生产环境不对外暴露） |
 | MySQL | localhost:13306 | 容器映射，避免与本机冲突 |
 | Redis | localhost:16379 | 同上 |
@@ -99,7 +99,7 @@ coolpilot-platform/
 | [docs/ED-04-API-DESIGN.md](docs/ED-04-API-DESIGN.md) | 接口约定、错误码、幂等设计 |
 | [docs/ED-05-TASKS.md](docs/ED-05-TASKS.md) | 任务卡与验收标准 |
 | [docs/V1.1B-TRADE.md](docs/V1.1B-TRADE.md) | 交易与权益闭环的实现与实测 |
-| [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、初始化顺序、常见问题 |
+| [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、Flyway 迁移、常见问题 |
 | [docs/CI-CD.md](docs/CI-CD.md) | 流水线、镜像发布、部署与回滚 |
 
 ## CI/CD

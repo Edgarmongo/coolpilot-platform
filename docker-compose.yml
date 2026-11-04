@@ -27,15 +27,8 @@ services:
       - "13306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      # 初始化脚本：仅在数据卷为空（首次启动）时按文件名顺序执行
-      - ./coolpilot-server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./deploy/mysql/02-seed-base.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
-      - ./coolpilot-server/demo-data.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
-      - ./coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql:/docker-entrypoint-initdb.d/04-indexes.sql:ro
-      - ./coolpilot-server/sql/2026-11-04-v1-0-community.sql:/docker-entrypoint-initdb.d/05-community.sql:ro
-      - ./coolpilot-server/sql/2026-11-05-v1-1a-file-product.sql:/docker-entrypoint-initdb.d/06-file-product.sql:ro
-      - ./deploy/mysql/07-seed-product.sql:/docker-entrypoint-initdb.d/07-seed-product.sql:ro
-      - ./coolpilot-server/sql/2026-11-05-v1-1b-order-payment-entitlement.sql:/docker-entrypoint-initdb.d/08-trade.sql:ro
+      # 表结构与基础数据由应用启动时的 Flyway 迁移负责（coolpilot-server/src/main/resources/db/migration），
+      # 不再挂 initdb 脚本：两套初始化机制并存会导致「结构由谁创建」不可控。
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -88,6 +81,10 @@ services:
       UPLOAD_FILE_PATH: /data/upload/
       # 浏览器访问图片/接口用的地址，指向宿主机映射端口
       BLOG_API: http://localhost:8091
+      # 邮件模板与分享链接里的站点地址；不传则用 properties 里的默认值
+      BLOG_VIEW: ${BLOG_VIEW:-http://192.236.184.68:8081}
+      # 邮件服务密码，留空则发信不可用（不影响其他功能）
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
     ports:
       - "8091:8091"
     volumes:

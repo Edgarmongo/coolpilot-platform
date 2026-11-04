@@ -117,24 +117,57 @@ docker compose down -v       # 停止并删除数据卷（数据库清空，慎�
 
 ---
 
-## 六、数据库初始化顺序
+## 六、数据库初始化（Flyway）
 
-MySQL 官方镜像**只在数据卷为空时**执行 `/docker-entrypoint-initdb.d` 下的脚本，按文件名排序：
+表结构与基础数据由后端启动时的 **Flyway** 负责，不再挂 `/docker-entrypoint-initdb.d`。
 
-| 顺序 | 文件 | 作用 |
-|---|---|---|
-| 01 | `coolpilot-server/schema.sql` | 建表 + 站点配置 |
-| 02 | `deploy/mysql/02-seed-base.sql` | 分类、标签种子（上游脚本不含） |
-| 03 | `coolpilot-server/demo-data.sql` | 5 篇演示文章 |
-| 04 | `coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql` | 索引与唯一约束 |
-| 05 | `coolpilot-server/sql/2026-11-04-v1-0-community.sql` | 社区模块 4 张表 |
-| 06 | `coolpilot-server/sql/2026-11-05-v1-1a-file-product.sql` | 文件服务 + 商品域 10 张表 |
-| 07 | `deploy/mysql/07-seed-product.sql` | 演示商品、课程、课时 |
-| 08 | `coolpilot-server/sql/2026-11-05-v1-1b-order-payment-entitlement.sql` | 交易域 + 权益域 6 张表，以及收款配置项 |
+```
+coolpilot-server/src/main/resources/db/migration/
+├── V1__init_schema.sql   # 39 张表的完整结构
+└── V2__init_seed.sql     # 站点配置 36 项、admin 账号、关于页、定时任务、分类标签
+```
 
-> **修改初始化脚本后不会自动重跑**。需要重建：
-> `docker compose down -v && docker compose up -d`
-> 这会清空数据，确认没有要保留的内容再执行。
+启动时的行为分两种：
+
+| 场景 | Flyway 的动作 |
+|---|---|
+| **空库**（全新环境） | 从 V1 依次执行到最新版本 |
+| **已有库**（表和数据都在） | 标记为 baseline 2，只接管之后的 V3+，**不重复建表** |
+
+已执行的记录写在 `flyway_schema_history` 表，重复启动只会打印
+`Current version of schema 'coolpilot': 2`，不会有任何写入。
+
+### 新增表 / 字段
+
+在 `db/migration/` 下加 `V3__xxx.sql`，重启后端即生效：
+
+```bash
+docker compose up -d --build api
+```
+
+规则见 `coolpilot-server/sql/README.md`，最重要的两条：
+
+- **已执行过的脚本不能改**（`validate-on-migrate=true`，checksum 不匹配会阻止启动）
+- 不写 `USE` 或库名，用当前连接的数据源
+
+### 演示数据不进迁移
+
+`demo-data.sql`（5 篇演示文章）和 `deploy/mysql/07-seed-product.sql`（演示商品）
+是「开发时看着有内容」用的，正式环境不该自动生成。需要时手动导入：
+
+```bash
+docker exec -i coolpilot-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" coolpilot' \
+  < coolpilot-server/demo-data.sql
+```
+
+### 需要彻底重建
+
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+数据卷清空后，Flyway 会在新库上从 V1 重新建起。**这会丢失全部业务数据**，
+确认没有要保留的内容再执行。
 
 ---
 
@@ -226,4 +259,4 @@ Get-CimInstance Win32_Process |
 | 生产部署 | 已落地 `docker-compose.prod.yml`：只拉 GHCR 镜像、前端 Nginx 静态、API 不对外暴露，见 [CI-CD.md](CI-CD.md) |
 | 文件存储 | 现在挂 `upload_data`；后续可换 MinIO 容器并切换 `storage_type` |
 | AI 服务 | 增加 `ai` 服务（Python FastAPI），通过 `http://ai:8000` 互访 |
-| 数据库迁移 | 引入 Flyway，把 `sql/*.sql` 收编为版本化脚本，替代 initdb 顺序约定 |
+| 数据库迁移 | 已用 Flyway 接管（V1/V2 见 `db/migration`）；后续可加多环境 profile 与回滚脚本 |
