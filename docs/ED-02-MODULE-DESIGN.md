@@ -23,7 +23,7 @@
 
 这是本文档最重要的一条。
 
-现状是**水平分层**：`controller` / `service` / `mapper` / `entity` 平铺在 `top.naccl` 下。新业务如果按域垂直分包，会出现两套风格。两种选择：
+现状是**水平分层**：`controller` / `service` / `mapper` / `entity` 平铺在 `com.coolskyai` 下。新业务如果按域垂直分包，会出现两套风格。两种选择：
 
 | 方案 | 代价 | 结论 |
 |---|---|---|
@@ -32,8 +32,8 @@
 
 **采用 B，并立规三条：**
 
-1. 遗留包（`top.naccl.{controller,service,mapper,entity,model,util,config,...}`）视为**冻结区**，只允许修 bug，不允许新增业务代码
-2. 新业务一律落在 `top.naccl.modules.{domain}`，内部自带 `controller/service/mapper/entity/dto/vo`
+1. 遗留包（`com.coolskyai.{controller,service,mapper,entity,model,util,config,...}`）视为**冻结区**，只允许修 bug，不允许新增业务代码
+2. 新业务一律落在 `com.coolskyai.modules.{domain}`，内部自带 `controller/service/mapper/entity/dto/vo`
 3. 两区之间只能通过 `XxxFacade` 接口调用，不允许直接注入对方的 Mapper
 
 > 将来若真要拆分，`modules/*` 已经是天然的拆分边界，届时把包重命名成独立模块即可。
@@ -47,7 +47,7 @@
 ## 二、目标包结构
 
 ```
-top.naccl
+com.coolskyai
 ├── BlogApiApplication.java
 │
 ├── 【遗留核心区 · 冻结】

@@ -34,7 +34,7 @@
 ### 2.1 包结构（实测文件数）
 
 ```
-top.naccl
+com.coolskyai
 ├── BlogApiApplication            1
 ├── controller                    12   前台
 ├── controller/admin              16   后台

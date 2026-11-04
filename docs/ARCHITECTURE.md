@@ -90,7 +90,7 @@ NBlog/
 
 | 包 | 文件数 | 职责 |
 |---|---|---|
-| `top.naccl` | 1 | 启动类 `BlogApiApplication` |
+| `com.coolskyai` | 1 | 启动类 `BlogApiApplication` |
 | `controller` | 12 | 前台公开接口 |
 | `controller/admin` | 16 | 后台接口，统一 `/admin` 前缀 |
 | `service` / `service.impl` | 19 + 19 | 业务接口与实现分离，全部 `@Service` |
