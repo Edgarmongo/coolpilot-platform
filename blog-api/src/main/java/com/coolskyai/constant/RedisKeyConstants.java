@@ -2,7 +2,7 @@ package com.coolskyai.constant;
 
 /**
  * @Description: Redis key配置
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-27
  */
 public class RedisKeyConstants {

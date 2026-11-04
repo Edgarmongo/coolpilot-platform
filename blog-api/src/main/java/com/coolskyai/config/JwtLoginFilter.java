@@ -31,7 +31,7 @@ import java.util.Map;
 
 /**
  * @Description: JWT登录过滤器
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-07-21
  */
 public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {

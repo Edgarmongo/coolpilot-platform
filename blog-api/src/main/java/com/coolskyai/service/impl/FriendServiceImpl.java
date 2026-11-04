@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * @Description: 友链业务层实现
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-08
  */
 @Service

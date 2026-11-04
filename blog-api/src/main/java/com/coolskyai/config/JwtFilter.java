@@ -35,7 +35,7 @@ import java.util.List;
  * - token 非法/过期 → /admin 路径返回 403（保持原行为）；其他路径按匿名放行，
  *   避免把历史的"密码文章 token"（subject 是 blogId）误判为登录态
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-07-21
  */
 public class JwtFilter extends GenericFilterBean {

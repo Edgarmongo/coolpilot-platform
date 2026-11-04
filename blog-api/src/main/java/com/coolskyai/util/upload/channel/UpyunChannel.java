@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * 又拍云存储上传方式
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-05-26
  */
 @Lazy

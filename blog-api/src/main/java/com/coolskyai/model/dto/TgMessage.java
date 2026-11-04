@@ -9,7 +9,7 @@ import lombok.ToString;
 /**
  * Telegram新消息
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-24
  */
 @NoArgsConstructor

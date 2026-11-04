@@ -7,7 +7,7 @@ import java.io.InputStream;
 
 /**
  * @Description: Jackson Object Mapper
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-11-07
  *
  * 升级说明：Spring Boot 4 默认使用 Jackson 3，序列化器包名由 com.fasterxml.jackson 迁至 tools.jackson，

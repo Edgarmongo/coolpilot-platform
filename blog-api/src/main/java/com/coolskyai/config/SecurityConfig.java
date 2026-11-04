@@ -16,7 +16,7 @@ import com.coolskyai.service.impl.UserServiceImpl;
 
 /**
  * @Description: Spring Security配置类
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-07-19
  *
  * 升级说明：Spring Security 6 起移除了 WebSecurityConfigurerAdapter，

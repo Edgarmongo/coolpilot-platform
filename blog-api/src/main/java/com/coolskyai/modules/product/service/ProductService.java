@@ -32,7 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * 价格规则：金额由服务端校验，不接受前端传入的负数或非法类型。
  * 上架规则：DRAFT/OFF_SALE 不可被前台查到；上下架通过独立接口控制。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

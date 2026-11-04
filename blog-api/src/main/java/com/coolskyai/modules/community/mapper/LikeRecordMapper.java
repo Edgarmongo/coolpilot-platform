@@ -10,7 +10,7 @@ import com.coolskyai.modules.community.entity.LikeRecord;
 
 /**
  * @Description: 点赞持久层
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @Mapper

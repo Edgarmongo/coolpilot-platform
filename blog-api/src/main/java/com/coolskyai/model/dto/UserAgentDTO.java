@@ -8,7 +8,7 @@ import lombok.ToString;
 
 /**
  * @Description: UserAgent解析DTO
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2022-10-13
  */
 @AllArgsConstructor

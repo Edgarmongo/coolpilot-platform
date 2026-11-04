@@ -22,7 +22,7 @@ import com.coolskyai.util.JwtUtils;
 
 /**
  * @Description: 动态
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-25
  */
 @RestController

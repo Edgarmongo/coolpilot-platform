@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * @Description: 异常日志业务层实现
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-12-03
  */
 @Service

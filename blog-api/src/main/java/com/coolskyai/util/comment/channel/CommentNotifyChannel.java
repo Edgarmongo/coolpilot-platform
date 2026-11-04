@@ -5,7 +5,7 @@ import com.coolskyai.model.dto.Comment;
 /**
  * 评论提醒方式
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 public interface CommentNotifyChannel {

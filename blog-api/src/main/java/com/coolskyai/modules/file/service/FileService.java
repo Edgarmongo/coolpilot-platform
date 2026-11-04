@@ -31,7 +31,7 @@ import java.util.UUID;
  * 2. 私有文件不暴露直链，下载必须先换一次性 token（5 分钟有效）。
  * 3. 非公开文件下载时校验归属：公开文件、文件所有者、或持有该商品权益的用户可下载。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

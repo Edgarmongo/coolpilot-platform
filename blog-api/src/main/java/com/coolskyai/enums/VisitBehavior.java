@@ -3,7 +3,7 @@ package com.coolskyai.enums;
 /**
  * 访问行为枚举类
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-08
  */
 public enum VisitBehavior {

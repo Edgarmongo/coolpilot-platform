@@ -14,7 +14,7 @@ import com.coolskyai.constant.JwtConstants;
  * 注意：不要用 ThreadLocal 自行保存用户名。
  * 历史上 JwtLoginFilter 曾用 ThreadLocal 记录登录名，异常分支未 remove 导致线程复用串号，已修复。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 public final class CurrentUser {

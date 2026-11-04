@@ -16,7 +16,7 @@ import java.io.PrintWriter;
  * 例如访客（ROLE_visitor）持有效 token 访问 /admin/** 时，
  * 若不处理会落到 Spring Security 默认的 403 页面，前端拿不到 msg 字段。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  */
 @Component
 public class MyAccessDeniedHandler implements AccessDeniedHandler {

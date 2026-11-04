@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * @Description: 访问日志持久层接口
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-12-04
  */
 @Mapper

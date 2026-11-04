@@ -15,7 +15,7 @@ import com.coolskyai.util.markdown.ext.cover.internal.CoverTextContentNodeRender
 
 /**
  * @Description: 自定义遮盖层拓展
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-05-13
  */
 public class CoverExtension implements Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, TextContentRenderer.TextContentRendererExtension {

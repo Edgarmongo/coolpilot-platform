@@ -11,7 +11,7 @@ import com.coolskyai.modules.community.service.FeedbackService;
 
 /**
  * @Description: 前台反馈提交（允许未登录提交，登录则记录用户）
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @RestController

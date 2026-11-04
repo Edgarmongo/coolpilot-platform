@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * @Description: 博客DTO
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-27
  */
 @NoArgsConstructor

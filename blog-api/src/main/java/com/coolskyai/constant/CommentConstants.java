@@ -3,7 +3,7 @@ package com.coolskyai.constant;
 /**
  * 评论相关常量
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 public class CommentConstants {

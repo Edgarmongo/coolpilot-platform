@@ -9,7 +9,7 @@ import java.util.Date;
 
 /**
  * @Description: 权益变更流水（审计用，只增不改）
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

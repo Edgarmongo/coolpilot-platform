@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 人工转账凭证提交入参
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

@@ -11,7 +11,7 @@ import com.coolskyai.interceptor.AccessLimitInterceptor;
 
 /**
  * @Description: 配置CORS跨域支持、拦截器
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-07-22
  */
 @Configuration

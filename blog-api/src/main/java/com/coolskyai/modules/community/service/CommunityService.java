@@ -21,7 +21,7 @@ import java.util.Set;
  * 幂等说明：收藏/点赞表都有 (user_id, target_type, target_id) 唯一索引，
  * 插入使用 INSERT IGNORE，重复提交不会产生脏数据也不会报错。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @Service

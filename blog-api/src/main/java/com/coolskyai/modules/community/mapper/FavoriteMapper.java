@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * @Description: 收藏持久层
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @Mapper

@@ -3,7 +3,7 @@ package com.coolskyai.constant;
 /**
  * 站点设置常量
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-28
  */
 public class SiteSettingConstants {

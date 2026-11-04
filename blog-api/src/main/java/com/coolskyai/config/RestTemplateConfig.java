@@ -13,7 +13,7 @@ import java.net.Proxy;
 /**
  * RestTemplate相关的Bean配置
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 @Configuration

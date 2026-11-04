@@ -14,7 +14,7 @@ import com.coolskyai.entity.ScheduleJob;
 
 /**
  * @Description: 定时任务操作工具类
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-11-01
  */
 public class ScheduleUtils {

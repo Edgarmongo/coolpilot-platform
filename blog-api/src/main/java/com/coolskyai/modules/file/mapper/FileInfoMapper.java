@@ -9,7 +9,7 @@ import com.coolskyai.modules.file.entity.FileInfo;
 
 /**
  * @Description: 文件元数据持久层
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

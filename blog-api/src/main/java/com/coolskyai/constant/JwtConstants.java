@@ -3,7 +3,7 @@ package com.coolskyai.constant;
 /**
  * JWT常量
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 public class JwtConstants {

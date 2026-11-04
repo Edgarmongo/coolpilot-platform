@@ -14,7 +14,7 @@ import com.coolskyai.modules.account.vo.AccountVO;
  * 这是新业务区（modules/*）的第一个模块，也是前台身份链路的验收点：
  * 能正确返回当前用户，说明 JwtFilter → SecurityContext → 业务层 已打通。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @RestController

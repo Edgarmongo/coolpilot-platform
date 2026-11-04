@@ -9,7 +9,7 @@ import java.util.Date;
 
 /**
  * @Description: 友链
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-08
  */
 @NoArgsConstructor

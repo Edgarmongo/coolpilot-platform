@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 访客注册信息
- * @Author: Naccl
+ * @Author: CoolSkyAI
  */
 @NoArgsConstructor
 @Getter

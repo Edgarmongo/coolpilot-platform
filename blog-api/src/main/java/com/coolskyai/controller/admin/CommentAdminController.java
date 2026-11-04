@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * @Description: 博客评论后台管理
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-03
  */
 @RestController

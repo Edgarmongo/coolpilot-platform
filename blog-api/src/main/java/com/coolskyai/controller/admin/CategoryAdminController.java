@@ -20,7 +20,7 @@ import com.coolskyai.util.StringUtils;
 
 /**
  * @Description: 博客分类后台管理
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-02
  */
 @RestController

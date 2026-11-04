@@ -33,7 +33,7 @@ import java.util.Map;
 
 /**
  * @Description: 博客文章业务层实现
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-07-29
  */
 @Service
@@ -158,7 +158,7 @@ public class BlogServiceImpl implements BlogService {
 			 * 2.删除 Redis DB 中 blogViewsMap 这个 key（或者直接清空对应的整个 DB）
 			 * 3.重新启动程序
 			 *
-			 * 具体请查看: https://github.com/Naccl/NBlog/issues/58
+			 * 具体请查看: https://github.com/Edgarmongo/coolpilot-platform
 			 */
 			int view = (int) redisService.getValueByHashKey(redisKey, blogId);
 			blogInfo.setViews(view);

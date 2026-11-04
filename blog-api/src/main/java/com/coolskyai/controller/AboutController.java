@@ -10,7 +10,7 @@ import com.coolskyai.service.AboutService;
 
 /**
  * @Description: 关于我页面
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-31
  */
 @RestController

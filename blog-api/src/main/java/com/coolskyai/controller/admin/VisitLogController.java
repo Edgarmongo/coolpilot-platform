@@ -15,7 +15,7 @@ import com.coolskyai.service.VisitLogService;
 
 /**
  * @Description: 访问日志后台管理
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-12-04
  */
 @RestController

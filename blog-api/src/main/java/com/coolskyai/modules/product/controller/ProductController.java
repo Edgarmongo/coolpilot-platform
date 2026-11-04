@@ -10,7 +10,7 @@ import com.coolskyai.modules.product.service.ProductService;
 
 /**
  * @Description: 知识商品（前台公开接口）
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @RestController

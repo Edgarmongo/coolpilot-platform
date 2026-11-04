@@ -7,7 +7,7 @@ import com.coolskyai.util.upload.UploadUtils;
 
 /**
  * @Description: 获取QQ昵称头像信息
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-10
  */
 public class QQInfoUtils {

@@ -13,7 +13,7 @@ import java.util.Date;
  *
  * 快照优先于关联：商品改价、改名、下架都不影响历史订单的展示与对账。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

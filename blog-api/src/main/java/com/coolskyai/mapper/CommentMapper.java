@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * @Description: 博客评论持久层接口
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-03
  */
 @Mapper

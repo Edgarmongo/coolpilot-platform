@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * @Description: 站内消息接口
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @RestController

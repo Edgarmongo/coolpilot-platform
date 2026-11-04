@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 受保护文章密码DTO
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-05
  */
 @NoArgsConstructor

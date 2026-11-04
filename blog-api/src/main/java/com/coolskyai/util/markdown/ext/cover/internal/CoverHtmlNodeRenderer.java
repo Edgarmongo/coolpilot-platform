@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * @Description: HTML节点渲染
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-05-13
  */
 public class CoverHtmlNodeRenderer extends AbstractCoverNodeRenderer {

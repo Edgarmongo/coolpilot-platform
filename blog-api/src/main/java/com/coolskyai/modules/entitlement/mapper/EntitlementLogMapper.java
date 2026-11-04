@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * @Description: 权益流水持久层
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

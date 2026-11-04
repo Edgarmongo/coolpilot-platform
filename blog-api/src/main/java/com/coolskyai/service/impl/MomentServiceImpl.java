@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * @Description: 博客动态业务层实现
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-24
  */
 @Service

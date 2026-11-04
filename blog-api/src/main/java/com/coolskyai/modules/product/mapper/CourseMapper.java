@@ -10,7 +10,7 @@ import com.coolskyai.modules.product.entity.Course;
 
 /**
  * @Description: 课程扩展持久层
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

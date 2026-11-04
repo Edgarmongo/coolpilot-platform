@@ -8,7 +8,7 @@ import lombok.ToString;
 
 /**
  * @Description: 站点设置
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-09
  */
 @NoArgsConstructor

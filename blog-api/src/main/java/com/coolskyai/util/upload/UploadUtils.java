@@ -15,7 +15,7 @@ import com.coolskyai.util.upload.channel.FileUploadChannel;
 
 /**
  * @Description: 图片下载保存工具类
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2021-11-11
  */
 @Component

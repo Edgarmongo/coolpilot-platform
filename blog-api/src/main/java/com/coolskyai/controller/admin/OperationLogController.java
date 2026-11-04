@@ -14,7 +14,7 @@ import com.coolskyai.service.OperationLogService;
 
 /**
  * @Description: 操作日志后台管理
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-12-01
  */
 @RestController

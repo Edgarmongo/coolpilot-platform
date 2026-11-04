@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * 2. 数字商品一人一份，已持有权益时不允许重复下单。
  * 3. 状态流转全部走带原状态条件的 UPDATE，谁抢到算谁的。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

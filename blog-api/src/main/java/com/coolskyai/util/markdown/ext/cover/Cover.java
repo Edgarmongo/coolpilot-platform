@@ -5,7 +5,7 @@ import org.commonmark.node.Delimited;
 
 /**
  * @Description: A cover node containing text and other inline nodes nodes as children.
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-05-13
  */
 public class Cover extends CustomNode implements Delimited {

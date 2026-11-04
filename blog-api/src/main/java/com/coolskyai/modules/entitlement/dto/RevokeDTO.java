@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 撤销权益入参
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

@@ -8,7 +8,7 @@ import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 
 /**
  * @Description: Redis序列化配置
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-27
  *
  * 升级说明：Spring Boot 4 默认使用 Jackson 3，

@@ -3,7 +3,7 @@ package com.coolskyai.enums;
 /**
  * 评论开放状态枚举类
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 public enum CommentOpenStateEnum {

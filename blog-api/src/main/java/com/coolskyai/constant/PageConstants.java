@@ -3,7 +3,7 @@ package com.coolskyai.constant;
 /**
  * 页面相关常量
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 public class PageConstants {

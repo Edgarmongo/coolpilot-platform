@@ -23,7 +23,7 @@ import java.util.Map;
  * 与后台管理登录（/admin/login）完全分离：
  * 访客只拿到 ROLE_visitor 身份，不具备任何后台数据访问权限。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  */
 @RestController
 @RequestMapping("/visitor")

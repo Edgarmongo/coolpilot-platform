@@ -7,7 +7,7 @@ import com.coolskyai.model.dto.UserAgentDTO;
 
 /**
  * @Description: UserAgent解析工具类
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-11-30
  */
 @Component

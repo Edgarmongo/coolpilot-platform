@@ -16,7 +16,7 @@ import java.util.List;
  * 所有状态流转都用「带原状态条件的 UPDATE」，靠影响行数判断是否抢到了这次流转，
  * 避免并发下重复发货 / 重复退款。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

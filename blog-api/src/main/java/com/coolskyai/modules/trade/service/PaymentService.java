@@ -33,7 +33,7 @@ import java.util.Map;
  * 幂等靠 payment 的条件更新：只有把状态从 INIT/WAIT_CONFIRM 改成 SUCCESS 的那一次
  * （影响行数 = 1）才继续发放，重复点击直接返回"已处理"。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

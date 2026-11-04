@@ -5,7 +5,7 @@ import com.coolskyai.util.upload.UploadUtils;
 /**
  * 文件上传方式
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 public interface FileUploadChannel {

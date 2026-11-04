@@ -16,7 +16,7 @@ import java.util.Date;
  *
  * 人工收款渠道的退款由 OWNER 线下打款后点「确认退款完成」，与支付确认同一套幂等思路。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

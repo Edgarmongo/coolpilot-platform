@@ -2,7 +2,7 @@ package com.coolskyai.exception;
 
 /**
  * @Description: 持久化异常
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-14
  */
 

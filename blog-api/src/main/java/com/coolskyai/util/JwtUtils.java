@@ -16,7 +16,7 @@ import java.util.Date;
 
 /**
  * @Description: JWT工具类
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-09-02
  *
  * 升级说明：jjwt 0.9.x → 0.12.x。

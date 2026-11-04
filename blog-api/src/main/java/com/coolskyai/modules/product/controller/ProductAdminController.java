@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * @Description: 知识商品管理（后台）
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @RestController

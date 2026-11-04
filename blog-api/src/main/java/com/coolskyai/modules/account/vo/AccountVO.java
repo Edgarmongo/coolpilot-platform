@@ -8,7 +8,7 @@ import java.util.Date;
 
 /**
  * @Description: 当前登录用户信息（不含密码）
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @Getter

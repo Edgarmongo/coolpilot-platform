@@ -10,7 +10,7 @@ import java.util.Date;
 
 /**
  * @Description: 商品主体
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

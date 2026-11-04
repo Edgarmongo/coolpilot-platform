@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * Telegram消息工具类
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 @Slf4j

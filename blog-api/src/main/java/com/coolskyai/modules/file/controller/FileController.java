@@ -31,7 +31,7 @@ import java.util.Map;
  * 下载流程：先 GET /file/token 换一次性 token（5 分钟），再 GET /file/download?token=
  * 私有文件不暴露可猜测的直链。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @RestController

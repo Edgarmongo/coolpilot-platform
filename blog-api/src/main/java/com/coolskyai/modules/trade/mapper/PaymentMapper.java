@@ -18,7 +18,7 @@ import java.util.List;
  * 只有把状态从 INIT/WAIT_CONFIRM 改成 SUCCESS 的那一次（影响行数 = 1）才继续往下走，
  * 其余情况（重复回调、重复点击确认）直接返回已处理。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

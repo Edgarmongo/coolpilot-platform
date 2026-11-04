@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Telegram配置
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 @NoArgsConstructor

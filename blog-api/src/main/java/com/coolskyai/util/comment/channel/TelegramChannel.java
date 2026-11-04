@@ -18,7 +18,7 @@ import java.util.TimeZone;
 /**
  * Telegram提醒方式
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 @Slf4j

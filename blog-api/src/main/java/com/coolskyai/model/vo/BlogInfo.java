@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * @Description: 博客简要信息
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-08
  */
 @NoArgsConstructor

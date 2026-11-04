@@ -15,7 +15,7 @@ import com.coolskyai.util.CurrentUser;
  * 统一的"当前登录用户"解析入口。业务模块不要各自解析 token，
  * 统一调用这里，避免出现多套判断逻辑。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @Service

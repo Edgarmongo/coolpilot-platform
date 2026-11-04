@@ -10,7 +10,7 @@ import com.coolskyai.util.markdown.ext.heimu.Heimu;
 
 /**
  * @Description: 定界
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-05-13
  */
 public class HeimuDelimiterProcessor implements DelimiterProcessor {

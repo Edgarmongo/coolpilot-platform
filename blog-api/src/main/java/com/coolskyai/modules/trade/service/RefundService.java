@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * 之所以不一步到位，是因为人工渠道的退款要真的去微信/支付宝/PayPal 操作，
  * 中途失败可以停在 APPROVED 重试，不会出现"钱没退但权益没了"。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

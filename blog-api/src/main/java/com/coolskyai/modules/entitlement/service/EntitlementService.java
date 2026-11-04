@@ -33,7 +33,7 @@ import java.util.Set;
  * 2. 后台人工发放 → grant（GIFT）
  * 3. 退款成功 → revokeByOrder（按订单精确撤销）
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Service

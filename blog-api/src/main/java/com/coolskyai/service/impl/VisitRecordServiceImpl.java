@@ -9,7 +9,7 @@ import com.coolskyai.service.VisitRecordService;
 
 /**
  * @Description: 访问记录业务层实现
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2021-02-23
  */
 @Service

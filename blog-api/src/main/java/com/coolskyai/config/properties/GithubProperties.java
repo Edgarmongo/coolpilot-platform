@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * GitHub配置(目前用于评论中QQ头像的图床)
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 @NoArgsConstructor

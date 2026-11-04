@@ -10,7 +10,7 @@ import org.apache.ibatis.annotations.Select;
  * 收款码、PayPal 链接这类运营信息放数据库，后台可随时更换，不写死在代码里。
  * 这里只做读，不改写遗留的 site_setting 链路。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @Mapper

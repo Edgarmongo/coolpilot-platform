@@ -17,7 +17,7 @@ import java.util.Date;
  * 幂等：SUCCESS 只能由条件更新（WHERE status IN ('INIT','WAIT_CONFIRM')）写入一次，
  * 影响行数为 1 的那次才允许发放权益。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

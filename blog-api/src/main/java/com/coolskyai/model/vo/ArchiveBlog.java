@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 归档页面博客简要信息
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-12
  */
 @NoArgsConstructor

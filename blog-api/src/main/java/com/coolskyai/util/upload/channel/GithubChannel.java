@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * GitHub上传方式
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-23
  */
 @Lazy

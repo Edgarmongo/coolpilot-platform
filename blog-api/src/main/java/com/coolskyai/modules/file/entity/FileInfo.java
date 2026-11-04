@@ -10,7 +10,7 @@ import java.util.Date;
 /**
  * @Description: 文件元数据
  * 类名不用 File，避免与 java.io.File 冲突
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

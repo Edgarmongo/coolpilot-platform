@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * @Description: 退款申请入参
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

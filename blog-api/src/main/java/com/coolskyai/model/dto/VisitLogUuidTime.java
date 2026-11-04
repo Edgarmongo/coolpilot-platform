@@ -10,7 +10,7 @@ import java.util.Date;
 
 /**
  * @Description: 访客更新DTO
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2021-02-05
  */
 @AllArgsConstructor

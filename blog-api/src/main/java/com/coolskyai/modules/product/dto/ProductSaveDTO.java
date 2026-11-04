@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 /**
  * @Description: 商品新增/编辑入参
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor

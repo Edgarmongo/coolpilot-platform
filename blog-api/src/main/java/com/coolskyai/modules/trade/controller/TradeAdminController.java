@@ -25,7 +25,7 @@ import java.util.Map;
  * 人工收款模式的核心操作都在这里：
  * 看「待确认收款」列表 → 核对到账 → 点确认 → 自动发权益。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @RestController

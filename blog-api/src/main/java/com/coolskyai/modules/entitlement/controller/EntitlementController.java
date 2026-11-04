@@ -12,7 +12,7 @@ import com.coolskyai.modules.product.mapper.ProductMapper;
 
 /**
  * @Description: 权益前台接口
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @RestController

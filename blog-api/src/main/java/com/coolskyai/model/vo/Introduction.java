@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * @Description: 侧边栏资料卡
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-08-09
  */
 @NoArgsConstructor

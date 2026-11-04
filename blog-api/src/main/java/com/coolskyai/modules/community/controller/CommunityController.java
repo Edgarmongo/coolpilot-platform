@@ -21,7 +21,7 @@ import java.util.Map;
  * 语义：POST = 添加（幂等），DELETE = 取消（幂等）。
  * 这两个接口属于"用户级"，已在 SecurityConfig 中要求登录。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-04
  */
 @RestController

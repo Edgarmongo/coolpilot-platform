@@ -12,7 +12,7 @@ import com.coolskyai.service.UserService;
 
 /**
  * @Description: 账号后台管理
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2023-01-31
  */
 @RestController

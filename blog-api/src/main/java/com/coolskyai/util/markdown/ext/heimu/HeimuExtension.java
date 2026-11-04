@@ -15,7 +15,7 @@ import com.coolskyai.util.markdown.ext.heimu.internal.HeimuTextContentNodeRender
 
 /**
  * @Description: 自定义黑幕拓展
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2020-05-13
  */
 public class HeimuExtension implements Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, TextContentRenderer.TextContentRendererExtension {

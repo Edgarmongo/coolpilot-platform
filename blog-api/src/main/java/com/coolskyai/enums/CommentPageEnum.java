@@ -3,7 +3,7 @@ package com.coolskyai.enums;
 /**
  * 评论页面枚举类
  *
- * @author: Naccl
+ * @author: CoolSkyAI
  * @date: 2022-01-22
  */
 public enum CommentPageEnum {

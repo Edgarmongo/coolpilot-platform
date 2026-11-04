@@ -16,7 +16,7 @@ import java.util.Date;
  * 唯一键 (user_id, product_id, ent_type)：同人同商品同类型只有一条。
  * 因此撤销必须按 order_no 精确定位，否则会误删用户此前合法购买的权益。
  *
- * @Author: Naccl
+ * @Author: CoolSkyAI
  * @Date: 2026-11-05
  */
 @NoArgsConstructor
