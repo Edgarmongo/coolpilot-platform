@@ -1,0 +1,13 @@
+[Unit]
+Description=CoolPilot 数据库与上传目录备份
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# 改成服务器上的实际目录
+WorkingDirectory=/opt/coolpilot-platform
+Environment=KEEP_DAYS=14
+ExecStart=/opt/coolpilot-platform/scripts/backup.sh /opt/coolpilot-platform/backups
+# 备份失败时 systemd 会记录 failed，可用 `systemctl --failed` 看到
+TimeoutStartSec=30min

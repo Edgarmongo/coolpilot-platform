@@ -31,6 +31,16 @@ COPY --from=build /build/target/*.jar app.jar
 # 上传目录（compose 挂载为持久卷）
 RUN mkdir -p /data/upload
 
+# 健康检查需要 curl（基础镜像里没有 wget/curl）
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8091
+
+# 存活探针只证明进程能响应，不查 MySQL/Redis；
+# 依赖健康用 /health（返回 200/503），交给监控而不是容器重启策略
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8091/health/live || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

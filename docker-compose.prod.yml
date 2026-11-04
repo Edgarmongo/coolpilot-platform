@@ -90,13 +90,14 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      # 是否信任 X-Forwarded-For：只有反向代理会覆盖该头时才置 true
-      SECURITY_TRUST_FORWARDED_FOR: ${SECURITY_TRUST_FORWARDED_FOR:-false}
+      # 生产固定走 gateway，而 gateway 会用 $remote_addr 覆盖该头，
+      # 所以这里默认 true，让限流/去重按真实客户端 IP 计算
+      SECURITY_TRUST_FORWARDED_FOR: ${SECURITY_TRUST_FORWARDED_FOR:-true}
       UPLOAD_FILE_PATH: /data/upload/
       # 图片直链的前缀。上线后应为 https://coolskyai.com（走 nginx 反代到本服务）
       BLOG_API: ${SITE_URL:-http://localhost:8091}
-      # 邮件模板与分享链接里的站点地址；不传则用 properties 里的默认值
-      BLOG_VIEW: ${BLOG_VIEW:-http://192.236.184.68:8081}
+      # 邮件模板与分享链接里的站点地址：与 SITE_URL 保持一致，避免出现 IP:端口
+      BLOG_VIEW: ${BLOG_VIEW:-${SITE_URL:-http://localhost}}
       # 邮件服务密码，留空则发信不可用（不影响其他功能）
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       JAVA_OPTS: "-Xms512m -Xmx1g -Duser.timezone=Asia/Shanghai"
@@ -118,8 +119,7 @@ services:
       # runtimeConfig.apiBase 的运行时覆盖，仅服务端可见
       NUXT_API_BASE: http://api:8091
       NUXT_TELEMETRY_DISABLED: "1"
-    ports:
-      - "8081:8081"
+    # 不对外映射端口：统一由 gateway 反代（容器间走 compose 内网）
 
   # ---------------- 管理后台（nginx 静态） ----------------
   admin:
@@ -129,9 +129,39 @@ services:
     logging: *default-logging
     depends_on:
       - api
+    # 不对外映射端口：统一由 gateway 反代
+
+  # ---------------- 统一入口（nginx） ----------------
+  gateway:
+    image: ${REGISTRY:-ghcr.io/edgarmongo}/coolpilot-gateway:${TAG:-latest}
+    container_name: coolpilot-gateway
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      # 用 service_started 而不是 service_healthy：
+      # 回滚到旧 tag 时镜像可能没有 HEALTHCHECK，等 healthy 会卡住整个入口。
+      # 服务是否真的可用由 /health 与外部探活判断。
+      api:
+        condition: service_started
+      web:
+        condition: service_started
+      admin:
+        condition: service_started
+    environment:
+      TZ: Asia/Shanghai
+      # 多个域名用空格分隔：coolskyai.com www.coolskyai.com
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+      WEB_UPSTREAM: web:8081
+      ADMIN_UPSTREAM: admin:80
+      API_UPSTREAM: api:8091
     ports:
-      # 容器内是 nginx 的 80
-      - "8079:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 证书目录：首次启动自动生成自签名，换真实证书后 restart 即可
+      - ./certs:/etc/nginx/certs
+      # Let's Encrypt HTTP-01 校验用
+      - ./certbot/www:/var/www/certbot
 
 volumes:
   mysql_data:

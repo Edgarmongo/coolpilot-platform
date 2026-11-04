@@ -1,0 +1,11 @@
+[Unit]
+Description=每天凌晨 3:30 备份 CoolPilot
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# 机器关机错过执行时，开机后补一次
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

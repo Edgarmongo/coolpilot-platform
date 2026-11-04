@@ -88,6 +88,8 @@ public final class SecurityPaths {
 			"/feedback",
 			// Telegram webhook：路径里带 bot token，本身就是凭证
 			"/tg/**",
+			// 健康检查：给容器 healthcheck / 负载均衡用，只返回组件通断
+			"/health", "/health/live",
 			// Spring Boot 默认错误页，不放行会把 404 变成 403
 			"/error"
 	};

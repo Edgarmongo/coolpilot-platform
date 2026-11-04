@@ -78,5 +78,9 @@ desktop.ini
 # 本地备份产物
 backups/
 
+# TLS 证书与 ACME 校验目录（含私钥，绝不入库）
+certs/
+certbot/
+
 # 临时挪走的旧依赖（清理 node_modules 时用，不进版本库）
 .trash-node-modules/

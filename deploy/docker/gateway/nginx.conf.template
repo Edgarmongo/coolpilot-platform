@@ -1,0 +1,119 @@
+# ============================================================
+# 统一入口配置模板
+#
+# ${SERVER_NAME} / ${WEB_UPSTREAM} / ${ADMIN_UPSTREAM} / ${API_UPSTREAM}
+# 由官方镜像的 envsubst 在启动时替换；nginx 自身变量（$host 等）不受影响。
+#
+# 关于 X-Forwarded-For：这里用 $remote_addr 覆盖而不是追加。
+# 追加（$proxy_add_x_forwarded_for）会保留客户端伪造的值，
+# 而后端的限流与友链去重按第一个 IP 计算，等于把限流键交给攻击者。
+# ============================================================
+
+upstream web_upstream {
+    server ${WEB_UPSTREAM};
+    keepalive 16;
+}
+
+upstream admin_upstream {
+    server ${ADMIN_UPSTREAM};
+    keepalive 8;
+}
+
+upstream api_upstream {
+    server ${API_UPSTREAM};
+    keepalive 16;
+}
+
+# ---------------- 80：只做跳转与证书校验 ----------------
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    # Let's Encrypt HTTP-01 校验
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # 给负载均衡 / 容器健康检查用，不跳转
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ---------------- 443：真正的入口 ----------------
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${SERVER_NAME};
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # 后端允许 100MB 上传（商品资源、付款凭证、交付文件）
+    client_max_body_size 100m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json application/xml image/svg+xml;
+
+    # 接口：去掉 /api 前缀转给后端，与开发时 Nitro/vite 的代理行为一致
+    location /api/ {
+        proxy_pass http://api_upstream/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    # 图片直链：数据库里存的是 https://域名/image/... 绝对地址
+    location /image/ {
+        proxy_pass http://api_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    # 管理后台：静态站自己带 /cms/ 前缀，原样转发
+    location /cms/ {
+        proxy_pass http://admin_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 其余全部交给前台（Nuxt SSR：页面、sitemap.xml、robots.txt）
+    location / {
+        proxy_pass http://web_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

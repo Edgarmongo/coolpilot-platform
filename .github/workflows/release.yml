@@ -1,6 +1,6 @@
 name: Release
 
-# 打 tag（v1.2.0 这种）或手动触发时，构建三个生产镜像推到 GHCR。
+# 打 tag（v1.2.0 这种）或手动触发时，构建四个生产镜像推到 GHCR。
 # 镜像推上去之后，服务器只需要 pull 新 tag，不用在机器上装 JDK/Node。
 
 on:
@@ -18,7 +18,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # ---------------- 构建并推送三个镜像 ----------------
+  # ---------------- 构建并推送四个镜像 ----------------
   images:
     name: Build ${{ matrix.image }}
     runs-on: ubuntu-latest
@@ -32,6 +32,8 @@ jobs:
             dockerfile: deploy/docker/admin/Dockerfile
           - image: coolpilot-web
             dockerfile: deploy/docker/web/Dockerfile.prod
+          - image: coolpilot-gateway
+            dockerfile: deploy/docker/gateway/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

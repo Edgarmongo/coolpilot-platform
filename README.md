@@ -101,6 +101,7 @@ coolpilot-platform/
 | [docs/V1.1B-TRADE.md](docs/V1.1B-TRADE.md) | 交易与权益闭环的实现与实测 |
 | [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、Flyway 迁移、常见问题 |
 | [docs/CI-CD.md](docs/CI-CD.md) | 流水线、镜像发布、部署与回滚 |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | 上线手册：gateway 分流、证书、备份恢复、排查清单 |
 
 ## CI/CD
 
@@ -113,7 +114,7 @@ git tag -a v1.2.0 -m "v1.2.0"
 git push origin v1.2.0
 ```
 
-三个生产镜像推到 GHCR（`coolpilot-server` / `coolpilot-admin` / `coolpilot-web`），服务器只需 `docker compose -f docker-compose.prod.yml pull && up -d`。回滚就是换个 tag。详见 [docs/CI-CD.md](docs/CI-CD.md)。
+四个生产镜像推到 GHCR（`coolpilot-server` / `coolpilot-admin` / `coolpilot-web` / `coolpilot-gateway`），服务器只需 `docker compose -f docker-compose.prod.yml pull && up -d`，对外只开 gateway 的 80/443。回滚就是换个 tag。上线步骤见 [docs/DEPLOY.md](docs/DEPLOY.md)，流水线细节见 [docs/CI-CD.md](docs/CI-CD.md)。
 
 ## 许可证
 

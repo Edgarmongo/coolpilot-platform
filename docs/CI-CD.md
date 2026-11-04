@@ -32,13 +32,14 @@
 
 ## 二、Release 做什么
 
-### 1. 三个镜像
+### 1. 四个镜像
 
 | 镜像 | 基础 | 说明 |
 |---|---|---|
 | `ghcr.io/<owner>/coolpilot-server` | maven 构建 → JRE 21 运行 | 后端 jar，多阶段 |
 | `ghcr.io/<owner>/coolpilot-admin` | node 构建 → nginx | 静态产物 + `/api` 反代 |
 | `ghcr.io/<owner>/coolpilot-web` | node 构建 → node 运行 | Nitro 产物 `.output/server/index.mjs` |
+| `ghcr.io/<owner>/coolpilot-gateway` | nginx + openssl | **生产唯一对外入口**：80→443、按路径分发、证书挂载 |
 
 `<owner>` 会自动小写（GHCR 不接受大写用户名）。
 
@@ -113,6 +114,8 @@ SITE_URL=https://coolskyai.com
 ```
 
 > `JWT_SECRET` 必须有 64 字符以上。之前的审计里发现过默认密钥可离线伪造管理员 token 的问题，生产环境换掉是硬要求。
+>
+> 完整的首次上线、证书、备份恢复与排查清单见 [DEPLOY.md](DEPLOY.md)。
 
 ### 3. 部署逻辑
 
@@ -126,30 +129,33 @@ docker image prune -f                              # 清悬空镜像
 
 `up -d` 只会重建镜像变了的服务，MySQL/Redis 不受影响。**数据卷不会被动**（`mysql_data` / `upload_data`）。
 
-### 4. 反向代理与真实 IP（上线必看）
+### 4. 统一入口与真实 IP（上线必看）
 
-限流与友链浏览去重依赖客户端 IP。默认取 TCP 对端地址，**不信任** `X-Forwarded-For` ——
-因为这个头客户端可以随便写，换一个伪造值就绕过限流与去重。
+生产**只用 gateway 一个容器对外**，其余服务不映射端口：
 
-放在 nginx / Caddy 之后时，必须让代理**覆盖**而不是追加该头：
+```
+80  → 301 到 443（保留 /.well-known/acme-challenge 给证书校验）
+443 → /api/**   api:8091（去掉 /api 前缀）
+      /image/** api:8091（图片直链，库里存的是绝对地址）
+      /cms/**   admin:80
+      /**       web:8081（Nuxt SSR，含 sitemap.xml / robots.txt）
+```
+
+gateway 的 `server_name` 取 `.env` 的 `SERVER_NAME`（多个域名用空格分隔）。
+证书放在 `./certs/fullchain.pem` 与 `./certs/privkey.pem`；**首次启动没有证书时会自动生成自签名**，
+保证容器能起来，之后用 `./scripts/renew-cert.sh` 换成 Let's Encrypt 正式证书，完整步骤见 `docs/DEPLOY.md`。
+
+限流与友链浏览去重依赖客户端 IP。后端默认取 TCP 对端地址、**不信任** `X-Forwarded-For`；
+gateway 会用 `$remote_addr` **覆盖**该头（不是追加），所以生产 compose 里
+`SECURITY_TRUST_FORWARDED_FOR` 默认是 `true`。
+
+如果你不用自带 gateway，而是自己在外层再放一层 nginx/Caddy，那外层也必须覆盖该头：
 
 ```nginx
-location /api/ {
-    proxy_pass http://127.0.0.1:8091/;
-    proxy_set_header Host $host;
-    # 用 $remote_addr 覆盖，不要用 $proxy_add_x_forwarded_for（那会保留伪造值）
-    proxy_set_header X-Forwarded-For $remote_addr;
-}
+proxy_set_header X-Forwarded-For $remote_addr;   # 不要用 $proxy_add_x_forwarded_for
 ```
 
-确认代理会覆盖后，再在 `.env` 里打开开关：
-
-```ini
-# 对应 application 里的 security.trust-forwarded-for，默认 false
-SECURITY_TRUST_FORWARDED_FOR=true
-```
-
-没接反代、或反代只是透传该头时保持 `false`，否则等于把限流键交给攻击者控制。
+否则等于把限流键交给攻击者控制。
 
 ## 四、发布与回滚
 
