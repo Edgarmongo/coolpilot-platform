@@ -1,5 +1,7 @@
 package com.coolskyai.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.mail.autoconfigure.MailProperties;
 import org.springframework.mail.SimpleMailMessage;
@@ -22,6 +24,9 @@ import java.util.Map;
 @EnableAsync
 @Component
 public class MailUtils {
+
+	private static final Logger log = LoggerFactory.getLogger(MailUtils.class);
+
 	@Autowired
 	private JavaMailSender javaMailSender;
 	@Autowired
@@ -39,7 +44,8 @@ public class MailUtils {
 			message.setText(content);
 			javaMailSender.send(message);
 		} catch (Exception e) {
-			e.printStackTrace();
+			// 通知失败不能影响业务；记下收件人和主题，便于排查是配置问题还是对方拒收
+			log.warn("发送纯文本邮件失败 to={} subject={}: {}", toAccount, subject, e.getMessage());
 		}
 	}
 
@@ -57,7 +63,8 @@ public class MailUtils {
 			messageHelper.setText(process, true);
 			javaMailSender.send(mimeMessage);
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.warn("发送模板邮件失败 to={} subject={} template={}: {}",
+					toAccount, subject, template, e.getMessage());
 		}
 	}
 }

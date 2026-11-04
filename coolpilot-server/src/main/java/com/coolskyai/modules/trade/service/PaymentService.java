@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.entitlement.service.EntitlementService;
+import com.coolskyai.modules.notify.service.NotifyService;
 import com.coolskyai.modules.product.mapper.ProductMapper;
 import com.coolskyai.modules.trade.dto.CreatePaymentDTO;
 import com.coolskyai.modules.trade.dto.ManualConfirmDTO;
@@ -61,6 +62,8 @@ public class PaymentService {
 	private OrderService orderService;
 	@Autowired
 	private EntitlementService entitlementService;
+	@Autowired
+	private NotifyService notifyService;
 
 	// ---------------- 创建支付 ----------------
 
@@ -126,6 +129,12 @@ public class PaymentService {
 			throw new BadRequestException("提交失败，请刷新后重试");
 		}
 		orderMapper.markPendingConfirm(payment.getBizNo());
+
+		notifyService.toOwner("ORDER", "有新的转账凭证待确认",
+				"订单 " + payment.getBizNo() + " 的支付单 " + paymentNo
+						+ " 已提交转账凭证，付款人：" + payerName
+						+ "，金额 ¥" + payment.getAmount() + "。请到后台确认收款后发放权益。",
+				"/trade/order", "PAYMENT", payment.getId());
 	}
 
 	// ---------------- 确认收款（唯一发权益出口） ----------------
@@ -174,6 +183,11 @@ public class PaymentService {
 			productMapper.addSales(item.getProductId(), item.getQuantity() == null ? 1 : item.getQuantity());
 		}
 		orderMapper.markCompleted(order.getOrderNo());
+
+		notifyService.toUser(order.getUserId(), "ORDER", "支付已确认，权益已开通",
+				"订单 " + order.getOrderNo() + " 已确认收款，金额 ¥" + order.getPayAmount()
+						+ "。权益已发放到你的账户，可在「我的 - 我的权益」查看。",
+				"/me?tab=ent", "ORDER", order.getId());
 		return true;
 	}
 

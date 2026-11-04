@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.PageResult;
+import com.coolskyai.modules.notify.service.NotifyService;
 import com.coolskyai.modules.service.dto.MilestoneSaveDTO;
 import com.coolskyai.modules.service.dto.ProjectCreateDTO;
 import com.coolskyai.modules.service.entity.Delivery;
@@ -63,6 +64,8 @@ public class ProjectService {
 	private ServiceItemMapper serviceItemMapper;
 	@Autowired
 	private ServiceEventLogger eventLogger;
+	@Autowired
+	private NotifyService notifyService;
 
 	// ---------------- 创建 ----------------
 
@@ -291,6 +294,11 @@ public class ProjectService {
 				operatorId, operatorName, "交付里程碑「" + milestone.getName() + "」");
 		eventLogger.log("PROJECT", project.getId(), project.getProjectNo(), project.getStatus(), "PENDING_ACCEPT",
 				"DELIVER", operatorId, operatorName, remark == null ? "" : remark);
+
+		notifyService.toUser(project.getUserId(), "PROJECT", "里程碑已交付，待你验收",
+				"项目「" + project.getName() + "」的里程碑「" + milestone.getName()
+						+ "」已交付，请查看交付物并验收。有问题可以直接打回并说明原因。",
+				"/project/" + project.getProjectNo(), "MILESTONE", milestone.getId());
 		return delivery;
 	}
 
@@ -332,6 +340,16 @@ public class ProjectService {
 				demandMapper.move(project.getDemandId(), "IN_PROGRESS", "COMPLETED", "", null);
 				demandMapper.move(project.getDemandId(), "PENDING_ACCEPT", "COMPLETED", "", null);
 			}
+			notifyService.toOwner("PROJECT", "项目已完成",
+					"项目「" + project.getName() + "」（" + project.getProjectNo()
+							+ "）的全部里程碑已验收通过，项目结束。可以整理复盘了。",
+					"/service/project", "PROJECT", project.getId());
+		} else {
+			notifyService.toOwner("PROJECT", "客户已验收里程碑",
+					"项目「" + project.getName() + "」的里程碑「" + milestone.getName()
+							+ "」验收通过，还有 " + milestoneMapper.countUnaccepted(project.getId())
+							+ " 个里程碑未完成。",
+					"/service/project", "MILESTONE", milestone.getId());
 		}
 	}
 
@@ -366,6 +384,11 @@ public class ProjectService {
 		String remark = reason == null || reason.trim().isEmpty() ? "未通过验收" : reason.trim();
 		eventLogger.log("MILESTONE", milestone.getId(), project.getProjectNo(), "DELIVERED", "REJECTED", "REJECT",
 				userId, "客户", remark);
+
+		notifyService.toOwner("PROJECT", "验收未通过，需要返工",
+				"项目「" + project.getName() + "」的里程碑「" + milestone.getName()
+						+ "」被打回，原因：" + remark + "。处理后可以重新交付。",
+				"/service/project", "MILESTONE", milestone.getId());
 	}
 
 	/**

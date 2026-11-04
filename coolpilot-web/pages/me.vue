@@ -102,11 +102,15 @@
 				<div v-for="msg in messages" :key="msg.id" :class="['item', {unread: !msg.isRead}]"
 				     @click="readMessage(msg)">
 					<div class="item-main">
-						<strong>{{ msg.title }}</strong>
+						<strong>
+							<span class="msg-type">{{ msgTypeText(msg.msgType) }}</span>
+							{{ msg.title }}
+						</strong>
 						<span class="muted">{{ msg.content }}</span>
 					</div>
 					<div class="item-side">
 						<span class="muted">{{ formatDate(msg.createTime) }}</span>
+						<span v-if="msg.linkUrl" class="muted go">查看 ›</span>
 						<span v-if="!msg.isRead" class="dot"/>
 					</div>
 				</div>
@@ -219,7 +223,16 @@ const tabList = [
 	{key: 'setting', label: '账户设置'}
 ] as const
 
-const tab = ref<'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'>('order')
+type TabKey = 'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'
+
+const route = useRoute()
+// 通知里的链接形如 /me?tab=ent，落地时直接打开对应标签
+const initialTab = (): TabKey => {
+	const key = String(route.query.tab || '')
+	return (tabList.some(item => item.key === key) ? key : 'order') as TabKey
+}
+
+const tab = ref<TabKey>(initialTab())
 const orders = ref<any[]>([])
 const demands = ref<any[]>([])
 const projects = ref<any[]>([])
@@ -313,6 +326,10 @@ async function removeFavorite(fav: any) {
 	if (res && res.code === 200) {
 		favorites.value = favorites.value.filter(f => f.id !== fav.id)
 	}
+}
+
+function msgTypeText(type: string) {
+	return {ORDER: '订单', DEMAND: '需求', PROJECT: '项目', SYSTEM: '系统'}[type] || '通知'
 }
 
 async function readMessage(msg: any) {
@@ -730,5 +747,21 @@ async function changePassword() {
 	color: var(--teal);
 	border: 1px solid var(--teal);
 	padding: 9px 14px;
+}
+
+.msg-type {
+	display: inline-block;
+	padding: 0 6px;
+	margin-right: 6px;
+	border-radius: 4px;
+	background: #eef7f5;
+	color: var(--teal);
+	font-size: 11.5px;
+	font-weight: 500;
+	vertical-align: 1px;
+}
+
+.go {
+	white-space: nowrap;
 }
 </style>

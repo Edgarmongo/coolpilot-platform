@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.product.entity.Product;
+import com.coolskyai.modules.notify.service.NotifyService;
 import com.coolskyai.modules.product.mapper.ProductMapper;
 import com.coolskyai.modules.service.dto.DemandCreateDTO;
 import com.coolskyai.modules.service.dto.DemandReviewDTO;
@@ -84,6 +85,8 @@ public class DemandService {
 	private ServiceEventLogger eventLogger;
 	@Autowired
 	private UserMapper userMapper;
+	@Autowired
+	private NotifyService notifyService;
 
 	// ---------------- 用户侧 ----------------
 
@@ -140,6 +143,13 @@ public class DemandService {
 
 		eventLogger.log("DEMAND", demand.getId(), demand.getDemandNo(), null, "PENDING_REVIEW", "SUBMIT",
 				userId, "客户", "提交需求");
+
+		User client = userMapper.findById(userId);
+		String who = client == null || client.getNickname() == null ? "客户" : client.getNickname();
+		notifyService.toOwner("DEMAND", "有新的服务需求待审核",
+				who + " 提交了需求「" + demand.getTitle() + "」（" + demand.getDemandNo() + "），类型 "
+						+ projectType + "，预算 " + budgetText(demand) + "。请到后台审核。",
+				"/service/demand", "DEMAND", demand.getId());
 		return demandMapper.findByNo(demand.getDemandNo());
 	}
 
@@ -234,6 +244,17 @@ public class DemandService {
 		}
 		eventLogger.log("DEMAND", demand.getId(), demand.getDemandNo(), "PENDING_REVIEW", target,
 				approve ? "APPROVE" : "REJECT", operatorId, operatorName, reason);
+
+		if (approve) {
+			notifyService.toUser(demand.getUserId(), "DEMAND", "需求已通过审核",
+					"需求「" + demand.getTitle() + "」已通过审核，平台会尽快给出报价，报价单发出后会再通知你。",
+					"/demand/" + demand.getDemandNo(), "DEMAND", demand.getId());
+		} else {
+			notifyService.toUser(demand.getUserId(), "DEMAND", "需求未通过审核",
+					"需求「" + demand.getTitle() + "」未通过审核，原因：" + reason
+							+ "。可以修改后重新提交，或直接提交意见反馈。",
+					"/demand/" + demand.getDemandNo(), "DEMAND", demand.getId());
+		}
 	}
 
 	/**
@@ -344,6 +365,13 @@ public class DemandService {
 				operatorId, operatorName, "发出报价，等待客户确认");
 		eventLogger.log("DEMAND", demand.getId(), demand.getDemandNo(), "PENDING_QUOTE", "PENDING_CONFIRM",
 				"SEND_QUOTE", operatorId, operatorName, "报价单 " + quote.getQuoteNo());
+
+		notifyService.toUser(demand.getUserId(), "DEMAND", "收到新的报价",
+				"需求「" + demand.getTitle() + "」的报价单 " + quote.getQuoteNo()
+						+ " 已发出：¥" + quote.getAmount()
+						+ (quote.getValidUntil() == null ? "" : "，有效期至 " + quote.getValidUntil())
+						+ "。请确认或提出你的想法。",
+				"/demand/" + demand.getDemandNo(), "QUOTE", quote.getId());
 	}
 
 	/**
@@ -387,6 +415,12 @@ public class DemandService {
 		Project project = projectService.createFromQuote(userId, demand.getDemandNo(), demand.getTitle(),
 				demand.getId(), demand.getProductId(), quote);
 
+		notifyService.toOwner("DEMAND", "客户已确认报价",
+				"需求「" + demand.getTitle() + "」的报价单 " + quote.getQuoteNo()
+						+ " 已被客户接受，金额 ¥" + quote.getAmount()
+						+ "，已自动立项 " + project.getProjectNo() + "，请按里程碑推进。",
+				"/service/project", "PROJECT", project.getId());
+
 		Map<String, Object> data = new HashMap<>(4);
 		data.put("quote", quoteMapper.findById(quote.getId()));
 		data.put("project", project);
@@ -418,6 +452,11 @@ public class DemandService {
 				userId, nickname, remark);
 		eventLogger.log("DEMAND", demand.getId(), demand.getDemandNo(), "PENDING_CONFIRM", "PENDING_QUOTE",
 				"REJECT_QUOTE", userId, nickname, remark);
+
+		notifyService.toOwner("DEMAND", "客户拒绝了报价",
+				"需求「" + demand.getTitle() + "」的报价单 " + quote.getQuoteNo()
+						+ " 被拒绝，原因：" + remark + "。可以调整方案后重新报价（会自动生成新版本）。",
+				"/service/demand", "DEMAND", demand.getId());
 	}
 
 	// ---------------- 内部 ----------------
@@ -436,6 +475,22 @@ public class DemandService {
 	/**
 	 * 联系方式：用户没填时回落到账号邮箱，保证平台总能联系到人
 	 */
+	/**
+	 * 预算区间文案，前后端都能看懂的说法
+	 */
+	private String budgetText(Demand demand) {
+		BigDecimal min = demand.getBudgetMin();
+		BigDecimal max = demand.getBudgetMax();
+		if (min == null && max == null) {
+			return "未填写";
+		}
+		if (min != null && max != null) {
+			return "¥" + min.stripTrailingZeros().toPlainString() + " ~ ¥" + max.stripTrailingZeros().toPlainString();
+		}
+		BigDecimal single = min == null ? max : min;
+		return "¥" + single.stripTrailingZeros().toPlainString();
+	}
+
 	private String resolveContact(Long userId, String contact) {
 		if (contact != null && !contact.trim().isEmpty()) {
 			return contact.trim();

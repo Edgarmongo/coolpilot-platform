@@ -2,6 +2,7 @@ package com.coolskyai.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 import com.coolskyai.entity.User;
@@ -17,6 +18,13 @@ public interface UserMapper {
 	User findByUsername(String username);
 
 	User findById(Long id);
+
+	/**
+	 * 平台所有者 id，用于把后台事件写成站内消息。
+	 * 只取第一条：数据上应当只有一个 ROLE_owner。
+	 */
+	@Select("SELECT id FROM user WHERE role = #{role} ORDER BY id LIMIT 1")
+	Long findOwnerIdByRole(@Param("role") String role);
 
 	int updateUserByUsername(String username, User user);
 

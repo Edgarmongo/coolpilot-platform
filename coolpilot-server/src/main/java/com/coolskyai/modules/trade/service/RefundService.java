@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.entitlement.service.EntitlementService;
+import com.coolskyai.modules.notify.service.NotifyService;
 import com.coolskyai.modules.product.mapper.ProductMapper;
 import com.coolskyai.modules.trade.dto.RefundApplyDTO;
 import com.coolskyai.modules.trade.entity.Order;
@@ -47,6 +48,8 @@ public class RefundService {
 	private ProductMapper productMapper;
 	@Autowired
 	private EntitlementService entitlementService;
+	@Autowired
+	private NotifyService notifyService;
 
 	@Transactional(rollbackFor = Exception.class)
 	public Refund apply(Long userId, RefundApplyDTO dto) {
@@ -89,6 +92,11 @@ public class RefundService {
 		if (orderMapper.markRefunding(orderNo) == 0) {
 			throw new BadRequestException("订单状态已变化，请刷新后重试");
 		}
+
+		notifyService.toOwner("ORDER", "收到退款申请",
+				"订单 " + orderNo + " 申请退款，金额 ¥" + refund.getAmount()
+						+ "，原因：" + refund.getReason() + "。请到后台处理。",
+				"/trade/refund", "REFUND", refund.getId());
 		return refund;
 	}
 
@@ -103,6 +111,11 @@ public class RefundService {
 		if (refundMapper.approve(refundNo, operatorId, remark == null ? "" : remark) == 0) {
 			throw new BadRequestException("退款单状态已变化，请刷新后重试");
 		}
+
+		notifyService.toUser(refund.getUserId(), "ORDER", "退款申请已通过",
+				"订单 " + refund.getBizNo() + " 的退款申请已通过，金额 ¥" + refund.getAmount()
+						+ "，平台将尽快安排打款。",
+				"/me?tab=order", "REFUND", refund.getId());
 	}
 
 	/**
@@ -119,6 +132,11 @@ public class RefundService {
 			throw new BadRequestException("退款单状态已变化，请刷新后重试");
 		}
 		orderMapper.restoreAfterRefundRejected(refund.getBizNo());
+
+		notifyService.toUser(refund.getUserId(), "ORDER", "退款申请未通过",
+				"订单 " + refund.getBizNo() + " 的退款申请未通过，原因：" + text
+						+ "。如有疑问可以直接提交意见反馈。",
+				"/me?tab=order", "REFUND", refund.getId());
 	}
 
 	/**
@@ -143,6 +161,11 @@ public class RefundService {
 				productMapper.addSales(item.getProductId(), -(item.getQuantity() == null ? 1 : item.getQuantity()));
 			}
 		}
+
+		notifyService.toUser(refund.getUserId(), "ORDER", "退款已完成",
+				"订单 " + refund.getBizNo() + " 已退款 ¥" + refund.getAmount()
+						+ "，对应的权益已收回。到账时间以支付渠道为准。",
+				"/me?tab=order", "REFUND", refund.getId());
 	}
 
 	// ---------------- 查询 ----------------

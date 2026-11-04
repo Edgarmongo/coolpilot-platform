@@ -100,6 +100,8 @@ services:
       BLOG_API: ${SITE_URL:-http://localhost:8091}
       # 邮件模板与分享链接里的站点地址：与 SITE_URL 保持一致，避免出现 IP:端口
       BLOG_VIEW: ${BLOG_VIEW:-${SITE_URL:-http://localhost}}
+      # 通知邮件里「去后台处理」的链接前缀
+      BLOG_CMS: ${BLOG_CMS:-${SITE_URL:-http://localhost}/cms}
       # 邮件服务密码，留空则发信不可用（不影响其他功能）
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       JAVA_OPTS: "-Xms512m -Xmx1g -Duser.timezone=Asia/Shanghai"

@@ -263,3 +263,53 @@ curl -fsS https://coolskyai.com/api/health
 - [ ] 备份定时任务已启用，`systemctl list-timers` 有记录，且**实际恢复过一次**
 - [ ] `security.trust-forwarded-for` 与入口方式匹配（用自带 gateway → true；裸奔 → false）
 - [ ] 已确认 `BLOG_API` / `BLOG_VIEW` / `SITE_URL` 三处都是 https 域名
+
+---
+
+## 十、业务通知（邮件）
+
+站内消息不需要任何配置：订单、退款、需求、报价、项目验收的关键节点都会写一条，
+用户在前台「我的 → 消息通知」里能看到，未读数显示在顶栏。
+
+邮件是可选增强。不配置时系统**只写站内消息**，启动日志会有一行
+`邮件通知未配置（MAIL_PASSWORD 为空），当前仅写站内消息`。
+
+### 开启步骤
+
+1. 准备一个支持 SMTP 的发信邮箱（阿里云、腾讯企业邮、Gmail 应用专用密码都可以），
+   在 `.env` 里填：
+
+```ini
+MAIL_PASSWORD=发信邮箱的授权码
+```
+
+2. 确认 `application-dev.properties` 里的发信账号与服务器和你的邮箱服务商一致
+   （默认是阿里云 `smtp.mxhichina.com:465`，SSL）：
+
+```properties
+spring.mail.host=smtp.mxhichina.com
+spring.mail.port=465
+spring.mail.username=admin@example.com   # 改成你的发信地址
+spring.mail.password=${MAIL_PASSWORD:}
+```
+
+3. 收件地址：
+
+| 收件人 | 取值 |
+|---|---|
+| 平台所有者 | 后台「页面管理 → 站点设置 → 资料卡 → 邮箱」，未填则回落到发信账号 |
+| 前台客户 | 用户注册/资料里填的邮箱，没填就不发 |
+
+4. 邮件里的链接前缀由两个变量决定，上线后必须设成正式域名：
+
+```ini
+BLOG_VIEW=https://coolskyai.com
+BLOG_CMS=https://coolskyai.com/cms
+```
+
+### 验证与排查
+
+- 触发一次「提交需求」：所有者应收到邮件，日志无 WARN；
+- 日志出现 `发送模板邮件失败 ... Authentication failed` → 授权码错误或未开 SMTP 服务；
+- 出现 `Connection timed out` → 服务器出网被封 465 端口，换 587 + STARTTLS 或找云厂商开白名单；
+- 业务接口始终返回成功是**预期行为**：通知失败不回滚业务。
