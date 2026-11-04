@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.constant.JwtConstants;
 import com.coolskyai.entity.User;
+import com.coolskyai.mapper.CommentMapper;
 import com.coolskyai.model.dto.Comment;
 import com.coolskyai.model.vo.PageComment;
 import com.coolskyai.model.vo.PageResult;
+import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.service.CommentService;
 import com.coolskyai.service.impl.UserServiceImpl;
@@ -25,6 +27,7 @@ import com.coolskyai.enums.CommentOpenStateEnum;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +43,10 @@ public class CommentController {
 	UserServiceImpl userService;
 	@Autowired
 	CommentUtils commentUtils;
+	@Autowired
+	AccountService accountService;
+	@Autowired
+	CommentMapper commentMapper;
 
 	/**
 	 * 根据页面分页查询评论列表
@@ -173,6 +180,12 @@ public class CommentController {
 						}
 						commentUtils.setAdminComment(comment, request, admin);
 						isVisitorComment = false;
+					} else if (subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
+						/*
+						 * 登录访客的 token 不含文章密码信息。
+						 * 之前这里直接 Long.parseLong(subject)，遇到 visitor:2 会抛异常变成 500。
+						 */
+						return Result.create(403, "此文章受密码保护，请验证密码");
 					} else {//普通访客经文章密码验证后携带Token
 						//对访客的评论昵称、邮箱合法性校验
 						if (StringUtils.isEmpty(comment.getNickname(), comment.getEmail()) || comment.getNickname().length() > 15) {
@@ -212,6 +225,36 @@ public class CommentController {
 						}
 						commentUtils.setAdminComment(comment, request, admin);
 						isVisitorComment = false;
+					} else if (subject.startsWith(JwtConstants.VISITOR_PREFIX)) {
+						/*
+						 * 登录访客评论：记录账号ID（用于「我的评论」），
+						 * 昵称/邮箱缺省时用账号资料补齐，避免前端不传就报「参数有误」。
+						 */
+						Long visitorId;
+						try {
+							visitorId = Long.parseLong(subject.replace(JwtConstants.VISITOR_PREFIX, ""));
+						} catch (NumberFormatException e) {
+							return Result.create(403, "登录状态异常，请重新登录");
+						}
+						User visitor = userService.findUserById(visitorId);
+						if (visitor == null) {
+							return Result.create(403, "登录状态已失效，请重新登录");
+						}
+						comment.setUserId(visitor.getId());
+						if (StringUtils.isEmpty(comment.getNickname())) {
+							comment.setNickname(StringUtils.isEmpty(visitor.getNickname())
+									? visitor.getUsername() : visitor.getNickname());
+						}
+						if (StringUtils.isEmpty(comment.getEmail())) {
+							// email 列为非空；账号未填邮箱时用占位地址，不参与发信
+							comment.setEmail(StringUtils.isEmpty(visitor.getEmail())
+									? "user" + visitor.getId() + "@coolskyai.local" : visitor.getEmail());
+						}
+						if (comment.getNickname().length() > 15) {
+							return Result.error("昵称不能超过15个字符");
+						}
+						commentUtils.setVisitorComment(comment, request);
+						isVisitorComment = true;
 					} else {//文章原先为密码保护，后取消保护，但客户端仍存在Token，则忽略Token
 						//对访客的评论昵称、邮箱合法性校验
 						if (StringUtils.isEmpty(comment.getNickname(), comment.getEmail()) || comment.getNickname().length() > 15) {
@@ -236,5 +279,20 @@ public class CommentController {
 		commentService.saveComment(comment);
 		commentUtils.judgeSendNotify(comment, isVisitorComment, parentComment);
 		return Result.ok("评论成功");
+	}
+
+	/**
+	 * 我的评论：只返回当前登录账号发表的评论。
+	 * 历史匿名评论没有 user_id，不会出现在这里。
+	 */
+	@GetMapping("/me/comments")
+	public Result myComments(@RequestParam(defaultValue = "1") Integer pageNum,
+	                         @RequestParam(defaultValue = "10") Integer pageSize) {
+		Long userId = accountService.requireUserId();
+		int page = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+		int size = (pageSize == null || pageSize < 1 || pageSize > 100) ? 10 : pageSize;
+		int total = commentMapper.countByUser(userId);
+		List<Map<String, Object>> list = commentMapper.pageByUser(userId, (page - 1) * size, size);
+		return Result.ok("OK", new PageResult<>((total + size - 1) / size, total, list));
 	}
 }

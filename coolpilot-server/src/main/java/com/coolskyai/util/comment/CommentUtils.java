@@ -284,6 +284,10 @@ public class CommentUtils {
 			comment.setWebsite("");
 		}
 		comment.setAdminComment(false);
+		// is_notice 为非空列，客户端漏传时给默认值，否则插入直接报约束错误
+		if (comment.getNotice() == null) {
+			comment.setNotice(false);
+		}
 		comment.setCreateTime(new Date());
 		comment.setPublished(commentDefaultOpen);
 		comment.setEmail(comment.getEmail().trim());
@@ -313,6 +317,13 @@ public class CommentUtils {
 	 * @return 是否合法
 	 */
 	private static boolean isValidUrl(String url) {
+		/*
+		 * website 是选填项，前端不传时为 null。
+		 * 直接 url.matches(...) 会抛 NPE，导致「不填个人网站」的评论一律 500。
+		 */
+		if (url == null || url.isEmpty()) {
+			return false;
+		}
 		return url.matches("^https?://([^!@#$%^&*?.\\s-]([^!@#$%^&*?.\\s]{0,63}[^!@#$%^&*?.\\s])?\\.)+[a-z]{2,6}/?");
 	}
 }

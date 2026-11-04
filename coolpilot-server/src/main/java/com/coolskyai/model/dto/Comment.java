@@ -18,6 +18,7 @@ import java.util.Date;
 @ToString
 public class Comment {
 	private Long id;
+	private Long userId;//登录访客的账号ID，匿名评论为空
 	private String nickname;//昵称
 	private String email;//邮箱
 	private String content;//评论内容

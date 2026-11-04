@@ -79,8 +79,25 @@
 				</div>
 			</template>
 
+			<!-- 我的评论 -->
+			<template v-else-if="tab === 'comment'">
+				<div v-if="!comments.length" class="empty">还没有发表过评论</div>
+				<div v-for="c in comments" :key="c.id" class="fb">
+					<div class="fb-head">
+						<NuxtLink v-if="c.page === 0 && c.blogId" :to="`/blog/${c.blogId}`" class="cm-link">
+							{{ c.blogTitle || '文章已删除' }}
+						</NuxtLink>
+						<span v-else class="cm-link">关于我</span>
+						<span class="muted">{{ formatDate(c.createTime) }}</span>
+						<span v-if="!c.published" class="status wait">待审核</span>
+					</div>
+					<p class="fb-content">{{ c.content }}</p>
+					<div v-if="c.parentCommentId && c.parentCommentId !== -1" class="muted">这是对某条评论的回复</div>
+				</div>
+			</template>
+
 			<!-- 反馈 -->
-			<template v-else>
+			<template v-else-if="tab === 'feedback'">
 				<div class="feedback-form">
 					<textarea v-model="feedback.content" rows="4" maxlength="2000"
 					          placeholder="遇到的问题、想要的功能，都可以写在这里（至少 5 个字）"/>
@@ -108,42 +125,94 @@
 					</div>
 				</div>
 			</template>
+
+			<!-- 账户设置 -->
+			<template v-else>
+				<div class="sub-title">基本资料</div>
+				<div class="set-row">
+					<label>昵称</label>
+					<input v-model="profile.nickname" maxlength="20" placeholder="1-20 个字符">
+				</div>
+				<div class="set-row">
+					<label>邮箱</label>
+					<input v-model="profile.email" placeholder="用于接收通知，可留空">
+				</div>
+				<div class="set-row">
+					<label>头像</label>
+					<input v-model="profile.avatar" placeholder="/img/avatar.jpg 或图片地址">
+					<input ref="avatarInput" type="file" accept="image/*" hidden @change="uploadAvatar">
+					<button class="btn ghost" :disabled="uploading" @click="$refs.avatarInput.click()">
+						{{ uploading ? '上传中…' : '上传' }}
+					</button>
+				</div>
+				<div class="set-actions">
+					<button class="btn" :disabled="savingProfile" @click="saveProfile">
+						{{ savingProfile ? '保存中…' : '保存资料' }}
+					</button>
+				</div>
+
+				<div class="sub-title">修改密码</div>
+				<div class="set-row">
+					<label>原密码</label>
+					<input v-model="pwd.oldPassword" type="password" placeholder="请输入当前密码">
+				</div>
+				<div class="set-row">
+					<label>新密码</label>
+					<input v-model="pwd.newPassword" type="password" placeholder="6-32 位">
+				</div>
+				<div class="set-actions">
+					<button class="btn" :disabled="savingPwd" @click="changePassword">
+						{{ savingPwd ? '提交中…' : '修改密码' }}
+					</button>
+					<span class="muted">修改后需要用新密码重新登录</span>
+				</div>
+			</template>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-const {call, isLogin} = useApi()
+const {call, isLogin, user, setSession, clearSession} = useApi()
 
 const tabList = [
 	{key: 'order', label: '订单记录'},
 	{key: 'ent', label: '我的权益'},
 	{key: 'fav', label: '我的收藏'},
 	{key: 'msg', label: '消息通知'},
-	{key: 'feedback', label: '意见反馈'}
+	{key: 'comment', label: '我的评论'},
+	{key: 'feedback', label: '意见反馈'},
+	{key: 'setting', label: '账户设置'}
 ] as const
 
-const tab = ref<'order' | 'ent' | 'fav' | 'msg' | 'feedback'>('order')
+const tab = ref<'order' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'>('order')
 const orders = ref<any[]>([])
 const entitlements = ref<any[]>([])
 const favorites = ref<any[]>([])
 const messages = ref<any[]>([])
 const feedbacks = ref<any[]>([])
+const comments = ref<any[]>([])
 const unread = ref(0)
 
 const feedback = reactive({content: '', contact: ''})
 const submitting = ref(false)
 
+const profile = reactive({nickname: '', avatar: '', email: ''})
+const pwd = reactive({oldPassword: '', newPassword: ''})
+const savingProfile = ref(false)
+const savingPwd = ref(false)
+
 if (!isLogin.value) {
 	await navigateTo('/login?redirect=/me')
 } else {
-	const [orderRes, entRes, favRes, msgRes, badgeRes, fbRes]: any[] = await Promise.all([
+	const [meRes, orderRes, entRes, favRes, msgRes, badgeRes, fbRes, cmRes]: any[] = await Promise.all([
+		call('/me').catch(() => null),
 		call('/orders?pageNum=1&pageSize=50').catch(() => null),
 		call('/entitlements').catch(() => null),
 		call('/favorites?pageNum=1&pageSize=50').catch(() => null),
 		call('/messages?pageNum=1&pageSize=50').catch(() => null),
 		call('/messages/unread-count').catch(() => null),
-		call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null)
+		call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null),
+		call('/me/comments?pageNum=1&pageSize=50').catch(() => null)
 	])
 	orders.value = orderRes?.data?.list || []
 	entitlements.value = entRes?.data || []
@@ -151,6 +220,11 @@ if (!isLogin.value) {
 	messages.value = msgRes?.data?.list || []
 	unread.value = badgeRes?.data?.count || 0
 	feedbacks.value = fbRes?.data?.list || []
+	comments.value = cmRes?.data?.list || []
+	const me = meRes?.data || user.value || {}
+	profile.nickname = me.nickname || ''
+	profile.avatar = me.avatar || ''
+	profile.email = me.email || ''
 }
 
 function price(value: number) {
@@ -220,6 +294,88 @@ async function submitFeedback() {
 		}
 	} finally {
 		submitting.value = false
+	}
+}
+
+// ---------------- 账户设置 ----------------
+const uploading = ref(false)
+
+async function saveProfile() {
+	if (!profile.nickname.trim()) {
+		alert('昵称不能为空')
+		return
+	}
+	savingProfile.value = true
+	try {
+		const res: any = await call('/me/profile', {
+			method: 'PUT',
+			body: {
+				nickname: profile.nickname.trim(),
+				avatar: profile.avatar.trim(),
+				email: profile.email.trim()
+			}
+		})
+		if (res && res.code === 200) {
+			// 同步顶栏展示用的 cookie，否则要刷新页面昵称才变
+			user.value = {...(user.value || {}), ...res.data}
+			alert('资料已保存')
+		} else {
+			alert((res && res.msg) || '保存失败')
+		}
+	} finally {
+		savingProfile.value = false
+	}
+}
+
+async function uploadAvatar(event: any) {
+	const file = event.target.files && event.target.files[0]
+	if (!file) {
+		return
+	}
+	uploading.value = true
+	try {
+		const fd = new FormData()
+		fd.append('file', file)
+		fd.append('bizType', 'AVATAR')
+		fd.append('isPublic', 'true')
+		const res: any = await call('/file/upload', {method: 'POST', body: fd})
+		if (res && res.code === 200) {
+			profile.avatar = res.data.url
+		} else {
+			alert((res && res.msg) || '上传失败')
+		}
+	} finally {
+		uploading.value = false
+		event.target.value = ''
+	}
+}
+
+async function changePassword() {
+	if (!pwd.oldPassword || !pwd.newPassword) {
+		alert('请填写原密码与新密码')
+		return
+	}
+	if (pwd.newPassword.length < 6 || pwd.newPassword.length > 32) {
+		alert('新密码需为 6-32 位')
+		return
+	}
+	savingPwd.value = true
+	try {
+		const res: any = await call('/me/password', {
+			method: 'PUT',
+			body: {oldPassword: pwd.oldPassword, newPassword: pwd.newPassword}
+		})
+		if (res && res.code === 200) {
+			pwd.oldPassword = ''
+			pwd.newPassword = ''
+			clearSession()
+			alert('密码已修改，请用新密码重新登录')
+			await navigateTo('/login')
+		} else {
+			alert((res && res.msg) || '修改失败')
+		}
+	} finally {
+		savingPwd.value = false
 	}
 }
 </script>
@@ -430,5 +586,93 @@ async function submitFeedback() {
 	margin: 4px 0 0;
 	line-height: 1.7;
 	white-space: pre-wrap;
+}
+
+.cm-link {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--teal);
+	text-decoration: none;
+}
+
+.set-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.set-row label {
+	width: 62px;
+	flex: none;
+	font-size: 13px;
+	color: #606266;
+}
+
+.set-row input {
+	flex: 1;
+	padding: 9px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	font-size: 13.5px;
+	outline-color: var(--teal);
+}
+
+.set-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 4px 0 8px 72px;
+}
+
+.btn.ghost {
+	background: #fff;
+	color: var(--teal);
+	border: 1px solid var(--teal);
+	padding: 9px 14px;
+}
+
+.cm-link {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--teal);
+	text-decoration: none;
+}
+
+.set-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.set-row label {
+	width: 62px;
+	flex: none;
+	font-size: 13px;
+	color: #606266;
+}
+
+.set-row input {
+	flex: 1;
+	padding: 9px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	font-size: 13.5px;
+	outline-color: var(--teal);
+}
+
+.set-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 4px 0 8px 72px;
+}
+
+.btn.ghost {
+	background: #fff;
+	color: var(--teal);
+	border: 1px solid var(--teal);
+	padding: 9px 14px;
 }
 </style>
