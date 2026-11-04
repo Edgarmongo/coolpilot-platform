@@ -1,7 +1,7 @@
-# NBlog 项目架构说明
+# CoolSkyAI 项目架构说明
 
 > 快照时间：2026-11-04
-> 基线：NBlog 三端项目，已完成 JDK 21 + Spring Boot 4.1.2 升级、前台门户化改造、访客登录体系新增。
+> 基线：三端项目，已完成 JDK 21 + Spring Boot 4.1.2 升级、前台门户化改造、访客登录体系新增。
 > 本文档描述的是**当前实际代码状态**，与上游原始版本已有较大差异。
 
 ---
@@ -57,7 +57,7 @@
 ## 三、目录结构
 
 ```
-NBlog/
+coolpilot-platform/
 ├── blog-api/                 Spring Boot 后端（211 个 Java 文件）
 │   ├── src/main/java/top/naccl/
 │   ├── src/main/resources/

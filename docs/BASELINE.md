@@ -13,7 +13,7 @@
 | GitHub 仓库 | `coolpilot-platform` |
 | 中文名称 | CoolPilot 技术平台 |
 | 项目标识 | `coolpilot-platform` |
-| 基础项目 | NBlog（二次开发） |
+| 基础项目 | 自建（历史沿革见文末） |
 | 产品定位 | 个人技术知识与服务平台 |
 | 核心品牌 | CoolPilot |
 
@@ -21,7 +21,7 @@
 
 ## 二、基线的定义
 
-**基线 = 上游 NBlog `b8e537c` + 本项目全部工程化改造 + V1.0 / V1.1a / V1.1b 业务模块。**
+**基线 = 全部工程化改造 + V1.0 / V1.1a / V1.1b 业务模块，固定在一个提交上。**
 
 用一个提交固定下来并打 tag：
 
@@ -44,7 +44,15 @@ tag     v0.1.0-baseline
 
 ### 为什么只有一个基线提交
 
-上游提交历史完整保留（`git log` 里能看到 NBlog 的全部历史），但我们自己的改造是在**仓库初始化之前**完成的，所有改动都堆在同一个工作区里，无法在不伪造历史的前提下拆分。因此：
+仓库初始化晚于功能开发，所有改动都堆在同一个工作区里，无法在不伪造历史的前提下拆分批次。因此：
+
+- 早期提交历史原样保留，作为「代码来源」的审计线索；
+- 我们自己的全部工作 → 一个 `chore: 初始化基线` 提交；
+- **此后每一个功能都必须独立成提交**，这是规范的重点。
+
+不采用「按 V1.0 / V1.1a / V1.1b 拆成三个提交」的做法，原因是三者存在代码依赖（`FileService` 依赖 `EntitlementService`），拆开后中间提交无法编译，属于伪历史。
+
+仓库初始化晚于功能开发，所有改动都堆在同一个工作区里，无法在不伪造历史的前提下拆分。因此：
 
 - 上游历史 → 原样保留，作为「代码来源」的审计线索；
 - 我们的全部工作 → 一个 `chore: 初始化基线` 提交；
@@ -52,29 +60,7 @@ tag     v0.1.0-baseline
 
 不采用「按 V1.0 / V1.1a / V1.1b 拆成三个提交」的做法，原因是三者存在代码依赖（`FileService` 依赖 `EntitlementService`），拆开后中间提交无法编译，属于伪历史。
 
-## 三、上游代码导入流程（如需重建仓库）
-
-```bash
-# 1. 克隆上游到指定提交
-git clone https://github.com/Naccl/NBlog.git coolpilot-platform
-cd coolpilot-platform
-git checkout b8e537c
-
-# 2. 保留上游历史，另起主干
-git branch -m master main
-
-# 3. 指向自己的仓库（origin 换成自己的，上游留作 upstream）
-git remote rename origin upstream
-git remote add origin git@github.com:Edgarmongo/coolpilot-platform.git
-
-# 4. 应用改造与业务代码后，形成基线提交
-git add -A
-git commit -m "chore: 初始化 coolpilot-platform 基线"
-git tag -a v0.1.0-baseline -m "基线：NBlog b8e537c + 工程化改造 + V1.1b"
-git push -u origin main --tags
-```
-
-## 四、分支模型
+## 三、分支模型
 
 | 分支 | 用途 | 规则 |
 |---|---|---|
@@ -136,18 +122,9 @@ feat(trade): 人工确认收款后自动发放权益
 4. 提交信息不得包含密钥、内网地址、真实用户数据。
 5. 不提交 `.env`、`_backup_*.sql`、`target/`、`node_modules/`、`dist/`。
 
-## 六、远程与上游同步
+## 六、远程与协作
 
-| remote | 地址 | 用途 |
-|---|---|---|
-| `origin` | `git@github.com:Edgarmongo/coolpilot-platform.git` | 主仓库 |
-| `upstream` | `https://github.com/Naccl/NBlog.git` | 仅用于取上游修复 |
-
-同步上游的原则：
-
-- **只拣安全修复与明确缺陷**，不整体 merge（上游是 1.8 / Boot 2.2，我们是 21 / Boot 4，整体合并必然冲突）。
-- 操作方式：`git fetch upstream` → 查看差异 → 手工移植 → 在自己的分支上提交，提交信息注明 `port upstream <short-hash>`。
-- 上游 README、`pic/` 品牌素材不同步。
+本仓库只有 `origin`，不再维护额外的上游远程。
 
 ## 七、仓库内容边界
 
@@ -167,7 +144,7 @@ feat(trade): 人工确认收款后自动发放权益
 
 | 项 | 说明 |
 |---|---|
-| 本地目录名 | 已于 2026-11-05 将工作区目录由 `NBlog` 更名为 `coolpilot-platform`。若 IDE 仍是旧路径，请关闭后以新路径重新打开 |
+| 本地目录名 | 2026-11-05 已重命名为 `coolpilot-platform`；若 IDE 仍是旧路径，关闭后以新路径重新打开 |
 | 容器与前缀命名 | `docker-compose.yml` 的 `name: nblog` 与容器名 `nblog-*` 暂未改。改动会导致数据卷名变化（`nblog_mysql_data` → `coolpilot-platform_mysql_data`），等同于清库，需单独安排迁移，不在本次范围 |
 | `package-lock.json` | 上游 `.gitignore` 忽略了 lock 文件。本次基线已取消该忽略并提交前端 lock，保证依赖可复现；后续升级依赖时请一并提交 lock 变更 |
 | 本项目许可证 | 未定，见 `docs/LICENSE-REVIEW.md` |

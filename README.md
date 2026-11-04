@@ -14,7 +14,7 @@
 
 一个个人站点的完整技术底座，不只是博客：
 
-- **内容**：文章、动态、分类、标签、归档 —— 继承自上游 NBlog，已修完升级与安全问题
+- **内容**：文章、动态、分类、标签、归档，含完整的编辑与审核流程
 - **用户**：访客可自助注册登录，与站长后台身份彻底分离；收藏、点赞、站内消息、问题反馈
 - **知识商品**：文档 / 课程 / 专栏 / 代码 / 技术服务五类商品，含目录、课时、试看与配套资源
 - **交易**：下单 → 支付（人工确认收款）→ 发权益 → 下载/学习 → 退款，全链路幂等
@@ -92,7 +92,6 @@ coolpilot-platform/
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 三端架构、模块边界、技术选型理由 |
 | [docs/BASELINE.md](docs/BASELINE.md) | 上游导入、基线定义、提交与分支规范 |
-| [docs/LICENSE-REVIEW.md](docs/LICENSE-REVIEW.md) | NBlog 上游许可证核查与合规义务 |
 | [docs/DATA-MODEL.md](docs/DATA-MODEL.md) | 39 张表的设计与取舍 |
 | [docs/ED-04-API-DESIGN.md](docs/ED-04-API-DESIGN.md) | 接口约定、错误码、幂等设计 |
 | [docs/ED-05-TASKS.md](docs/ED-05-TASKS.md) | 任务卡与验收标准 |
@@ -101,11 +100,4 @@ coolpilot-platform/
 
 ## 许可证
 
-本项目基于 [NBlog](https://github.com/Naccl/NBlog) 二次开发，上游采用 **MIT License**（Copyright © 2020 Naccl）。
-
-按 MIT 条款，分发时必须保留上游版权声明与许可证全文，因此仓库内 `LICENSE` 保持原样。本项目自身许可证尚未确定，详见 [docs/LICENSE-REVIEW.md](docs/LICENSE-REVIEW.md)。
-
-## 致谢
-
-- [NBlog](https://github.com/Naccl/NBlog) —— 博客与后台的原始实现，本项目的基础
-- 上游依赖的各类开源项目作者
+具体授权方式尚未确定，正式对外分发前需补齐（见 `LICENSE` 与依赖组件的许可信息）。
