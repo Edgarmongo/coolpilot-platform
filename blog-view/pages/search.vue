@@ -10,7 +10,8 @@
 
 		<div v-if="searched" class="result">
 			<p class="muted">「{{ current }}」找到 {{ posts.length }} 篇</p>
-			<PostList :posts="posts" :page-num="1" :total-page="1" empty-text="没有匹配的文章"/>
+			<PostList :posts="pageItems" :page-num="page" :total-page="totalPage" empty-text="没有匹配的文章"
+			          @change="go"/>
 		</div>
 	</div>
 </template>
@@ -24,6 +25,11 @@ const keyword = ref(String(route.query.q || ''))
 const current = ref(String(route.query.q || ''))
 const posts = ref<any[]>([])
 const searched = ref(false)
+const page = ref(1)
+const PAGE_SIZE = 10
+// 搜索接口一次性返回全部结果，分页在前端切片
+const totalPage = computed(() => Math.max(1, Math.ceil(posts.value.length / PAGE_SIZE)))
+const pageItems = computed(() => posts.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
 
 async function doSearch() {
 	if (!keyword.value.trim()) {
@@ -40,10 +46,16 @@ async function run() {
 	searched.value = true
 	const res: any = await call(`/searchBlog?query=${encodeURIComponent(current.value)}`).catch(() => null)
 	posts.value = (res && res.data) || []
+	page.value = 1
 }
 
 if (current.value) {
 	await run()
+}
+
+function go(target: number) {
+	page.value = target
+	window.scrollTo({top: 0, behavior: 'smooth'})
 }
 
 useHead({title: '搜索 - CoolPilot'})

@@ -13,6 +13,7 @@
 						<span class="muted">{{ formatDate(item.createTime) }}</span>
 					</div>
 					<p class="content">{{ item.content }}</p>
+					<button class="reply-btn" @click="startReply(item)">回复</button>
 					<ul v-if="item.replyComments && item.replyComments.length" class="replies">
 						<li v-for="reply in item.replyComments" :key="reply.id">
 							<strong>{{ reply.nickname }}</strong>：{{ reply.content }}
@@ -27,6 +28,10 @@
 			<div class="fields">
 				<input v-model="form.nickname" placeholder="昵称" maxlength="20">
 				<input v-model="form.email" placeholder="邮箱（不公开）" maxlength="50">
+			</div>
+			<div v-if="replyTo" class="reply-hint">
+				回复 <strong>@{{ replyTo.nickname }}</strong>
+				<button class="cancel" @click="replyTo = null">取消</button>
 			</div>
 			<textarea v-model="form.content" placeholder="说点什么…（最多 250 字）" maxlength="250"/>
 			<div class="actions">
@@ -45,6 +50,8 @@ const {call} = useApi()
 
 const comments = ref<any[]>([])
 const submitting = ref(false)
+// 盖楼：为 null 时是顶层评论，否则是回复某条评论
+const replyTo = ref<any>(null)
 const form = reactive({nickname: '', email: '', content: ''})
 
 async function load() {
@@ -69,7 +76,7 @@ async function submit() {
 				content: form.content.trim(),
 				page: 0,
 				blogId: props.blogId,
-				parentCommentId: -1,
+				parentCommentId: replyTo.value ? replyTo.value.id : -1,
 				nickname: form.nickname.trim(),
 				email: form.email.trim(),
 				notice: true
@@ -77,6 +84,7 @@ async function submit() {
 		})
 		if (res.code === 200) {
 			form.content = ''
+			replyTo.value = null
 			alert('评论已提交，审核通过后展示')
 			await load()
 		} else {
@@ -85,6 +93,10 @@ async function submit() {
 	} finally {
 		submitting.value = false
 	}
+}
+
+function startReply(item: any) {
+	replyTo.value = item
 }
 
 await load()
@@ -144,6 +156,36 @@ await load()
 	margin: 4px 0 0;
 	font-size: 13.5px;
 	white-space: pre-wrap;
+}
+
+.reply-btn {
+	border: none;
+	background: none;
+	color: var(--teal);
+	font-size: 12.5px;
+	cursor: pointer;
+	padding: 0;
+	margin-top: 4px;
+}
+
+.reply-hint {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+	padding: 6px 10px;
+	background: #eef7f5;
+	border-radius: 7px;
+	font-size: 12.5px;
+	color: #115e59;
+}
+
+.reply-hint .cancel {
+	border: none;
+	background: none;
+	color: #9ca3af;
+	font-size: 12px;
+	cursor: pointer;
 }
 
 .replies {
