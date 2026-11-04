@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.model.vo.Result;
+import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.modules.product.entity.Product;
 import com.coolskyai.modules.product.service.ProductService;
 import com.coolskyai.modules.service.service.ServiceItemService;
@@ -23,6 +24,8 @@ public class ProductController {
 	private ProductService productService;
 	@Autowired
 	private ServiceItemService serviceItemService;
+	@Autowired
+	private AccountService accountService;
 
 	@GetMapping("/products")
 	public Result products(@RequestParam(required = false) String type,
@@ -31,6 +34,14 @@ public class ProductController {
 	                       @RequestParam(defaultValue = "1") Integer pageNum,
 	                       @RequestParam(defaultValue = "12") Integer pageSize) {
 		return Result.ok("OK", productService.pageOnSale(type, categoryId, keyword, pageNum, pageSize));
+	}
+
+	/**
+	 * 文章关联的付费内容：公开可读，登录时额外返回是否已拥有
+	 */
+	@GetMapping("/blog/{blogId}/products")
+	public Result blogProducts(@PathVariable Long blogId) {
+		return Result.ok("OK", productService.relatedByBlog(blogId, accountService.currentUserId()));
 	}
 
 	@GetMapping("/productCategories")

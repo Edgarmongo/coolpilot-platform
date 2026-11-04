@@ -113,7 +113,7 @@ ALTER TABLE `friend`
 | 商品域 | `product` | V1.1 | 统一商品主体（文档/课程/专栏/代码/服务） |
 | | `product_category` | V1.1 | 商品分类 |
 | | `product_price` | V1.1 | 价格策略（固定价 / 限时优惠） |
-| | `product_article` | V1.1 | 专栏 ↔ 文章关联 |
+| | `product_article` | V1.1 | 文章 ↔ 商品关联（已接入：文章底部的付费内容推荐） |
 | | `course` | V1.1 | 课程扩展信息 |
 | | `lesson` | V1.1 | 课时 |
 | | `product_resource` | V1.1 | 可下载资源（文档/代码包） |

@@ -11,6 +11,23 @@
 				</div>
 				<div class="article" v-html="blog.content"></div>
 
+				<!-- 关联付费内容：内容底部导流到商品 -->
+				<div v-if="relatedProducts.length" class="related">
+					<h3>相关付费内容</h3>
+					<div class="related-grid">
+						<NuxtLink v-for="item in relatedProducts" :key="item.id"
+						          :to="`/knowledge/${item.productNo}`" class="related-item">
+							<div class="ri-head">
+								<span class="tag">{{ typeText(item.productType) }}</span>
+								<span v-if="item.owned" class="owned">已拥有</span>
+							</div>
+							<strong>{{ item.title }}</strong>
+							<p class="muted ri-summary">{{ item.summary }}</p>
+							<span class="amount">{{ priceLabel(item) }}</span>
+						</NuxtLink>
+					</div>
+				</div>
+
 				<!--收藏与点赞：未登录时点击跳转登录-->
 				<div class="actions">
 					<button :class="['act', {active: favorited}]" @click="toggleFavorite">
@@ -65,6 +82,7 @@ const unlocking = ref(false)
 const favorited = ref(false)
 const liked = ref(false)
 const likeCount = ref(0)
+const relatedProducts = ref<any[]>([])
 // 密码凭证按文章维度存，30 天有效
 const pwdToken = useCookie<string | null>(`cp_blog_pwd_${param}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
 
@@ -74,11 +92,12 @@ async function fetchBlog() {
 		headers.authorization = pwdToken.value
 	}
 	// 密码文章只认自己的凭证，不能带访客 token（后端会把它当 blogId 解析）
-	const res: any = await call(`/blog?${blogQuery}`, {headers, skipAuth: !pwdToken.value}).catch(() => null)
+	const res: any = await call(`/blog?${blogQuery}`, {headers}).catch(() => null)
 	if (res && res.code === 200) {
 		blog.value = res.data
 		if (res.data && res.data.id) {
 			blogId.value = res.data.id
+			await loadRelated()
 		}
 		locked.value = false
 		message.value = ''
@@ -163,6 +182,23 @@ async function toggleLike() {
 	}
 }
 
+async function loadRelated() {
+	const res: any = await call(`/blog/${blogId.value}/products`).catch(() => null)
+	relatedProducts.value = (res && res.code === 200 && res.data) ? res.data : []
+}
+
+function typeText(type: string) {
+	return {DOC: '文档', COURSE: '课程', COLUMN: '专栏', CODE: '代码', SERVICE: '服务'}[type] || type
+}
+
+function priceLabel(product: any) {
+	if (product.priceMode === 'CUSTOM') {
+		return '按需报价'
+	}
+	const value = Number(product.price || 0).toFixed(2).replace(/\.00$/, '')
+	return product.priceMode === 'STARTING' ? `¥${value} 起` : `¥${value}`
+}
+
 if (blog.value) {
 	useHead({title: `${blog.value.title} - CoolSkyAI`})
 } else {
@@ -240,5 +276,58 @@ if (blog.value) {
 .cnt {
 	font-size: 12px;
 	opacity: .8;
+}
+
+.related {
+	margin: 18px 0 4px;
+	padding-top: 14px;
+	border-top: 1px dashed var(--line);
+}
+
+.related h3 {
+	margin: 0 0 10px;
+	font-size: 15px;
+}
+
+.related-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 10px;
+}
+
+.related-item {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	padding: 10px 12px;
+	transition: box-shadow .15s, transform .15s;
+}
+
+.related-item:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 20px rgba(15, 118, 110, .08);
+}
+
+.ri-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.owned {
+	font-size: 12px;
+	color: var(--teal);
+}
+
+.ri-summary {
+	margin: 0;
+	font-size: 12px;
+	line-height: 1.6;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 </style>

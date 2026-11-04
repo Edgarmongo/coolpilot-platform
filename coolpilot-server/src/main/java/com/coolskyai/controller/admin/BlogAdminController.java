@@ -257,7 +257,10 @@ public class BlogAdminController {
 			for (Tag t : tags) {
 				blogService.saveBlogTag(blog.getId(), t.getId());
 			}
-			return Result.ok("添加成功");
+			// 返回 id：新建后前端要立刻绑定关联商品，没有 id 就得再查一次列表
+			Map<String, Object> data = new java.util.HashMap<>(2);
+			data.put("id", blog.getId());
+			return Result.ok("添加成功", data);
 		} else {
 			blog.setUpdateTime(date);
 			blogService.updateBlog(blog);

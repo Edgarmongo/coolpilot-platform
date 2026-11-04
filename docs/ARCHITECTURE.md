@@ -295,7 +295,16 @@ upload.file.resources-locations=file:${upload.file.path}
 
 ---
 
-### 4.9 V1.3 知识库检索（第一阶段）
+### 4.9 文章关联付费内容
+
+表：`product_article`（V1 快照就有，此前一直没有代码使用）。用于「内容 → 付费」的转化入口。
+
+- 后台：文章编辑页「关联付费内容」多选，整组替换（`PUT /admin/blog/{blogId}/products`），顺序即展示顺序
+- 前台：`GET /blog/{blogId}/products`（公开）只返回**上架**商品；登录用户额外返回 `owned`
+- 文章页在正文下方展示卡片，已购显示「已拥有」；未登录点击进入商品页
+- 未绑定商品的文章不渲染该区块，不留空位
+
+### 4.10 V1.3 知识库检索（第一阶段）
 
 模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；
 决策记录见 `docs/ADR-0001-VECTOR-STORE.md`。

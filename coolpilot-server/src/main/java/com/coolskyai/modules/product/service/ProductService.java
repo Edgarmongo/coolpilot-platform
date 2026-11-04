@@ -15,7 +15,10 @@ import com.coolskyai.modules.product.mapper.CourseMapper;
 import com.coolskyai.modules.product.mapper.LessonMapper;
 import com.coolskyai.modules.product.mapper.ProductCategoryMapper;
 import com.coolskyai.modules.product.mapper.ProductMapper;
+import com.coolskyai.modules.product.mapper.ProductArticleMapper;
 import com.coolskyai.modules.product.mapper.ProductResourceMapper;
+import com.coolskyai.modules.product.vo.RelatedProduct;
+import com.coolskyai.modules.entitlement.mapper.EntitlementMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -51,6 +54,10 @@ public class ProductService {
 	private LessonMapper lessonMapper;
 	@Autowired
 	private ProductResourceMapper productResourceMapper;
+	@Autowired
+	private ProductArticleMapper productArticleMapper;
+	@Autowired
+	private EntitlementMapper entitlementMapper;
 
 	// ---------------- 前台 ----------------
 
@@ -104,6 +111,59 @@ public class ProductService {
 
 	public List<ProductCategory> categories(String type) {
 		return productCategoryMapper.listByType(type);
+	}
+
+	// ---------------- 文章关联付费内容 ----------------
+
+	/**
+	 * 文章关联的商品（前台）
+	 *
+	 * 只返回上架商品；登录用户额外标记是否已拥有，前端据此显示「已拥有」。
+	 * 未登录或没有权益时 owned=false，不影响展示。
+	 */
+	public List<RelatedProduct> relatedByBlog(Long blogId, Long userId) {
+		List<RelatedProduct> list = productArticleMapper.listByBlogId(blogId);
+		list.removeIf(product -> !"ON_SALE".equals(product.getStatus()));
+		for (RelatedProduct product : list) {
+			product.setOwned(userId != null && entitlementMapper.countActive(userId, product.getId()) > 0);
+		}
+		return list;
+	}
+
+	/**
+	 * 后台：某篇文章绑定的商品 id（用于编辑时回填）
+	 */
+	public List<Long> blogProductIds(Long blogId) {
+		return productArticleMapper.listProductIdsByBlogId(blogId);
+	}
+
+	/**
+	 * 后台：整组替换绑定关系
+	 *
+	 * 用「先删后插」而不是 diff：绑定数量很少，简单可靠；
+	 * 顺序即前台展示顺序。
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void bindBlogProducts(Long blogId, List<Long> productIds) {
+		if (productArticleMapper.countBlog(blogId) == 0) {
+			throw new BadRequestException("文章不存在");
+		}
+		productArticleMapper.deleteByBlogId(blogId);
+		if (productIds == null || productIds.isEmpty()) {
+			return;
+		}
+		int sort = 0;
+		Set<Long> seen = new java.util.LinkedHashSet<>();
+		for (Long productId : productIds) {
+			if (productId == null || !seen.add(productId)) {
+				continue;
+			}
+			Product product = productMapper.findById(productId);
+			if (product == null) {
+				continue;
+			}
+			productArticleMapper.insert(productId, blogId, sort++);
+		}
 	}
 
 	// ---------------- 后台 ----------------

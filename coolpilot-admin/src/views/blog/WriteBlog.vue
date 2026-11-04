@@ -73,6 +73,16 @@
 				</div>
 
 				<div class="side-block">
+					<h4>关联付费内容</h4>
+					<el-select v-model="relatedIds" multiple filterable placeholder="在文章底部推荐的商品"
+					           class="mt" style="width: 100%">
+						<el-option v-for="p in productOptions" :key="p.id" :value="p.id"
+						           :label="`${p.title}（${priceText(p)}）`"/>
+					</el-select>
+					<p class="hint">只列出已上架商品；用户已购买时前台显示「已拥有」</p>
+				</div>
+
+				<div class="side-block">
 					<h4>首图</h4>
 					<el-input v-model="form.firstPicture" placeholder="上传或直接填写图片地址" class="mt"/>
 					<div class="upload-row">
@@ -101,6 +111,7 @@ import {Back} from '@element-plus/icons-vue'
 import {marked} from 'marked'
 import request from '@/util/request'
 import {getBlog, getCategoryAndTag, saveBlog, updateBlog} from '@/api/blog'
+import {bindBlogProducts, getBlogProducts, getProductList} from '@/api/product'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +121,8 @@ const saving = ref(false)
 const uploading = ref(false)
 const categories = ref([])
 const tags = ref([])
+const productOptions = ref([])
+const relatedIds = ref([])
 const isEdit = computed(() => !!route.params.id)
 
 const form = reactive({
@@ -132,6 +145,13 @@ const form = reactive({
 const wordCount = computed(() => (form.content || '').replace(/\s/g, '').length)
 const readTime = computed(() => Math.max(1, Math.ceil(wordCount.value / 350)))
 const previewHtml = computed(() => (form.content ? marked.parse(form.content) : '<p class="muted">暂无内容</p>'))
+
+function priceText(product) {
+	if (product.priceMode === 'CUSTOM') {
+		return '面议'
+	}
+	return '¥' + Number(product.price || 0).toFixed(2).replace(/\.00$/, '')
+}
 
 async function uploadCover(event) {
 	const file = event.target.files && event.target.files[0]
@@ -195,10 +215,20 @@ async function submit() {
 			cate: form.cate,
 			tagList: form.tagList
 		}
+		let blogId = form.id
 		if (isEdit.value) {
 			await updateBlog(payload)
 		} else {
-			await saveBlog(payload)
+			const created = await saveBlog(payload)
+			blogId = created && created.data ? created.data.id : null
+		}
+		// 文章已保存成功；绑定失败单独提示，不要让用户以为整篇没存上
+		if (blogId) {
+			try {
+				await bindBlogProducts(blogId, relatedIds.value)
+			} catch (e) {
+				ElMessage.warning('文章已保存，但关联商品未保存，请重新编辑后再试')
+			}
 		}
 		ElMessage.success('保存成功')
 		router.push('/blog/list')
@@ -213,6 +243,8 @@ onMounted(async () => {
 		const meta = await getCategoryAndTag()
 		categories.value = meta.data.categories || []
 		tags.value = meta.data.tags || []
+		const products = await getProductList({status: 'ON_SALE', pageNum: 1, pageSize: 100})
+		productOptions.value = (products.data && products.data.list) || []
 		if (isEdit.value) {
 			const res = await getBlog(route.params.id)
 			const blog = res.data
@@ -232,6 +264,8 @@ onMounted(async () => {
 				cate: blog.category ? blog.category.id : null,
 				tagList: (blog.tags || []).map(tag => tag.id)
 			})
+			const bound = await getBlogProducts(blog.id).catch(() => null)
+			relatedIds.value = (bound && bound.data && bound.data.productIds) || []
 		}
 	} finally {
 		loading.value = false

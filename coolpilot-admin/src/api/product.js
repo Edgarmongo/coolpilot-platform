@@ -41,6 +41,16 @@ export function bindResource(productId, data) {
 	return request({url: `product/${productId}/resource`, method: 'POST', data})
 }
 
+// ---------------- 文章关联付费内容 ----------------
+
+export function getBlogProducts(blogId) {
+	return request({url: `blog/${blogId}/products`, method: 'GET'})
+}
+
+export function bindBlogProducts(blogId, productIds) {
+	return request({url: `blog/${blogId}/products`, method: 'PUT', data: {productIds}})
+}
+
 // ---------------- 其他 ----------------
 
 /**

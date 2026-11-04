@@ -68,7 +68,7 @@ public final class SecurityPaths {
 	 */
 	public static final String[] PUBLIC = {
 			// 内容浏览
-			"/blogs", "/blog", "/archives", "/searchBlog", "/category", "/tag",
+			"/blogs", "/blog", "/blog/*/products", "/archives", "/searchBlog", "/category", "/tag",
 			"/moments", "/about", "/site",
 			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）
 			"/comments", "/comment",

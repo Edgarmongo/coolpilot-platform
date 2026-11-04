@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.OperationLogger;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.service.AccountService;
+import com.coolskyai.modules.product.dto.BlogProductBindDTO;
 import com.coolskyai.modules.product.dto.ProductSaveDTO;
 import com.coolskyai.modules.product.entity.Lesson;
 import com.coolskyai.modules.product.entity.ProductResource;
@@ -67,6 +68,22 @@ public class ProductAdminController {
 	public Result changeStatus(@PathVariable Long id, @RequestParam String status) {
 		productService.changeStatus(id, status);
 		return Result.ok("操作成功");
+	}
+
+	// ---------------- 文章关联付费内容 ----------------
+
+	@GetMapping("/admin/blog/{blogId}/products")
+	public Result blogProducts(@PathVariable Long blogId) {
+		Map<String, Object> data = new HashMap<>(2);
+		data.put("productIds", productService.blogProductIds(blogId));
+		return Result.ok("OK", data);
+	}
+
+	@OperationLogger("绑定文章付费内容")
+	@PutMapping("/admin/blog/{blogId}/products")
+	public Result bindBlogProducts(@PathVariable Long blogId, @RequestBody BlogProductBindDTO dto) {
+		productService.bindBlogProducts(blogId, dto.getProductIds());
+		return Result.ok("已保存", null);
 	}
 
 	@OperationLogger("保存课时")
