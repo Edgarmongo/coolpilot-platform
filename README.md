@@ -38,11 +38,11 @@
 |---|---|
 | 后端 | Java 21、Spring Boot 4.1、Spring Security + JWT、MyBatis、PageHelper |
 | 数据库 | MySQL 8.0、Redis 7 |
-| 前台 | Vue 2.6、Vue Router、Element UI（`blog-view`） |
-| 后台 | Vue 2.6、Element UI Admin 模板（`blog-cms`） |
-| 构建 | Maven、vue-cli 5、Docker Compose |
+| 前台 | Nuxt 3 + Vue 3.5 + TypeScript（`blog-view`，SSR） |
+| 后台 | Vue 3.5 + Vite + Element Plus + Pinia（`blog-cms`） |
+| 构建 | Maven、Vite、Nuxt、Docker Compose |
 
-> 前端目前是 Vue 2。迁移 Vue 3 需要重写大量组件，暂不在当前批次内。
+> 前端已于 2026-11-05 从 Vue 2 迁移到 Vue 3 / Nuxt 3，旧的 Vue 2 版本保留在 `v0.1.0-baseline` 标签中，迁移分批进行，进度见 [docs/FRONTEND-MIGRATION.md](docs/FRONTEND-MIGRATION.md)。
 
 ## 快速开始
 

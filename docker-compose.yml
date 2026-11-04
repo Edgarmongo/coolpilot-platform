@@ -106,8 +106,10 @@ services:
       - api
     environment:
       TZ: Asia/Shanghai
-      API_TARGET: http://api:8091
-    command: ["npx", "vue-cli-service", "serve", "--host", "0.0.0.0", "--port", "8081"]
+      # Nuxt 的 Nitro 代理用它拼后端地址（仅服务端可见）
+      API_BASE: http://api:8091
+      NUXT_TELEMETRY_DISABLED: "1"
+    command: ["npx", "nuxt", "dev", "--host", "0.0.0.0", "--port", "8081"]
     ports:
       - "8081:8081"
     volumes:
@@ -128,8 +130,9 @@ services:
       - api
     environment:
       TZ: Asia/Shanghai
+      # Vite 代理目标
       API_TARGET: http://api:8091
-    command: ["npx", "vue-cli-service", "serve", "--host", "0.0.0.0", "--port", "8079"]
+    command: ["npx", "vite", "--host", "0.0.0.0", "--port", "8079"]
     ports:
       - "8079:8079"
     volumes:

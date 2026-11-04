@@ -125,7 +125,7 @@
         "./imports"
       ],
       "#app-manifest": [
-        "./manifest/meta/5db78e9a-aa96-405e-8e1d-f69421c9e892.json"
+        "./manifest/meta/dev.json"
       ],
       "#components": [
         "./components"
@@ -170,16 +170,11 @@
     "../**/*",
     "../.config/nuxt.*",
     "./nuxt.d.ts",
-    "../node_modules/runtime",
-    "../node_modules/dist/runtime",
     ".."
   ],
   "exclude": [
     "../dist",
     "../.data",
-    "../../node_modules",
-    "../node_modules/runtime/server",
-    "../node_modules/dist/runtime/server",
-    "../.output"
+    "dev"
   ]
 }

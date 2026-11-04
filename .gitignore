@@ -69,3 +69,8 @@ desktop.ini
 
 # 上游遗留的临时目录
 /blog-cms-tmp
+
+# Nuxt 生成物
+.nuxt/
+.output/
+.data/

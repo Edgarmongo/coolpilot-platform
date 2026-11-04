@@ -9,3 +9,6 @@ blog-api/sql/_backup_*.sql
 out
 pic
 docs
+.nuxt
+.output
+.data
