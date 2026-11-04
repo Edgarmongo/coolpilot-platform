@@ -8,6 +8,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import com.coolskyai.config.properties.UploadProperties;
 import com.coolskyai.interceptor.AccessLimitInterceptor;
+import com.coolskyai.interceptor.ImageGuardInterceptor;
 
 /**
  * @Description: 配置CORS跨域支持、拦截器
@@ -18,6 +19,8 @@ import com.coolskyai.interceptor.AccessLimitInterceptor;
 public class WebConfig implements WebMvcConfigurer {
 	@Autowired
 	AccessLimitInterceptor accessLimitInterceptor;
+	@Autowired
+	ImageGuardInterceptor imageGuardInterceptor;
 	@Autowired
 	UploadProperties uploadProperties;
 
@@ -43,6 +46,9 @@ public class WebConfig implements WebMvcConfigurer {
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(accessLimitInterceptor);
+		// /image/** 是静态资源，不走鉴权；这里单独挡住 _private/ 前缀
+		registry.addInterceptor(imageGuardInterceptor)
+				.addPathPatterns(uploadProperties.getAccessPath());
 	}
 
 	/**

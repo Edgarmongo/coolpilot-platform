@@ -51,6 +51,8 @@ public interface BlogService {
 
 	Blog getBlogById(Long id);
 
+	Blog getBlogBySlug(String slug);
+
 	String getTitleByBlogId(Long id);
 
 	BlogDetail getBlogByIdAndIsPublished(Long id);

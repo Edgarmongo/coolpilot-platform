@@ -61,8 +61,13 @@ public class FileController {
 		data.put("fileSize", info.getFileSize());
 		data.put("mimeType", info.getMimeType());
 		data.put("isPublic", info.getIsPublic());
-		// /image/** 映射到上传目录，拼出可直接放进 Markdown 的地址
-		data.put("url", blogApi + "/image/" + info.getObjectKey());
+		/*
+		 * 只有公开文件才有直链。
+		 * 私有文件存在 _private/ 下，/image/** 会拒绝该前缀（403），
+		 * 给出一个用不了的地址只会误导调用方 —— 私有文件请走 /file/token + /file/download。
+		 */
+		data.put("url", Boolean.TRUE.equals(info.getIsPublic())
+				? blogApi + "/image/" + info.getObjectKey() : null);
 		return Result.ok("上传成功", data);
 	}
 

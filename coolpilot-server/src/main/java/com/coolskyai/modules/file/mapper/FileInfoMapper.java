@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import com.coolskyai.modules.file.entity.FileInfo;
 
 /**
@@ -24,6 +25,15 @@ public interface FileInfoMapper {
 
 	@Select("SELECT * FROM file WHERE id = #{id} AND status = 'NORMAL'")
 	FileInfo findById(@Param("id") Long id);
+
+	/**
+	 * 迁移用：历史上私有文件与公开图片混在同一目录，需搬进 _private/
+	 */
+	@Select("SELECT * FROM file WHERE is_public = 0 AND object_key NOT LIKE '_private/%'")
+	java.util.List<FileInfo> listPrivateLegacy();
+
+	@Update("UPDATE file SET object_key = #{objectKey}, update_time = NOW() WHERE id = #{id}")
+	int updateObjectKey(@Param("id") Long id, @Param("objectKey") String objectKey);
 
 	@Select("SELECT * FROM file WHERE file_uuid = #{uuid} AND status = 'NORMAL'")
 	FileInfo findByUuid(@Param("uuid") String uuid);

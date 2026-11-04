@@ -37,6 +37,13 @@ import java.util.UUID;
 @Service
 public class FileService {
 	private static final long TOKEN_TTL_MS = 5 * 60 * 1000L;
+	/**
+	 * 私有文件的存储前缀。
+	 * /image/** 映射的是整个上传目录，如果不做隔离，付费资源的直链可被匿名下载。
+	 * 放到 _private/ 下并由 ImageGuardInterceptor 拒绝该前缀，私有文件就只能走
+	 * /file/download?token= 这条带权益校验的通道。
+	 */
+	public static final String PRIVATE_PREFIX = "_private/";
 	/** 允许上传的扩展名，避免上传可执行文件 */
 	private static final List<String> ALLOWED_EXT = Arrays.asList(
 			"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp",
@@ -79,9 +86,10 @@ public class FileService {
 
 		String uuid = UUID.randomUUID().toString().replace("-", "");
 		String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM"));
-		String objectKey = datePath + "/" + uuid + "." + ext;
+		String dir = (isPublic ? "" : PRIVATE_PREFIX) + datePath;
+		String objectKey = dir + "/" + uuid + "." + ext;
 
-		File folder = new File(uploadPath, datePath);
+		File folder = new File(uploadPath, dir);
 		if (!folder.exists() && !folder.mkdirs()) {
 			throw new IllegalStateException("无法创建上传目录：" + folder.getAbsolutePath());
 		}

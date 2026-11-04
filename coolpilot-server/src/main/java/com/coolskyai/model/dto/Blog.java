@@ -24,6 +24,7 @@ import java.util.List;
 public class Blog {
 	private Long id;
 	private String title;//文章标题
+	private String slug;//URL 别名，前台 /blog/:slug 使用；为空时回落 id
 	private String firstPicture;//文章首图，用于随机文章展示
 	private String content;//文章正文
 	private String description;//描述

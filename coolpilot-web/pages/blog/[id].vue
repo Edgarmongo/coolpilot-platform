@@ -40,7 +40,7 @@
 			<div v-else class="empty">{{ message || '文章不存在或已被删除' }}</div>
 		</div>
 
-		<CommentSection v-if="blog" :blog-id="Number(id)"/>
+		<CommentSection v-if="blog" :blog-id="blogId"/>
 	</div>
 </template>
 
@@ -48,8 +48,16 @@
 const route = useRoute()
 const {call, isLogin} = useApi()
 
-const id = String(route.params.id)
+/**
+ * 路由参数既可能是旧链接的 id，也可能是新链接的 slug。
+ * 纯数字按 id 处理，其余按 slug 查——旧链接因此不会失效。
+ */
+const param = String(route.params.id)
+const isIdParam = /^\d+$/.test(param)
+const blogQuery = isIdParam ? `id=${param}` : `slug=${encodeURIComponent(param)}`
 const blog = ref<any>(null)
+// 评论、收藏、点赞都需要真实 id，slug 进来时由接口返回后再填
+const blogId = ref<number>(isIdParam ? Number(param) : 0)
 const locked = ref(false)
 const message = ref('')
 const password = ref('')
@@ -58,7 +66,7 @@ const favorited = ref(false)
 const liked = ref(false)
 const likeCount = ref(0)
 // 密码凭证按文章维度存，30 天有效
-const pwdToken = useCookie<string | null>(`cp_blog_pwd_${id}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
+const pwdToken = useCookie<string | null>(`cp_blog_pwd_${param}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
 
 async function fetchBlog() {
 	const headers: Record<string, string> = {}
@@ -66,9 +74,12 @@ async function fetchBlog() {
 		headers.authorization = pwdToken.value
 	}
 	// 密码文章只认自己的凭证，不能带访客 token（后端会把它当 blogId 解析）
-	const res: any = await call(`/blog?id=${id}`, {headers, skipAuth: !pwdToken.value}).catch(() => null)
+	const res: any = await call(`/blog?${blogQuery}`, {headers, skipAuth: !pwdToken.value}).catch(() => null)
 	if (res && res.code === 200) {
 		blog.value = res.data
+		if (res.data && res.data.id) {
+			blogId.value = res.data.id
+		}
 		locked.value = false
 		message.value = ''
 	} else if (res && res.code === 403) {
@@ -90,7 +101,7 @@ async function unlock() {
 	try {
 		const res: any = await call('/checkBlogPassword', {
 			method: 'POST',
-			body: {blogId: Number(id), password: password.value}
+			body: {blogId: blogId.value, password: password.value}
 		})
 		if (res.code === 200) {
 			pwdToken.value = res.data
@@ -112,8 +123,8 @@ await fetchBlog()
  */
 if (blog.value && isLogin.value) {
 	const [f, l]: any[] = await Promise.all([
-		call(`/favorite/status?targetType=ARTICLE&targetId=${id}`).catch(() => null),
-		call(`/like/status?targetType=ARTICLE&targetId=${id}`).catch(() => null)
+		call(`/favorite/status?targetType=ARTICLE&targetId=${blogId.value}`).catch(() => null),
+		call(`/like/status?targetType=ARTICLE&targetId=${blogId.value}`).catch(() => null)
 	])
 	favorited.value = !!(f && f.data && f.data.favorited)
 	liked.value = !!(l && l.data && l.data.liked)
@@ -130,7 +141,7 @@ async function toggleFavorite() {
 		requireLogin()
 		return
 	}
-	const res: any = await call(`/favorite?targetType=ARTICLE&targetId=${id}`, {
+	const res: any = await call(`/favorite?targetType=ARTICLE&targetId=${blogId.value}`, {
 		method: favorited.value ? 'DELETE' : 'POST'
 	})
 	if (res && res.code === 200) {
@@ -143,7 +154,7 @@ async function toggleLike() {
 		requireLogin()
 		return
 	}
-	const res: any = await call(`/like?targetType=ARTICLE&targetId=${id}`, {
+	const res: any = await call(`/like?targetType=ARTICLE&targetId=${blogId.value}`, {
 		method: liked.value ? 'DELETE' : 'POST'
 	})
 	if (res && res.code === 200) {

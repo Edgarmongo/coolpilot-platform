@@ -54,6 +54,13 @@
 				</div>
 
 				<div class="side-block">
+					<h4>链接别名（slug）</h4>
+					<el-input v-model="form.slug" placeholder="如 spring-boot-layering，留空则用 id"
+					          maxlength="120" class="mt"/>
+					<p class="hint">只能使用字母、数字、连字符和下划线；决定 /blog/xxx 这个地址</p>
+				</div>
+
+				<div class="side-block">
 					<h4>分类与标签</h4>
 					<el-select v-model="form.cate" filterable allow-create default-first-option
 					           placeholder="选择或输入新分类" class="mt" style="width: 100%">
@@ -108,6 +115,7 @@ const isEdit = computed(() => !!route.params.id)
 const form = reactive({
 	id: null,
 	title: '',
+	slug: '',
 	description: '',
 	content: '',
 	firstPicture: '/img/cover.jpg',
@@ -172,6 +180,7 @@ async function submit() {
 		const payload = {
 			id: form.id || undefined,
 			title: form.title.trim(),
+			slug: form.slug.trim() || null,
 			description: form.description.trim(),
 			content: form.content,
 			firstPicture: form.firstPicture || '/img/cover.jpg',
@@ -210,6 +219,7 @@ onMounted(async () => {
 			Object.assign(form, {
 				id: blog.id,
 				title: blog.title,
+				slug: blog.slug || '',
 				description: blog.description,
 				content: blog.content,
 				firstPicture: blog.firstPicture,

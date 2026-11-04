@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.constant.RedisKeyConstants;
 import com.coolskyai.entity.Blog;
+import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.exception.NotFoundException;
 import com.coolskyai.exception.PersistenceException;
 import com.coolskyai.mapper.BlogMapper;
@@ -148,20 +149,20 @@ public class BlogServiceImpl implements BlogService {
 		for (int i = 0; i < blogInfos.size(); i++) {
 			BlogInfo blogInfo = JacksonUtils.convertValue(blogInfos.get(i), BlogInfo.class);
 			Long blogId = blogInfo.getId();
-			/**
-			 * 这里如果出现异常，通常是手动修改过 MySQL 而没有通过后台管理，导致 Redis 和 MySQL 不同步
-			 * 从 Redis 中查出了 null，强转 int 时出现 NullPointerException
-			 * 直接抛出异常比带着 bug 继续跑要好得多
-			 *
-			 * 解决步骤：
-			 * 1.结束程序
-			 * 2.删除 Redis DB 中 blogViewsMap 这个 key（或者直接清空对应的整个 DB）
-			 * 3.重新启动程序
-			 *
-			 * 具体请查看: https://github.com/Edgarmongo/coolpilot-platform
+			/*
+			 * Redis 里的浏览量 hash 可能不存在这条记录：
+			 * 缓存被清空、Redis 重启（未开持久化）、或手动改过库都会这样。
+			 * 原实现直接强转 int 会抛 NPE，导致整个首页 500。
+			 * 这里用数据库里的值兜底，并顺手回填缓存，下次就正常了。
 			 */
-			int view = (int) redisService.getValueByHashKey(redisKey, blogId);
-			blogInfo.setViews(view);
+			Object cachedView = redisService.getValueByHashKey(redisKey, blogId);
+			if (cachedView == null) {
+				int dbView = blogInfo.getViews() == null ? 0 : blogInfo.getViews();
+				redisService.saveKVToHash(redisKey, blogId, dbView);
+				blogInfo.setViews(dbView);
+			} else {
+				blogInfo.setViews((int) cachedView);
+			}
 			blogInfos.set(i, blogInfo);
 		}
 	}
@@ -273,9 +274,30 @@ public class BlogServiceImpl implements BlogService {
 		blogMapper.deleteBlogTagByBlogId(blogId);
 	}
 
+	/**
+	 * slug 规范化与唯一性校验。
+	 *
+	 * 只允许字母、数字、连字符和下划线 —— 这些字符在 URL 里不需要转义，
+	 * 中文 slug 虽然合法但复制粘贴时容易变形，让编辑自己决定更稳妥。
+	 */
+	private void checkSlug(String slug, Long selfId) {
+		if (slug == null || slug.trim().isEmpty()) {
+			return;
+		}
+		String normalized = slug.trim();
+		if (!normalized.matches("^[A-Za-z0-9_-]{1,120}$")) {
+			throw new BadRequestException("slug 只能使用字母、数字、连字符和下划线，且不超过 120 个字符");
+		}
+		Blog exist = blogMapper.getBlogBySlug(normalized);
+		if (exist != null && (selfId == null || !exist.getId().equals(selfId))) {
+			throw new BadRequestException("slug 已被《" + exist.getTitle() + "》占用，请换一个");
+		}
+	}
+
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveBlog(com.coolskyai.model.dto.Blog blog) {
+		checkSlug(blog.getSlug(), null);
 		if (blogMapper.saveBlog(blog) != 1) {
 			throw new PersistenceException("添加博客失败");
 		}
@@ -333,18 +355,28 @@ public class BlogServiceImpl implements BlogService {
 	}
 
 	@Override
+	public Blog getBlogBySlug(String slug) {
+		if (slug == null || slug.trim().isEmpty()) {
+			return null;
+		}
+		return blogMapper.getBlogBySlug(slug.trim());
+	}
+
+	@Override
 	public Blog getBlogById(Long id) {
 		Blog blog = blogMapper.getBlogById(id);
 		if (blog == null) {
 			throw new NotFoundException("博客不存在");
 		}
-		/**
-		 * 将浏览量设置为Redis中的最新值
-		 * 这里如果出现异常，查看第 152 行注释说明
-		 * @see BlogServiceImpl#setBlogViewsFromRedisToPageResult
-		 */
-		int view = (int) redisService.getValueByHashKey(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId());
-		blog.setViews(view);
+		// 与列表一致：缓存缺失时用库里的值兜底并回填，不因为缓存丢了就打不开文章
+		Object cachedView = redisService.getValueByHashKey(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId());
+		if (cachedView == null) {
+			int dbView = blog.getViews() == null ? 0 : blog.getViews();
+			redisService.saveKVToHash(RedisKeyConstants.BLOG_VIEWS_MAP, blog.getId(), dbView);
+			blog.setViews(dbView);
+		} else {
+			blog.setViews((int) cachedView);
+		}
 		return blog;
 	}
 
@@ -378,6 +410,7 @@ public class BlogServiceImpl implements BlogService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateBlog(com.coolskyai.model.dto.Blog blog) {
+		checkSlug(blog.getSlug(), blog.getId());
 		if (blogMapper.updateBlog(blog) != 1) {
 			throw new PersistenceException("更新博客失败");
 		}

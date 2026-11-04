@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.VisitLogger;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.entity.Blog;
 import com.coolskyai.entity.User;
 import com.coolskyai.enums.VisitBehavior;
 import com.coolskyai.model.dto.BlogPassword;
@@ -58,9 +59,25 @@ public class BlogController {
 	 */
 	@VisitLogger(VisitBehavior.BLOG)
 	@GetMapping("/blog")
-	public Result getBlog(@RequestParam Long id,
+	public Result getBlog(@RequestParam(required = false) Long id,
+	                      @RequestParam(required = false) String slug,
 	                      @RequestHeader(value = "Authorization", defaultValue = "") String jwt) {
+		// 新链接走 slug，旧链接 /blog/:id 继续可用
+		if (id == null) {
+			if (slug == null || slug.trim().isEmpty()) {
+				return Result.error("参数有误");
+			}
+			Blog bySlug = blogService.getBlogBySlug(slug.trim());
+			if (bySlug == null) {
+				return Result.create(404, "文章不存在");
+			}
+			id = bySlug.getId();
+		}
 		BlogDetail blog = blogService.getBlogByIdAndIsPublished(id);
+		// 文章不存在或已下线时直接 404，否则下面读 password 会 NPE 变成 500
+		if (blog == null) {
+			return Result.create(404, "文章不存在或未公开");
+		}
 		//对密码保护的文章校验Token
 		if (!"".equals(blog.getPassword())) {
 			if (JwtUtils.judgeTokenIsExist(jwt)) {

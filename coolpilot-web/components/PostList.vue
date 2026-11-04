@@ -1,7 +1,7 @@
 <template>
 	<div class="card">
 		<div v-if="!posts.length" class="empty">{{ emptyText }}</div>
-		<NuxtLink v-for="post in posts" :key="post.id" :to="`/blog/${post.id}`" class="post-item">
+		<NuxtLink v-for="post in posts" :key="post.id" :to="`/blog/${post.slug || post.id}`" class="post-item">
 			<h3 class="post-title">{{ post.title }}</h3>
 			<p v-if="post.description" class="desc" v-html="post.description"></p>
 			<div class="post-meta">
