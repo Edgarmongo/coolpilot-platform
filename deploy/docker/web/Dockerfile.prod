@@ -1,0 +1,42 @@
+# ============================================================
+# 前台生产镜像：Nuxt 构建 → Nitro node-server
+#
+# 与开发镜像（同目录下的 Dockerfile）的区别：
+#   开发用 nuxt dev，改代码即热更新，但同时开着 HMR、源码映射、按需编译；
+#   生产只有 .output 产物，冷启动更快、内存更省，也没有 dev 工具暴露面。
+#
+# 构建（上下文必须是仓库根目录）：
+#   docker build -f deploy/docker/web/Dockerfile.prod -t coolpilot-web .
+# ============================================================
+
+FROM node:22-alpine AS build
+WORKDIR /app
+
+ENV NUXT_TELEMETRY_DISABLED=1
+
+COPY coolpilot-web/package*.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY coolpilot-web/ ./
+RUN npm run build
+
+# ---------------- 运行阶段 ----------------
+FROM node:22-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    NUXT_TELEMETRY_DISABLED=1 \
+    HOST=0.0.0.0 \
+    PORT=8081 \
+    TZ=Asia/Shanghai
+
+# Nitro 产物自带 server，不需要 node_modules
+COPY --from=build /app/.output ./.output
+
+EXPOSE 8081
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+    CMD wget -q --spider http://127.0.0.1:8081/ || exit 1
+
+CMD ["node", ".output/server/index.mjs"]

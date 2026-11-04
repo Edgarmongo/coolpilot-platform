@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: nblog
+      MYSQL_DATABASE: coolpilot
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4

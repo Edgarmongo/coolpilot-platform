@@ -1,0 +1,140 @@
+# ============================================================
+# CoolPilot 生产环境（镜像来自 GHCR，不在本地编译）
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# 与 docker-compose.yml 的差别：
+#   1. 三个应用服务用 image 而不是 build —— 服务器上不需要 JDK / Node / 源码
+#   2. 前台跑 Nitro 生产产物（非 nuxt dev），后台跑 nginx 静态（非 vite dev）
+#   3. 不再 bind mount 源码，前后端都是不可变镜像，回滚 = 换 tag
+#   4. MySQL / Redis 不对外映射端口
+#
+# 常用变量（写在 .env 里）：
+#   REGISTRY=ghcr.io/edgarmongo
+#   TAG=latest            # 或某个 git tag，回滚就改这里
+#   MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET
+#   SITE_URL=https://coolskyai.com   # 拼图片直链、CORS 用
+# ============================================================
+
+name: coolpilot
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ---------------- MySQL ----------------
+  mysql:
+    image: mysql:8.0
+    container_name: coolpilot-mysql
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: coolpilot
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # 仅在数据卷为空时执行，已有数据不会被覆盖
+      - ./coolpilot-server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./deploy/mysql/02-seed-base.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./coolpilot-server/demo-data.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
+      - ./coolpilot-server/sql/2026-11-04-indexes-and-constraints.sql:/docker-entrypoint-initdb.d/04-indexes.sql:ro
+      - ./coolpilot-server/sql/2026-11-04-v1-0-community.sql:/docker-entrypoint-initdb.d/05-community.sql:ro
+      - ./coolpilot-server/sql/2026-11-05-v1-1a-file-product.sql:/docker-entrypoint-initdb.d/06-file-product.sql:ro
+      - ./deploy/mysql/07-seed-product.sql:/docker-entrypoint-initdb.d/07-seed-product.sql:ro
+      - ./coolpilot-server/sql/2026-11-05-v1-1b-order-payment-entitlement.sql:/docker-entrypoint-initdb.d/08-trade.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ---------------- Redis ----------------
+  redis:
+    image: redis:7-alpine
+    container_name: coolpilot-redis
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TZ: Asia/Shanghai
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- 后端 API ----------------
+  api:
+    image: ${REGISTRY:-ghcr.io/edgarmongo}/coolpilot-server:${TAG:-latest}
+    container_name: coolpilot-server
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/coolpilot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      UPLOAD_FILE_PATH: /data/upload/
+      # 图片直链的前缀。上线后应为 https://coolskyai.com（走 nginx 反代到本服务）
+      BLOG_API: ${SITE_URL:-http://localhost:8091}
+      JAVA_OPTS: "-Xms512m -Xmx1g -Duser.timezone=Asia/Shanghai"
+    volumes:
+      - upload_data:/data/upload
+    # 生产不对外暴露 8091，只允许 compose 内网访问；
+    # 需要直连调试时临时加 "127.0.0.1:8091:8091"
+
+  # ---------------- 前台（Nuxt / Nitro） ----------------
+  web:
+    image: ${REGISTRY:-ghcr.io/edgarmongo}/coolpilot-web:${TAG:-latest}
+    container_name: coolpilot-web
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      - api
+    environment:
+      TZ: Asia/Shanghai
+      # runtimeConfig.apiBase 的运行时覆盖，仅服务端可见
+      NUXT_API_BASE: http://api:8091
+      NUXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "8081:8081"
+
+  # ---------------- 管理后台（nginx 静态） ----------------
+  admin:
+    image: ${REGISTRY:-ghcr.io/edgarmongo}/coolpilot-admin:${TAG:-latest}
+    container_name: coolpilot-admin
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      - api
+    ports:
+      # 容器内是 nginx 的 80
+      - "8079:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  upload_data:

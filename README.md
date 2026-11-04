@@ -5,7 +5,7 @@
 
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen)](https://spring.io/projects/spring-boot)
-[![Vue](https://img.shields.io/badge/Vue-2.6-42b883)](https://v2.vuejs.org/)
+[![Vue](https://img.shields.io/badge/Vue-3.5-42b883)](https://vuejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)](https://www.mysql.com/)
 
 ---
@@ -60,8 +60,8 @@ docker compose up -d --build
 | 服务 | 地址 | 说明 |
 |---|---|---|
 | 前台 | http://localhost:8081 | 访客侧，支持注册登录 |
-| 后台 | http://localhost:8079/cms/ | 站长侧，默认 `admin` / `123456` |
-| 接口 | http://localhost:8091 | Spring Boot API |
+| 后台 | http://localhost:8079/cms/ | 站长侧，账号 `admin`，密码见 `deploy/mysql/02-seed-base.sql` |
+| 接口 | http://localhost:8091 | Spring Boot API（生产环境不对外暴露） |
 | MySQL | localhost:13306 | 容器映射，避免与本机冲突 |
 | Redis | localhost:16379 | 同上 |
 
@@ -71,18 +71,21 @@ docker compose up -d --build
 
 ```
 coolpilot-platform/
-├── coolpilot-server/            # Java 后端（Spring Boot）
-│   ├── src/main/java/top/naccl/
-│   │   ├── controller/  # 上游接口
-│   │   ├── modules/     # 自建业务模块：account / community / file / product / trade / entitlement
+├── coolpilot-server/    # Java 后端（Spring Boot 4.1 / JDK 21）
+│   ├── src/main/java/com/coolskyai/
+│   │   ├── controller/  # 内容、评论、友链、站点设置等接口
+│   │   ├── modules/     # 业务模块：account / community / file / product / trade / entitlement
 │   │   └── ...
+│   ├── schema.sql       # 全量建表
 │   └── sql/             # 增量迁移脚本（按日期命名）
-├── coolpilot-admin/            # 管理后台（Vue 2）
-├── coolpilot-web/           # 用户前台（Vue 2）
-├── deploy/              # 构建与部署资产（Dockerfile、MySQL 种子）
-├── scripts/             # 工程脚本（启停、重建、进库）
-├── docs/                # 架构、PRD、数据模型、接口与任务卡
-├── docker-compose.yml   # 本地开发编排
+├── coolpilot-admin/     # 管理后台（Vue 3 + Vite + Element Plus）
+├── coolpilot-web/       # 用户前台（Nuxt 3 + TS，SSR）
+├── deploy/              # 镜像与编排资产（Dockerfile、nginx、MySQL 种子）
+├── scripts/             # 工程脚本（启停、重建、进库、备份）
+├── docs/                # 架构、PRD、数据模型、接口、任务卡
+├── .github/workflows/   # CI（构建校验）与 Release（镜像发布）
+├── docker-compose.yml        # 本地开发
+├── docker-compose.prod.yml   # 生产（拉 GHCR 镜像）
 └── README.md
 ```
 
@@ -97,7 +100,21 @@ coolpilot-platform/
 | [docs/ED-05-TASKS.md](docs/ED-05-TASKS.md) | 任务卡与验收标准 |
 | [docs/V1.1B-TRADE.md](docs/V1.1B-TRADE.md) | 交易与权益闭环的实现与实测 |
 | [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、初始化顺序、常见问题 |
+| [docs/CI-CD.md](docs/CI-CD.md) | 流水线、镜像发布、部署与回滚 |
+
+## CI/CD
+
+推送 `main` 或提 PR 时，GitHub Actions 会对三端各做一次真实构建（Maven / Vite / Nuxt），编译不过直接红叉。
+
+打版本标签即触发镜像发布：
+
+```bash
+git tag -a v1.2.0 -m "v1.2.0"
+git push origin v1.2.0
+```
+
+三个生产镜像推到 GHCR（`coolpilot-server` / `coolpilot-admin` / `coolpilot-web`），服务器只需 `docker compose -f docker-compose.prod.yml pull && up -d`。回滚就是换个 tag。详见 [docs/CI-CD.md](docs/CI-CD.md)。
 
 ## 许可证
 
-具体授权方式尚未确定，正式对外分发前需补齐（见 `LICENSE` 与依赖组件的许可信息）。
+具体授权方式尚未确定，正式对外分发前需补齐。

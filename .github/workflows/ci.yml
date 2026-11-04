@@ -1,0 +1,111 @@
+name: CI
+
+# 每次推送 main 或提交 PR 时，对三端各做一次真实构建。
+# 目的是「合并前就能知道编译不过」，而不是等部署时才发现。
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一分支连续推送时，取消上一次未完成的运行，省额度
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------- 后端 ----------------
+  server:
+    name: Server · Maven / JDK 21
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # 先单独编译测试源码：测试里有 @SpringBootTest，执行需要 MySQL/Redis，
+      # CI 里不跑，但至少要保证测试类本身能编译（改包名时最容易漏掉的就是它）
+      - name: Compile tests
+        working-directory: coolpilot-server
+        run: mvn -B -ntp -DskipTests test-compile
+
+      - name: Package
+        working-directory: coolpilot-server
+        run: mvn -B -ntp -DskipTests package
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-jar
+          path: coolpilot-server/target/*.jar
+          retention-days: 7
+
+  # ---------------- 管理后台 ----------------
+  admin:
+    name: Admin · Vite build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: coolpilot-admin/package-lock.json
+
+      # 用 ci 而不是 install：锁文件必须与 package.json 一致，否则直接失败
+      - name: Install
+        working-directory: coolpilot-admin
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        working-directory: coolpilot-admin
+        run: npm run build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: coolpilot-admin/dist
+          retention-days: 7
+
+  # ---------------- 前台 ----------------
+  web:
+    name: Web · Nuxt build
+    runs-on: ubuntu-latest
+    env:
+      NUXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: coolpilot-web/package-lock.json
+
+      - name: Install
+        working-directory: coolpilot-web
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        working-directory: coolpilot-web
+        run: npm run build
+
+      - name: Upload output
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-output
+          path: coolpilot-web/.output
+          retention-days: 7
