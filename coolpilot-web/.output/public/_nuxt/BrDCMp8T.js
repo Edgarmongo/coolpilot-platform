@@ -1,1 +1,0 @@
-function m(n,Y="YYYY-MM-DD HH:mm"){if(!n)return"-";const t=new Date(n);if(Number.isNaN(t.getTime()))return"-";const e=r=>String(r).padStart(2,"0"),a={YYYY:String(t.getFullYear()),MM:e(t.getMonth()+1),DD:e(t.getDate()),HH:e(t.getHours()),mm:e(t.getMinutes())};return Y.replace(/YYYY|MM|DD|HH|mm/g,r=>a[r])}export{m as f};

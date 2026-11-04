@@ -77,3 +77,6 @@ desktop.ini
 
 # 本地备份产物
 backups/
+
+# 临时挪走的旧依赖（清理 node_modules 时用，不进版本库）
+.trash-node-modules/
