@@ -34,12 +34,9 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # 先单独编译测试源码：测试里有 @SpringBootTest，执行需要 MySQL/Redis，
-      # CI 里不跑，但至少要保证测试类本身能编译（改包名时最容易漏掉的就是它）
-      - name: Compile tests
-        working-directory: coolpilot-server
-        run: mvn -B -ntp -DskipTests test-compile
-
+      # -DskipTests 只跳过「执行」，测试源码仍会被编译。
+      # 这一点很重要：改包名、改签名时测试目录最容易漏，
+      # 编译到它就能立刻发现（唯一的 @SpringBootTest 需要 MySQL/Redis，CI 里跑不了）
       - name: Package
         working-directory: coolpilot-server
         run: mvn -B -ntp -DskipTests package

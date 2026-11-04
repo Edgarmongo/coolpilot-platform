@@ -7,12 +7,8 @@ on:
   push:
     tags:
       - 'v*'
+  # 手动触发时用当前分支最新提交构建，tag 打 sha-xxxx
   workflow_dispatch:
-    inputs:
-      tag:
-        description: '要发布的版本号（如 v1.2.0），留空则用当前 commit 短 SHA'
-        required: false
-        type: string
 
 permissions:
   contents: read
