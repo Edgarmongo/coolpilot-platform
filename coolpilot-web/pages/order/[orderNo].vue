@@ -44,6 +44,17 @@
 				</ul>
 				<p class="tip">{{ payInfo.tip }}</p>
 
+				<!-- 收款码：后端一直有返回 qrCodeUrl，之前这里没渲染，买家只能自己找收款方 -->
+				<template v-if="payInfo.qrCodeUrl">
+					<div v-if="!qrFailed" class="qr-box">
+						<img :src="payInfo.qrCodeUrl" alt="收款码" @error="qrFailed = true">
+						<p class="qr-tip">扫码后请核对收款人，金额与备注照上方填写</p>
+					</div>
+					<p v-else class="tip warn">收款码加载失败，可能尚未配置好，请联系站长。</p>
+				</template>
+				<a v-else-if="payInfo.payUrl" class="pay-link btn" :href="payInfo.payUrl"
+				   target="_blank" rel="noopener noreferrer">前往 PayPal 付款</a>
+
 				<div class="proof">
 					<h4>已转账？填写付款信息</h4>
 					<div class="form">
@@ -82,6 +93,8 @@ const busy = ref(false)
 const channel = ref('MANUAL_WECHAT')
 const channels = ref<Record<string, string>>({})
 const payInfo = ref<any>(null)
+// 图片可能因为没配置好而 404，加载失败就别一直显示裂图
+const qrFailed = ref(false)
 const payerName = ref('')
 const transferTime = ref('')
 const order = ref<any>(null)
@@ -110,6 +123,7 @@ async function startPay() {
 	try {
 		const res: any = await call('/payment', {method: 'POST', body: {orderNo: order.value.orderNo, channel: channel.value}})
 		if (res.code === 200) {
+			qrFailed.value = false
 			payInfo.value = res.data
 		} else {
 			alert(res.msg || '生成收款信息失败')
@@ -259,6 +273,37 @@ function price(value: number) {
 	border-radius: 8px;
 	color: #92400e;
 	font-size: 12.5px;
+}
+
+.tip.warn {
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+.qr-box {
+	margin: 16px 0 0;
+	text-align: center;
+}
+
+.qr-box img {
+	width: 180px;
+	height: 180px;
+	padding: 6px;
+	object-fit: contain;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+}
+
+.qr-tip {
+	margin: 6px 0 0;
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.pay-link {
+	display: inline-block;
+	margin: 14px 0 0;
 }
 
 .proof {
