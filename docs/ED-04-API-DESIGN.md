@@ -254,7 +254,7 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/nav` | 公开：前台菜单，只返回 `visible = 1`，按 `sort` 升序；走 Redis `navMenuList` 缓存 |
+| GET | `/nav?lang=` | 公开：前台菜单，只返回 `visible = 1`，按 `sort` 升序；`lang=en` 用 `label_en`（为空回落中文）；缓存按语言分开 `navMenuList:{lang}` |
 | GET | `/admin/navs` | 后台全量列表（含隐藏项） |
 | POST | `/admin/nav` | 新增；`path` 以 `/` 开头为站内，`http(s)://` 开头为外链 |
 | PUT | `/admin/nav/{id}` | 编辑文字 / 链接 / 排序 / 显隐 / 打开方式 |
@@ -271,7 +271,7 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/brand` | 公开：`{brandMark, brandName, footerText, footerTagline, beian}`，走 Redis `brandInfoMap` 缓存 |
+| GET | `/brand?lang=` | 公开：`{brandMark, brandName, footerText, footerTagline, beian}`；`lang=en` 用 `value_en`（为空回落中文）；缓存键 `brandInfoMap:{lang}` |
 
 - `brandName` 复用已有的 `blogName`，不新增同义字段；`beian` 复用已有备案号，非空才在页脚显示并链到工信部。
 - 整行配置缺失时回落到改造前的默认文案；配置存在但值为空表示「主动不显示」（品牌标记、页脚两段均适用）。

@@ -40,8 +40,13 @@
 							</div>
 						</div>
 
-						<el-input v-else-if="isLong(item)" v-model="item.value" type="textarea" :rows="3"/>
-						<el-input v-else v-model="item.value"/>
+						<template v-else>
+							<el-input v-if="isLong(item)" v-model="item.value" type="textarea" :rows="3"/>
+							<el-input v-else v-model="item.value"/>
+							<!-- 基础设置里有品牌名、页脚这类前台展示文案，英文单独一份 -->
+							<el-input v-if="item.type === 1 && !isImage(item)" v-model="item.valueEn" class="en-input"
+							          placeholder="英文值（留空则英文站沿用中文）"/>
+						</template>
 					</div>
 				</div>
 			</el-tab-pane>
@@ -181,7 +186,8 @@ async function save() {
 				nameEn: item.nameEn,
 				nameZh: item.nameZh,
 				type: item.type,
-				value: item.value
+				value: item.value,
+				valueEn: item.valueEn
 			})),
 			deleteIds: []
 		})
@@ -252,6 +258,10 @@ onMounted(load)
 .img-line {
 	display: flex;
 	gap: 8px;
+}
+
+.en-input {
+	margin-top: 6px;
 }
 
 .hint {

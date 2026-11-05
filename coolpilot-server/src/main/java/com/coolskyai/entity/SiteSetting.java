@@ -21,5 +21,7 @@ public class SiteSetting {
 	private String nameEn;
 	private String nameZh;
 	private String value;
+	/** 英文值，留空则前台用 value */
+	private String valueEn;
 	private Integer type;
 }

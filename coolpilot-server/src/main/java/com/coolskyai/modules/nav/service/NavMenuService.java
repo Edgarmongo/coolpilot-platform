@@ -40,14 +40,32 @@ public class NavMenuService {
 
 	// ---------------- 前台 ----------------
 
-	public List<NavMenu> listPublic() {
-		List<NavMenu> cached = redisService.getListByValue(RedisKeyConstants.NAV_MENU_LIST);
+	/**
+	 * @param lang zh-CN / en；英文站优先用 label_en，没填则回落中文
+	 *
+	 * 缓存按语言分开：菜单总量小，多一份缓存换来「英文站不会读到中文那份」。
+	 */
+	public List<NavMenu> listPublic(String lang) {
+		String locale = normalizeLocale(lang);
+		String key = RedisKeyConstants.NAV_MENU_LIST + ":" + locale;
+		List<NavMenu> cached = redisService.getListByValue(key);
 		if (cached != null) {
 			return cached;
 		}
 		List<NavMenu> menus = navMenuMapper.listVisible();
-		redisService.saveListToValue(RedisKeyConstants.NAV_MENU_LIST, menus);
+		if ("en".equals(locale)) {
+			for (NavMenu menu : menus) {
+				if (menu.getLabelEn() != null && !menu.getLabelEn().trim().isEmpty()) {
+					menu.setLabel(menu.getLabelEn().trim());
+				}
+			}
+		}
+		redisService.saveListToValue(key, menus);
 		return menus;
+	}
+
+	private String normalizeLocale(String lang) {
+		return "en".equalsIgnoreCase(lang) ? "en" : "zh-CN";
 	}
 
 	// ---------------- 后台 ----------------
@@ -60,6 +78,7 @@ public class NavMenuService {
 	public Long create(NavMenuSaveDTO dto) {
 		NavMenu menu = new NavMenu();
 		menu.setLabel(normalizeLabel(dto.getLabel()));
+		menu.setLabelEn(normalizeLabelEn(dto.getLabelEn()));
 		menu.setPath(normalizePath(dto.getPath()));
 		menu.setTarget(normalizeTarget(dto.getTarget()));
 		menu.setVisible(dto.getVisible() == null || dto.getVisible());
@@ -76,6 +95,7 @@ public class NavMenuService {
 			throw new BadRequestException("菜单不存在或已删除");
 		}
 		exists.setLabel(normalizeLabel(dto.getLabel()));
+		exists.setLabelEn(normalizeLabelEn(dto.getLabelEn()));
 		exists.setPath(normalizePath(dto.getPath()));
 		exists.setTarget(normalizeTarget(dto.getTarget()));
 		if (dto.getVisible() != null) {
@@ -173,6 +193,17 @@ public class NavMenuService {
 	}
 
 	/**
+	 * 英文名称可以留空（表示英文站沿用中文），但填了就要限制长度
+	 */
+	private String normalizeLabelEn(String raw) {
+		String label = raw == null ? "" : raw.trim();
+		if (label.length() > LABEL_MAX) {
+			throw new BadRequestException("英文名称最多 " + LABEL_MAX + " 个字符");
+		}
+		return label;
+	}
+
+	/**
 	 * 站内路径必须以 / 开头，外链必须 http(s):// 开头。
 	 *
 	 * 不校验「路径是否存在对应页面」—— 菜单可以先于页面配好（比如先挂外链），
@@ -201,6 +232,9 @@ public class NavMenuService {
 	}
 
 	private void evict() {
-		redisService.deleteCacheByKey(RedisKeyConstants.NAV_MENU_LIST);
+		// 两种语言各一份缓存，改一处要同时失效
+		for (String locale : new String[]{"zh-CN", "en"}) {
+			redisService.deleteCacheByKey(RedisKeyConstants.NAV_MENU_LIST + ":" + locale);
+		}
 	}
 }

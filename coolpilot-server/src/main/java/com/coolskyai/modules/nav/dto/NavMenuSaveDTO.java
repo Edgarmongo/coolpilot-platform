@@ -14,6 +14,7 @@ import lombok.Setter;
 @Setter
 public class NavMenuSaveDTO {
 	private String label;
+	private String labelEn;
 	private String path;
 	private Integer sort;
 	private Boolean visible;

@@ -2,6 +2,7 @@ package com.coolskyai.modules.nav.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.nav.service.NavMenuService;
@@ -22,7 +23,7 @@ public class NavController {
 	private NavMenuService navMenuService;
 
 	@GetMapping("/nav")
-	public Result list() {
-		return Result.ok("OK", navMenuService.listPublic());
+	public Result list(@RequestParam(required = false) String lang) {
+		return Result.ok("OK", navMenuService.listPublic(lang));
 	}
 }

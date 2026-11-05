@@ -194,6 +194,9 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 	 */
 	private void deleteSiteInfoRedisCache() {
 		redisService.deleteCacheByKey(RedisKeyConstants.SITE_INFO_MAP);
-		redisService.deleteCacheByKey(RedisKeyConstants.BRAND_INFO_MAP);
+		// 品牌缓存按语言分了两份，改一次配置两份都要失效
+		for (String locale : new String[]{"zh-CN", "en"}) {
+			redisService.deleteCacheByKey(RedisKeyConstants.BRAND_INFO_MAP + ":" + locale);
+		}
 	}
 }

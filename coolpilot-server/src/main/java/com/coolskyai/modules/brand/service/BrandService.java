@@ -39,8 +39,10 @@ public class BrandService {
 	@Autowired
 	private RedisService redisService;
 
-	public Map<String, String> get() {
-		Map<String, String> cached = redisService.getMapByValue(RedisKeyConstants.BRAND_INFO_MAP);
+	public Map<String, String> get(String lang) {
+		String locale = "en".equalsIgnoreCase(lang) ? "en" : "zh-CN";
+		String cacheKey = RedisKeyConstants.BRAND_INFO_MAP + ":" + locale;
+		Map<String, String> cached = redisService.getMapByValue(cacheKey);
 		if (cached != null) {
 			return cached;
 		}
@@ -50,18 +52,22 @@ public class BrandService {
 			// 只认基础设置组，避免和资料卡里的 name / email 这类同名字段串味
 			if (setting.getType() != null && setting.getType() == 1) {
 				values.put(setting.getNameEn(), setting.getValue());
+				if (setting.getValueEn() != null && !setting.getValueEn().trim().isEmpty()) {
+					values.put(setting.getNameEn() + ":en", setting.getValueEn());
+				}
 			}
 		}
+		boolean english = "en".equals(locale);
 		Map<String, String> brand = new LinkedHashMap<>(8);
 		// 标记与页脚允许「配置了但留空」= 主动不显示；只有整行缺失才用默认值。
 		// 品牌名不同：空白的站名没有任何意义，一律回落到默认值。
-		brand.put("brandMark", configured(values, "brandMark", DEFAULT_MARK));
-		brand.put("brandName", orDefault(values.get("blogName"), DEFAULT_NAME));
-		brand.put("footerText", configured(values, "footerText", DEFAULT_FOOTER_TEXT));
-		brand.put("footerTagline", configured(values, "footerTagline", DEFAULT_FOOTER_TAGLINE));
+		brand.put("brandMark", configured(english, values, "brandMark", DEFAULT_MARK));
+		brand.put("brandName", orDefault(englishValue(english, values, "blogName"), DEFAULT_NAME));
+		brand.put("footerText", configured(english, values, "footerText", DEFAULT_FOOTER_TEXT));
+		brand.put("footerTagline", configured(english, values, "footerTagline", DEFAULT_FOOTER_TAGLINE));
 		// 备案号为空是常态（本地开发、海外部署），不做默认值，前台按非空才渲染
 		brand.put("beian", values.get("beian") == null ? "" : values.get("beian").trim());
-		redisService.saveMapToValue(RedisKeyConstants.BRAND_INFO_MAP, brand);
+		redisService.saveMapToValue(cacheKey, brand);
 		return brand;
 	}
 
@@ -71,11 +77,27 @@ public class BrandService {
 	 * 两者的区别很实际：站长把「页脚副文案」清空，是想让它不显示；
 	 * 而迁移没跑到、有人删了这行配置时，页脚不该突然空一块。
 	 */
-	private String configured(Map<String, String> values, String key, String fallback) {
+	private String configured(boolean english, Map<String, String> values, String key, String fallback) {
 		if (!values.containsKey(key)) {
 			return fallback;
 		}
-		String value = values.get(key);
+		return orEmpty(englishValue(english, values, key));
+	}
+
+	/**
+	 * 英文值优先；没填英文就回落中文原文 —— 英文站少一句翻译，总比留白好。
+	 */
+	private String englishValue(boolean english, Map<String, String> values, String key) {
+		if (english) {
+			String en = values.get(key + ":en");
+			if (en != null && !en.trim().isEmpty()) {
+				return en.trim();
+			}
+		}
+		return values.get(key);
+	}
+
+	private String orEmpty(String value) {
 		return value == null ? "" : value.trim();
 	}
 

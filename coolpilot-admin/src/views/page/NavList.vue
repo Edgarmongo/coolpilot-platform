@@ -24,7 +24,13 @@
 					<span class="sort-no">{{ row.sort }}</span>
 				</template>
 			</el-table-column>
-			<el-table-column prop="label" label="菜单文字" width="160"/>
+			<el-table-column prop="label" label="菜单文字" width="150"/>
+			<el-table-column label="英文" width="130">
+				<template #default="{row}">
+					<span v-if="row.labelEn">{{ row.labelEn }}</span>
+					<span v-else class="muted">同中文</span>
+				</template>
+			</el-table-column>
 			<el-table-column label="链接" min-width="240">
 				<template #default="{row}">
 					<code class="path">{{ row.path }}</code>
@@ -53,6 +59,9 @@
 			<el-form :model="form" label-width="80px" size="small">
 				<el-form-item label="菜单文字" required>
 					<el-input v-model="form.label" maxlength="20" show-word-limit placeholder="如：知识付费"/>
+				</el-form-item>
+				<el-form-item label="英文名称">
+					<el-input v-model="form.labelEn" maxlength="20" placeholder="如 Knowledge，留空则英文站沿用中文"/>
 				</el-form-item>
 				<el-form-item label="链接" required>
 					<el-input v-model="form.path" maxlength="255" placeholder="如：/knowledge 或 https://example.com"/>
@@ -97,7 +106,15 @@ const loading = ref(false)
 const saving = ref(false)
 const visible = ref(false)
 const list = ref([])
-const form = reactive({id: null, label: '', path: '', sort: undefined, visible: true, target: '_self'})
+const form = reactive({
+	id: null,
+	label: '',
+	labelEn: '',
+	path: '',
+	sort: undefined,
+	visible: true,
+	target: '_self'
+})
 
 function isExternal(path) {
 	return /^https?:\/\//i.test(path || '')
@@ -116,6 +133,7 @@ async function load() {
 function openDialog(row) {
 	form.id = row ? row.id : null
 	form.label = row ? row.label : ''
+	form.labelEn = row ? (row.labelEn || '') : ''
 	form.path = row ? row.path : ''
 	form.sort = row ? row.sort : undefined
 	form.visible = row ? !!row.visible : true
@@ -134,6 +152,7 @@ async function submit() {
 	}
 	const payload = {
 		label: form.label.trim(),
+		labelEn: form.labelEn.trim(),
 		path: form.path.trim(),
 		sort: form.sort === undefined ? null : form.sort,
 		visible: form.visible,

@@ -709,7 +709,7 @@ CREATE TABLE `milestone` (
 
 | 表 | 关键字段 | 说明 |
 |---|---|---|
-| `nav_menu` | `label`、`path`、`sort`（升序）、`visible`、`target` | 前台顶部菜单 |
+| `nav_menu` | `label`、**`label_en`**、`path`、`sort`（升序）、`visible`、`target` | 前台顶部菜单；`label_en` 为空时英文站回落中文（V18） |
 
 `path` 同时承载站内路径与外链（`http(s)://` 开头即外链），不另设 `type` 列——
 多一列就多一处「两个字段互相矛盾」的可能。菜单总量个位数，不做分页。
@@ -724,6 +724,7 @@ CREATE TABLE `milestone` (
 | `brandMark` | 左上角方块标记 | 新增，留空则不显示方块 |
 | `footerText` | 页脚主文案 | 新增 |
 | `footerTagline` | 页脚副文案 | 新增 |
+| `value_en` | 任意配置的英文值 | V18 新增列，为空回落 `value` |
 | `beian` | ICP 备案号 | 已有，非空才在页脚显示 |
 
 ## 十三、状态枚举字典

@@ -19,6 +19,8 @@ import java.util.Date;
 public class NavMenu {
 	private Long id;
 	private String label;
+	/** 英文菜单文字，留空则前台用 label */
+	private String labelEn;
 	/** 站内路径（/ 开头）或完整外链（http(s):// 开头） */
 	private String path;
 	private Integer sort;

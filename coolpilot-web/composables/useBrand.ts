@@ -23,11 +23,13 @@ const FALLBACK: BrandInfo = {
 
 export function useBrand() {
 	const {call} = useApi()
+	const {locale} = useI18n()
 
+	// 品牌名与页脚文字是站长配置的内容，中英各存一份；切语言要重新取
 	const {data} = useAsyncData<Partial<BrandInfo> | null>('site-brand', async () => {
-		const res: any = await call('/brand').catch(() => null)
+		const res: any = await call(`/brand?lang=${locale.value}`).catch(() => null)
 		return res && res.code === 200 && res.data ? res.data as Partial<BrandInfo> : null
-	})
+	}, {watch: [locale]})
 
 	// 注意是「后端值覆盖兜底」，不是反过来：后端明确返回空串表示站长清了这项，应该照做
 	return computed<BrandInfo>(() => ({...FALLBACK, ...(data.value || {})}))

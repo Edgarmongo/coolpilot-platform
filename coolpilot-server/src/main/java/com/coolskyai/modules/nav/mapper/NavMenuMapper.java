@@ -32,13 +32,13 @@ public interface NavMenuMapper {
 	@Select("SELECT * FROM nav_menu WHERE id = #{id}")
 	NavMenu findById(@Param("id") Long id);
 
-	@Insert("INSERT INTO nav_menu (label, path, sort, visible, target) " +
-			"VALUES (#{label}, #{path}, #{sort}, #{visible}, #{target})")
+	@Insert("INSERT INTO nav_menu (label, label_en, path, sort, visible, target) " +
+			"VALUES (#{label}, #{labelEn}, #{path}, #{sort}, #{visible}, #{target})")
 	@Options(useGeneratedKeys = true, keyProperty = "id")
 	int insert(NavMenu menu);
 
-	@Update("UPDATE nav_menu SET label = #{label}, path = #{path}, sort = #{sort}, " +
-			"visible = #{visible}, target = #{target} WHERE id = #{id}")
+	@Update("UPDATE nav_menu SET label = #{label}, label_en = #{labelEn}, path = #{path}, " +
+			"sort = #{sort}, visible = #{visible}, target = #{target} WHERE id = #{id}")
 	int update(NavMenu menu);
 
 	/**

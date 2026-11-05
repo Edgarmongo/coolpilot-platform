@@ -30,7 +30,6 @@ export default defineNuxtConfig({
 	},
 	app: {
 		head: {
-			title: 'CoolSkyAI 技术平台',
 			htmlAttrs: {lang: 'zh-CN'},
 			meta: [
 				{name: 'viewport', content: 'width=device-width, initial-scale=1'}

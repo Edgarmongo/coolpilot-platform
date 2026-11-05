@@ -2,6 +2,7 @@ package com.coolskyai.modules.brand.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.brand.service.BrandService;
@@ -22,7 +23,7 @@ public class BrandController {
 	private BrandService brandService;
 
 	@GetMapping("/brand")
-	public Result brand() {
-		return Result.ok("OK", brandService.get());
+	public Result brand(@RequestParam(required = false) String lang) {
+		return Result.ok("OK", brandService.get(lang));
 	}
 }
