@@ -21,7 +21,12 @@
 				</el-form-item>
 				<el-form-item :label="t('正文(HTML)')">
 					<el-input v-model="form.content" type="textarea" :rows="12"
-					          :placeholder="t('支持 HTML，例如 &lt;p&gt;简介&lt;/p&gt;')"/>
+					          :class="{dragging: zhDragging}"
+					          :placeholder="t('支持 HTML / Markdown，例如 &lt;p&gt;简介&lt;/p&gt;；截图后可直接 Ctrl+V 粘贴')"
+					          @paste="onZhPaste"
+					          @dragover.prevent="onZhDragOver"
+					          @dragleave="onZhDragLeave"
+					          @drop.prevent="onZhDrop"/>
 				</el-form-item>
 				<el-divider content-position="left">{{ t('英文版（留空则英文站显示上面的中文）') }}</el-divider>
 				<el-form-item :label="t('英文标题')">
@@ -29,7 +34,12 @@
 				</el-form-item>
 				<el-form-item :label="t('英文正文')">
 					<el-input v-model="form.contentEn" type="textarea" :rows="12"
-					          :placeholder="t('Markdown / HTML，留空则回落中文正文')"/>
+					          :class="{dragging: enDragging}"
+					          :placeholder="t('Markdown / HTML，留空则回落中文正文；截图后可直接 Ctrl+V 粘贴')"
+					          @paste="onEnPaste"
+					          @dragover.prevent="onEnDragOver"
+					          @dragleave="onEnDragLeave"
+					          @drop.prevent="onEnDrop"/>
 				</el-form-item>
 			</el-form>
 		</div>
@@ -43,10 +53,42 @@ const t = useT()
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getAbout, updateAbout} from '@/api/about'
+import {useImagePaste} from '@/composables/useImagePaste'
 
 const loading = ref(false)
 const saving = ref(false)
 const form = reactive({title: '', titleEn: '', musicId: '', content: '', contentEn: '', commentEnabled: true})
+
+// 中英正文各自一份配置，所以各接一个实例，互不影响
+const {
+	uploading: zhUploading,
+	dragging: zhDragging,
+	onPaste: onZhPaste,
+	onDrop: onZhDrop,
+	onDragOver: onZhDragOver,
+	onDragLeave: onZhDragLeave
+} = useImagePaste({
+	getValue: () => form.content,
+	setValue: value => {
+		form.content = value
+	},
+	bizType: 'ABOUT'
+})
+
+const {
+	uploading: enUploading,
+	dragging: enDragging,
+	onPaste: onEnPaste,
+	onDrop: onEnDrop,
+	onDragOver: onEnDragOver,
+	onDragLeave: onEnDragLeave
+} = useImagePaste({
+	getValue: () => form.contentEn,
+	setValue: value => {
+		form.contentEn = value
+	},
+	bizType: 'ABOUT'
+})
 
 async function load() {
 	loading.value = true
@@ -65,6 +107,11 @@ async function load() {
 }
 
 async function save() {
+	// 上传中的图片只是正文里的一行注释，此刻保存会把占位存进正文
+	if (zhUploading.value || enUploading.value) {
+		ElMessage.warning(t('图片还在上传，请稍候再保存'))
+		return
+	}
 	saving.value = true
 	try {
 		// 后端按 nameEn -> value 逐条更新，值必须是字符串

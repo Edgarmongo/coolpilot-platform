@@ -33,7 +33,13 @@
 
 		<el-dialog v-model="visible" :title="form.id ? t('编辑动态') : t('发布动态')" width="520px">
 			<el-input v-model="form.content" type="textarea" :rows="5" maxlength="500" show-word-limit
-			          :placeholder="t('此刻的想法…')"/>
+			          :class="{dragging: imgDragging}"
+			          :placeholder="t('此刻的想法…')"
+			          @paste="onImgPaste"
+			          @dragover.prevent="onImgDragOver"
+			          @dragleave="onImgDragLeave"
+			          @drop.prevent="onImgDrop"/>
+			<div v-if="imgUploading" class="muted hint">{{ t('正在上传图片…') }}</div>
 			<div class="row">
 				<span>{{ t('公开') }}</span>
 				<el-switch v-model="form.published"/>
@@ -55,6 +61,7 @@ import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
 import {deleteMoment, getMomentList, saveMoment, updateMoment, updateMomentPublished} from '@/api/moment'
 import {formatDate} from '@/util/date'
+import {useImagePaste} from '@/composables/useImagePaste'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -64,6 +71,22 @@ const pageSize = ref(10)
 const total = ref(0)
 const list = ref([])
 const form = reactive({id: null, content: '', published: true})
+
+// 动态正文是 Markdown（后端渲染成 HTML），支持粘贴 / 拖拽贴图
+const {
+	uploading: imgUploading,
+	dragging: imgDragging,
+	onPaste: onImgPaste,
+	onDrop: onImgDrop,
+	onDragOver: onImgDragOver,
+	onDragLeave: onImgDragLeave
+} = useImagePaste({
+	getValue: () => form.content,
+	setValue: value => {
+		form.content = value
+	},
+	bizType: 'MOMENT'
+})
 
 async function load() {
 	loading.value = true
@@ -84,6 +107,11 @@ function openDialog(row) {
 }
 
 async function submit() {
+	// 上传中的图片在正文里只有一个注释占位，此时保存会把它一起存进去
+	if (imgUploading.value) {
+		ElMessage.warning(t('图片还在上传，请稍候再保存'))
+		return
+	}
 	if (!form.content.trim()) {
 		ElMessage.warning(t('请输入内容'))
 		return

@@ -59,3 +59,27 @@ a {
 .el-pagination {
 	margin-top: 16px;
 }
+
+/*
+ * 支持粘贴 / 拖拽图片的多行编辑器：拖到上面时给个明确反馈，
+ * 否则用户不确定松手会不会生效。el-input 的 textarea 结构固定，全局一处即可。
+ */
+/* class 通常落在 el-input 根元素；el-input 内部用了 useAttrs 排除 class，
+   若某个版本把它透到 textarea 上，第二种选择器也能兜住 */
+.dragging .el-textarea__inner,
+textarea.el-textarea__inner.dragging {
+	background: #eaf7f4;
+	box-shadow: inset 0 0 0 2px #4ec9b0;
+}
+
+/*
+ * 支持粘贴 / 拖拽图片的多行编辑器：拖到上面时给个明确反馈，
+ * 否则用户不确定松手会不会生效。el-input 的 textarea 结构固定，全局一处即可。
+ */
+/* class 通常落在 el-input 根元素；el-input 内部用了 useAttrs 排除 class，
+   若某个版本把它透到 textarea 上，第二种选择器也能兜住 */
+.dragging .el-textarea__inner,
+textarea.el-textarea__inner.dragging {
+	background: #eaf7f4;
+	box-shadow: inset 0 0 0 2px #4ec9b0;
+}

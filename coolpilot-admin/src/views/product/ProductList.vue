@@ -130,7 +130,12 @@
 						</el-form-item>
 						<el-form-item :label="t('详情')">
 							<el-input v-model="form.detail" type="textarea" :rows="8"
-							          :placeholder="t('支持 Markdown，前台渲染为 HTML')"/>
+							          :class="{dragging: detailDragging}"
+							          :placeholder="t('支持 Markdown，前台渲染为 HTML；截图后可直接 Ctrl+V 粘贴')"
+							          @paste="onDetailPaste"
+							          @dragover.prevent="onDetailDragOver"
+							          @dragleave="onDetailDragLeave"
+							          @drop.prevent="onDetailDrop"/>
 						</el-form-item>
 						<el-form-item>
 							<el-button type="primary" :loading="saving" @click="save">
@@ -278,6 +283,7 @@ import {
 	uploadFile
 } from '@/api/product'
 import {getServiceItem, saveServiceItem} from '@/api/service'
+import {useImagePaste} from '@/composables/useImagePaste'
 
 const typeOptions = [
 	{value: 'DOC', label: t('文档')},
@@ -393,6 +399,22 @@ const emptyForm = () => ({
 })
 const form = reactive(emptyForm())
 
+// 商品详情是 Markdown，前台 v-html 渲染，支持粘贴 / 拖拽贴图
+const {
+	uploading: detailUploading,
+	dragging: detailDragging,
+	onPaste: onDetailPaste,
+	onDrop: onDetailDrop,
+	onDragOver: onDetailDragOver,
+	onDragLeave: onDetailDragLeave
+} = useImagePaste({
+	getValue: () => form.detail,
+	setValue: value => {
+		form.detail = value
+	},
+	bizType: 'PRODUCT'
+})
+
 async function openCreate() {
 	Object.assign(form, emptyForm())
 	detail.value = {course: null, lessons: [], resources: []}
@@ -470,6 +492,11 @@ function resetDrawer() {
 }
 
 async function save() {
+	// 上传中的图片只是正文里的一行注释，此刻保存会把占位存进正文
+	if (detailUploading.value) {
+		ElMessage.warning(t('图片还在上传，请稍候再保存'))
+		return
+	}
 	if (!form.title || !form.title.trim()) {
 		ElMessage.warning(t('请填写标题'))
 		return

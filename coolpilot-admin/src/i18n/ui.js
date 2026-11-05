@@ -233,6 +233,12 @@ export const UI_EN = {
 	'验收': 'Acceptance',
 	// —— 第二批：页面正文 ——
 	// —— 第三批：状态与提示 ——
+	'支持 HTML / Markdown，例如 &lt;p&gt;简介&lt;/p&gt;；截图后可直接 Ctrl+V 粘贴': 'HTML / Markdown supported, e.g. &lt;p&gt;intro&lt;/p&gt;. Paste a screenshot with Ctrl+V.',
+	'Markdown / HTML，留空则回落中文正文；截图后可直接 Ctrl+V 粘贴': 'Markdown / HTML; blank falls back to the Chinese body. Paste a screenshot with Ctrl+V.',
+	'支持 Markdown，前台渲染为 HTML；截图后可直接 Ctrl+V 粘贴': 'Markdown supported and rendered as HTML on the site. Paste a screenshot with Ctrl+V.',
+	'支持 HTML / Markdown，例如 &lt;p&gt;简介&lt;/p&gt;；截图后可直接 Ctrl+V 粘贴': 'HTML / Markdown supported, e.g. &lt;p&gt;intro&lt;/p&gt;. Paste a screenshot with Ctrl+V.',
+	'Markdown / HTML，留空则回落中文正文；截图后可直接 Ctrl+V 粘贴': 'Markdown / HTML; blank falls back to the Chinese body. Paste a screenshot with Ctrl+V.',
+	'支持 Markdown，前台渲染为 HTML；截图后可直接 Ctrl+V 粘贴': 'Markdown supported and rendered as HTML on the site. Paste a screenshot with Ctrl+V.',
 	'正在上传图片…': 'Uploading image…',
 	'还有图片正在上传，请稍候': 'Another image is still uploading — please wait',
 	'图片超过 {n} MB，请先压缩': 'Image is over {n} MB — please compress it first',
