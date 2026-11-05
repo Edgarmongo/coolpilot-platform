@@ -8,16 +8,12 @@
 				</NuxtLink>
 
 				<nav class="nav">
-					<NuxtLink to="/" class="nav-item" active-class="is-active">首页</NuxtLink>
-					<NuxtLink to="/archives" class="nav-item" active-class="is-active">归档</NuxtLink>
-					<NuxtLink to="/topic" class="nav-item" active-class="is-active">专题</NuxtLink>
-					<NuxtLink to="/moments" class="nav-item" active-class="is-active">动态</NuxtLink>
-					<NuxtLink to="/friends" class="nav-item" active-class="is-active">友链</NuxtLink>
-					<NuxtLink to="/about" class="nav-item" active-class="is-active">关于</NuxtLink>
-					<NuxtLink to="/knowledge" class="nav-item" active-class="is-active">知识付费</NuxtLink>
-					<NuxtLink to="/service" class="nav-item" active-class="is-active">技术服务</NuxtLink>
-					<NuxtLink to="/ask" class="nav-item" active-class="is-active">问答</NuxtLink>
-					<NuxtLink to="/search" class="nav-item" active-class="is-active">搜索</NuxtLink>
+					<template v-for="item in navItems" :key="item.id || item.path">
+						<a v-if="isExternal(item.path)" :href="item.path" class="nav-item"
+						   :target="item.target || '_self'" rel="noopener noreferrer">{{ item.label }}</a>
+						<NuxtLink v-else :to="item.path" class="nav-item" active-class="is-active"
+						          :target="item.target === '_blank' ? '_blank' : undefined">{{ item.label }}</NuxtLink>
+					</template>
 				</nav>
 
 				<div class="header-right">
@@ -50,6 +46,44 @@
 <script setup lang="ts">
 const router = useRouter()
 const {call, isLogin, user, clearSession} = useApi()
+
+interface NavItem {
+	id?: number
+	label: string
+	path: string
+	target?: string
+}
+
+/**
+ * 兜底菜单：只在「接口拿不到」时使用（后端重启、网络抖动、迁移没跑）。
+ * 配置化之后导航仍不能因为一次请求失败就白掉 —— 导航消失比菜单文字旧更伤。
+ */
+const FALLBACK_NAV: NavItem[] = [
+	{label: '首页', path: '/'},
+	{label: '归档', path: '/archives'},
+	{label: '专题', path: '/topic'},
+	{label: '动态', path: '/moments'},
+	{label: '友链', path: '/friends'},
+	{label: '关于', path: '/about'},
+	{label: '知识付费', path: '/knowledge'},
+	{label: '技术服务', path: '/service'},
+	{label: '问答', path: '/ask'},
+	{label: '搜索', path: '/search'}
+]
+
+// SSR 首屏就要有菜单，所以 await；后端对 /nav 做了 Redis 缓存，这次请求很轻
+const {data: navMenu} = await useAsyncData('nav-menu', async () => {
+	const res: any = await call('/nav').catch(() => null)
+	// code !== 200 时返回 null，交给下面的 computed 走兜底；
+	// 返回空数组是站长的真实配置（把菜单全隐藏了），此时不兜底
+	return res && res.code === 200 && Array.isArray(res.data) ? (res.data as NavItem[]) : null
+})
+
+const navItems = computed<NavItem[]>(() => Array.isArray(navMenu.value) ? navMenu.value! : FALLBACK_NAV)
+
+function isExternal(path: string) {
+	return /^https?:\/\//i.test(path || '')
+}
 
 async function logout() {
 	// 先让服务端吊销 token（递增版本号），失败也要清本地，不能卡住用户

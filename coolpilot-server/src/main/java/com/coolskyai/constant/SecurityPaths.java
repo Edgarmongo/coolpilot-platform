@@ -86,6 +86,8 @@ public final class SecurityPaths {
 			// 内容浏览
 			"/blogs", "/blog", "/blog/*/products", "/blog/*/topics", "/archives", "/searchBlog", "/category", "/tag",
 			"/moments", "/about", "/site",
+			// 导航菜单：每个页面都要渲染，且只返回 visible = 1 的条目
+			"/nav",
 			// 专题：公开页面，文章本身仍由 /blog 的可见性规则把关
 			"/topics", "/topic/*",
 			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）

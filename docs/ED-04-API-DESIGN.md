@@ -248,7 +248,24 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 | PUT | `/admin/topic/{id}/articles` | 整组替换绑定，数组顺序即阅读顺序 |
 | DELETE | `/admin/topic/{id}` | 删除专题（文章不受影响） |
 
-### 4.6 文件与统计
+### 4.6 导航菜单（V15）
+
+顶部导航原本写死在 `coolpilot-web/layouts/default.vue`，V15 起改为可配置。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/nav` | 公开：前台菜单，只返回 `visible = 1`，按 `sort` 升序；走 Redis `navMenuList` 缓存 |
+| GET | `/admin/navs` | 后台全量列表（含隐藏项） |
+| POST | `/admin/nav` | 新增；`path` 以 `/` 开头为站内，`http(s)://` 开头为外链 |
+| PUT | `/admin/nav/{id}` | 编辑文字 / 链接 / 排序 / 显隐 / 打开方式 |
+| PUT | `/admin/nav/{id}/move?direction=up|down` | 与相邻项交换位置（先把 sort 规整为 10/20/30） |
+| PUT | `/admin/nav/{id}/visible?visible=` | 单独切换显隐 |
+| DELETE | `/admin/nav/{id}` | 删除 |
+
+任何写操作都会清 `navMenuList` 缓存。前台在接口失败时回落到内置默认菜单（`FALLBACK_NAV`），
+返回空数组则不回落——那是站长主动把菜单全隐藏了。
+
+### 4.7 文件与统计
 
 | 方法 | 路径 | 说明 |
 |---|---|---|

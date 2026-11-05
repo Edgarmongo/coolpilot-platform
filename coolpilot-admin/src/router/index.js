@@ -100,6 +100,12 @@ export const routes = [
 				meta: {title: '站点设置', icon: 'Setting'}
 			},
 			{
+				path: 'nav',
+				name: 'NavManage',
+				component: () => import('@/views/page/NavList.vue'),
+				meta: {title: '导航管理', icon: 'Menu'}
+			},
+			{
 				path: 'about',
 				name: 'AboutPage',
 				component: () => import('@/views/page/About.vue'),

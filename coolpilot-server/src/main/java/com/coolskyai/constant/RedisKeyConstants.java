@@ -38,6 +38,10 @@ public class RedisKeyConstants {
 	 */
 	public static final String FRIEND_INFO_MAP = "friendInfoMap";
 	/**
+	 * 前台导航菜单列表key（菜单很少变动，读写比极高）
+	 */
+	public static final String NAV_MENU_LIST = "navMenuList";
+	/**
 	 * 博客归档key
 	 */
 	public static final String ARCHIVE_BLOG_MAP = "archiveBlogMap";
