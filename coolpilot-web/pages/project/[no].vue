@@ -4,27 +4,27 @@
 			<div class="head">
 				<div>
 					<div class="crumbs">
-						<span class="tag">项目</span>
+						<span class="tag">{{ t('projectPage.tag') }}</span>
 						<span class="mono muted">{{ project.projectNo }}</span>
 						<span :class="['status', statusClass(project.status)]">{{ statusText(project.status) }}</span>
 					</div>
 					<h1 class="page-title">{{ project.name }}</h1>
 					<p class="page-desc">
-						合同金额 ¥{{ price(project.amount) }}
-						· 开始 {{ project.startDate || '未定' }}
-						<span v-if="project.endDate"> · 结束 {{ project.endDate }}</span>
+						{{ t('projectPage.contract', {amount: `¥${price(project.amount)}`}) }}
+						· {{ t('projectPage.start', {date: project.startDate || t('projectPage.undecided')}) }}
+						<span v-if="project.endDate"> · {{ t('projectPage.end', {date: project.endDate}) }}</span>
 					</p>
 				</div>
 				<div class="progress">
 					<strong>{{ accepted }}/{{ milestones.length }}</strong>
-					<span class="muted">里程碑已验收</span>
+					<span class="muted">{{ t('projectPage.progress') }}</span>
 				</div>
 			</div>
 		</div>
 
 		<div class="card section">
-			<h2 class="sub-title">里程碑</h2>
-			<div v-if="!milestones.length" class="empty">还没有里程碑，平台会尽快补充</div>
+			<h2 class="sub-title">{{ t('projectPage.milestones') }}</h2>
+			<div v-if="!milestones.length" class="empty">{{ t('projectPage.noMilestones') }}</div>
 
 			<div v-for="milestone in milestones" :key="milestone.id" class="milestone">
 				<div class="ms-head">
@@ -34,7 +34,7 @@
 					</div>
 					<div class="ms-right">
 						<span class="amount">¥{{ price(milestone.amount) }}</span>
-						<span class="muted">截止 {{ milestone.dueDate || '未定' }}</span>
+						<span class="muted">{{ t('projectPage.due', {date: milestone.dueDate || t('projectPage.undecided')}) }}</span>
 					</div>
 				</div>
 
@@ -50,22 +50,22 @@
 					</div>
 					<p v-if="latest[milestone.id].content" class="delivery-content">{{ latest[milestone.id].content }}</p>
 					<div v-if="latest[milestone.id].fileId" class="delivery-file">
-						<span>{{ latest[milestone.id].fileName || '交付文件' }}</span>
-						<button class="btn ghost btn-sm" @click="download(latest[milestone.id])">下载</button>
+						<span>{{ latest[milestone.id].fileName || t('projectPage.deliveryFile') }}</span>
+						<button class="btn ghost btn-sm" @click="download(latest[milestone.id])">{{ t('projectPage.download') }}</button>
 					</div>
 				</div>
-				<p v-else class="muted small">等待交付</p>
+				<p v-else class="muted small">{{ t('projectPage.waitingDelivery') }}</p>
 
 				<div v-if="milestone.status === 'DELIVERED' && canAccept" class="ms-actions">
-					<button class="btn" :disabled="busy" @click="accept(milestone)">验收通过</button>
-					<button class="btn ghost" :disabled="busy" @click="reject(milestone)">需要修改</button>
+					<button class="btn" :disabled="busy" @click="accept(milestone)">{{ t('projectPage.accept') }}</button>
+					<button class="btn ghost" :disabled="busy" @click="reject(milestone)">{{ t('projectPage.needChanges') }}</button>
 				</div>
 			</div>
 		</div>
 
 		<div class="card section">
-			<h2 class="sub-title">进度记录</h2>
-			<div v-if="!events.length" class="empty">暂无记录</div>
+			<h2 class="sub-title">{{ t('projectPage.timeline') }}</h2>
+			<div v-if="!events.length" class="empty">{{ t('projectPage.noEvents') }}</div>
 			<div v-for="event in events" :key="event.id" class="event">
 				<span class="dot"/>
 				<div>
@@ -76,19 +76,20 @@
 						</span>
 					</div>
 					<p v-if="event.remark" class="muted small">{{ event.remark }}</p>
-					<p class="muted small">{{ event.operatorName || '系统' }} · {{ formatDate(event.createTime) }}</p>
+					<p class="muted small">{{ event.operatorName || t('projectPage.system') }} · {{ formatDate(event.createTime) }}</p>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div v-else class="empty card">项目不存在或无权查看</div>
+	<div v-else class="empty card">{{ t('projectPage.notFound') }}</div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const {call, isLogin} = useApi()
+const {t, te} = useI18n()
 
-useHead({title: '项目进度 - CoolSkyAI'})
+useHead({title: t('projectPage.head')})
 
 if (!isLogin.value) {
 	await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
@@ -107,14 +108,14 @@ const accepted = computed(() => milestones.value.filter((m: any) => m.status ===
 const canAccept = computed(() => ['IN_PROGRESS', 'PENDING_ACCEPT'].includes(project.value?.status))
 
 async function accept(milestone: any) {
-	if (!confirm(`确认验收「${milestone.name}」？`)) {
+	if (!confirm(t('projectPage.acceptConfirm', {name: milestone.name}))) {
 		return
 	}
 	await act(`/milestone/${milestone.id}/accept`, {})
 }
 
 async function reject(milestone: any) {
-	const reason = prompt('请说明需要修改的地方') ?? ''
+	const reason = prompt(t('projectPage.rejectPrompt')) ?? ''
 	if (!reason.trim()) {
 		return
 	}
@@ -149,10 +150,11 @@ function price(value: number) {
 }
 
 function statusText(status: string) {
-	return {
-		NOT_STARTED: '未开始', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收', COMPLETED: '已完成', ARCHIVED: '已归档',
-		PENDING: '待交付', DELIVERING: '交付中', DELIVERED: '待验收', ACCEPTED: '已验收', REJECTED: '已打回'
-	}[status] || status || ''
+	if (!status) {
+		return ''
+	}
+	const key = `projectPage.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function statusClass(status: string) {
@@ -166,22 +168,26 @@ function statusClass(status: string) {
 }
 
 function milestoneStatusText(status: string) {
-	return {PENDING: '待交付', DELIVERING: '交付中', DELIVERED: '待验收', ACCEPTED: '已验收', REJECTED: '已打回'}[status] || status
+	const key = `projectPage.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function deliveryTypeText(type: string) {
-	return {FILE: '文件', LINK: '链接', TEXT: '说明'}[type] || type
+	const key = `projectPage.deliveryType.${type}`
+	return te(key) ? t(key) : type
 }
 
 function deliveryStatusText(status: string) {
-	return {DELIVERED: '待验收', ACCEPTED: '已验收', REJECTED: '已打回'}[status] || status
+	const key = `projectPage.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function actionText(action: string) {
-	return {
-		CREATE: '项目创建', DELIVER: '提交交付', COMPLETE: '项目完成', MOVE: '状态调整',
-		ADD_MILESTONE: '新增里程碑', UPDATE: '里程碑调整', ACCEPT: '验收通过', REJECT: '验收打回'
-	}[action] || action
+	const key = `projectPage.action.${action}`
+	if (te(key)) {
+		return t(key)
+	}
+	return action
 }
 </script>
 

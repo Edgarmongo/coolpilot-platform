@@ -469,5 +469,55 @@
       "REJECT_QUOTE": "拒绝报价",
       "CANCEL": "取消需求"
     }
+  },
+  "projectPage": {
+    "tag": "项目",
+    "contract": "合同金额 {amount}",
+    "start": "开始 {date}",
+    "end": "结束 {date}",
+    "undecided": "未定",
+    "progress": "里程碑已验收",
+    "milestones": "里程碑",
+    "noMilestones": "还没有里程碑，平台会尽快补充",
+    "due": "截止 {date}",
+    "waitingDelivery": "等待交付",
+    "accept": "验收通过",
+    "needChanges": "需要修改",
+    "deliveryFile": "交付文件",
+    "download": "下载",
+    "timeline": "进度记录",
+    "noEvents": "暂无记录",
+    "system": "系统",
+    "notFound": "项目不存在或无权查看",
+    "head": "项目进度",
+    "acceptConfirm": "确认验收「{name}」？",
+    "rejectPrompt": "请说明需要修改的地方",
+    "status": {
+      "NOT_STARTED": "未开始",
+      "IN_PROGRESS": "实施中",
+      "PENDING_ACCEPT": "待验收",
+      "COMPLETED": "已完成",
+      "ARCHIVED": "已归档",
+      "PENDING": "待交付",
+      "DELIVERING": "交付中",
+      "DELIVERED": "待验收",
+      "ACCEPTED": "已验收",
+      "REJECTED": "已打回"
+    },
+    "deliveryType": {
+      "FILE": "文件",
+      "LINK": "链接",
+      "TEXT": "说明"
+    },
+    "action": {
+      "CREATE": "项目创建",
+      "DELIVER": "提交交付",
+      "COMPLETE": "项目完成",
+      "MOVE": "状态调整",
+      "ADD_MILESTONE": "新增里程碑",
+      "UPDATE": "里程碑调整",
+      "ACCEPT": "验收通过",
+      "REJECT": "验收打回"
+    }
   }
 }

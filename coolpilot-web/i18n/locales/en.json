@@ -469,5 +469,55 @@
       "REJECT_QUOTE": "Quote declined",
       "CANCEL": "Request cancelled"
     }
+  },
+  "projectPage": {
+    "tag": "Project",
+    "contract": "Contract {amount}",
+    "start": "Started {date}",
+    "end": "Ended {date}",
+    "undecided": "TBD",
+    "progress": "milestones accepted",
+    "milestones": "Milestones",
+    "noMilestones": "No milestones yet — they will be added shortly",
+    "due": "Due {date}",
+    "waitingDelivery": "Awaiting delivery",
+    "accept": "Accept",
+    "needChanges": "Needs changes",
+    "deliveryFile": "Delivery file",
+    "download": "Download",
+    "timeline": "History",
+    "noEvents": "Nothing yet",
+    "system": "System",
+    "notFound": "This project does not exist or you cannot view it",
+    "head": "Project progress",
+    "acceptConfirm": "Accept “{name}”?",
+    "rejectPrompt": "Describe what needs to change",
+    "status": {
+      "NOT_STARTED": "Not started",
+      "IN_PROGRESS": "In progress",
+      "PENDING_ACCEPT": "Awaiting acceptance",
+      "COMPLETED": "Completed",
+      "ARCHIVED": "Archived",
+      "PENDING": "Awaiting delivery",
+      "DELIVERING": "Delivering",
+      "DELIVERED": "Awaiting acceptance",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Sent back"
+    },
+    "deliveryType": {
+      "FILE": "File",
+      "LINK": "Link",
+      "TEXT": "Note"
+    },
+    "action": {
+      "CREATE": "Project created",
+      "DELIVER": "Delivered",
+      "COMPLETE": "Project completed",
+      "MOVE": "Status changed",
+      "ADD_MILESTONE": "Milestone added",
+      "UPDATE": "Milestone updated",
+      "ACCEPT": "Accepted",
+      "REJECT": "Sent back"
+    }
   }
 }
