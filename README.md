@@ -43,10 +43,14 @@
 | 导航菜单文字 | `nav_menu.label` / `label_en` | 后台「页面管理 → 导航管理」 |
 | 站点名、页脚、品牌标记 | `site_setting.value` / `value_en` | 后台「站点设置 → 基础设置」 |
 | 文章 / 商品正文 | 不翻译 | 英文站展示原文 |
+| 后台界面文案 | `coolpilot-admin/src/i18n/ui.js` | 中文原文即 key；英文查表，缺词回落中文 |
 
 英文列留空时回落中文，所以可以逐项补翻译，不必一次填完。
 新增语言：在 `nuxt.config.ts` 的 `i18n.locales` 加一项、放一份 JSON，并在
-`NavMenuService` / `BrandService` 的语言白名单里补上即可。
+`NavMenuService` / `BrandService` / `AboutService` 的语言白名单里补上即可。
+
+后台的语言选择存 localStorage（不走 URL），因为后台是登录后的工作台、
+没有 SEO 诉求，也不需要 `/en/cms/...` 这种地址。
 
 ## 技术栈
 
