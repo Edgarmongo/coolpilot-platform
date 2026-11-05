@@ -68,12 +68,6 @@ export const routes = [
 				meta: {title: '专题管理', icon: 'Notebook'}
 			},
 			{
-				path: 'topic',
-				name: 'TopicList',
-				component: () => import('@/views/topic/TopicList.vue'),
-				meta: {title: '专题管理', icon: 'Notebook'}
-			},
-			{
 				path: 'moment',
 				name: 'MomentList',
 				component: () => import('@/views/blog/MomentList.vue'),
