@@ -339,7 +339,16 @@ AI_LLM_MODEL=qwen2.5:7b
 AI_LLM_TIMEOUT=60          # 秒，本地小机器可以放宽到 120
 AI_LLM_MAX_TOKENS=800
 AI_LLM_TEMPERATURE=0.3
+# 厂商专有参数（JSON，原样并入请求体，不覆盖标准字段）
+# DeepSeek V4 默认开思考模式，只要正文：{"thinking":{"type":"disabled"}}
+AI_LLM_EXTRA_BODY=
 ```
+
+> **DeepSeek 注意**：它的 OpenAI 兼容层只有对话接口，**没有 embeddings**。
+> 用 DeepSeek 生成时，向量侧请继续用本地 bge-m3（或通义 `text-embedding-v4` 等），
+> 两边各配各的：`AI_LLM_*` 指向 DeepSeek，`AI_EMBEDDING_*` 指向向量服务。
+> 模型名以控制台为准：旧的 `deepseek-chat` / `deepseek-reasoner` 已在 2026-07 退役，
+> 现为 `deepseek-v4-flash` / `deepseek-v4-pro`。
 
 改完 `docker compose -f docker-compose.prod.yml up -d api` 生效。
 

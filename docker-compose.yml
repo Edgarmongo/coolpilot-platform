@@ -108,6 +108,8 @@ services:
       AI_LLM_TIMEOUT: ${AI_LLM_TIMEOUT:-60}
       AI_LLM_MAX_TOKENS: ${AI_LLM_MAX_TOKENS:-800}
       AI_LLM_TEMPERATURE: ${AI_LLM_TEMPERATURE:-0.3}
+      # 厂商专有参数，JSON；DeepSeek 可填 {"thinking":{"type":"disabled"}}
+      AI_LLM_EXTRA_BODY: ${AI_LLM_EXTRA_BODY:-}
     # 本地跑 Ollama 时容器要用 host.docker.internal 访问宿主机；Linux 下需要这条映射
     extra_hosts:
       - "host.docker.internal:host-gateway"

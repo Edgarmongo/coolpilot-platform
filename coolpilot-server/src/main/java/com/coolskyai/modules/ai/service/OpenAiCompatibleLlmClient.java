@@ -59,6 +59,19 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 	@Value("${ai.llm.temperature:0.3}")
 	private double temperature;
 
+	/**
+	 * 额外请求字段（JSON 字符串），原样并入请求体
+	 *
+	 * 用途：不同厂商有自己的开关，比如 DeepSeek 的 V4 默认开启思考模式，
+	 * 需要 {"thinking":{"type":"disabled"}} 才能只拿正文。为这种参数改代码不值得，
+	 * 留一个口子让部署侧自己填。
+	 *
+	 * 核心字段（model/messages/temperature/max_tokens/stream）不允许被覆盖，
+	 * 否则一次手误就会把模型换掉。
+	 */
+	@Value("${ai.llm.extra-body:}")
+	private String extraBody;
+
 	private RestClient restClient;
 
 	@PostConstruct
@@ -240,7 +253,25 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 		body.put("messages", messages);
 		body.put("temperature", temperature);
 		body.put("max_tokens", maxTokens);
+		mergeExtraBody(body);
 		return body;
+	}
+
+	/**
+	 * 合并 ai.llm.extra-body，不动核心字段
+	 */
+	private void mergeExtraBody(Map<String, Object> body) {
+		if (extraBody == null || extraBody.isBlank()) {
+			return;
+		}
+		try {
+			Map<String, Object> extra = JacksonUtils.readValue(extraBody, Map.class);
+			if (extra != null) {
+				extra.forEach(body::putIfAbsent);
+			}
+		} catch (Exception e) {
+			log.warn("ai.llm.extra-body 不是合法 JSON，已忽略：{}", e.getMessage());
+		}
 	}
 
 	private String endpoint() {
