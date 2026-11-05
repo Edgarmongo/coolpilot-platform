@@ -292,5 +292,21 @@
       "STARTING": "Starting at",
       "CUSTOM": "Custom quote"
     }
+  },
+  "servicePage": {
+    "title": "Services",
+    "desc": "Backend development, AI applications, deployment and consulting — traceable from assessment to acceptance",
+    "step1": "Request",
+    "step2": "Assessment",
+    "step3": "Quote",
+    "step4": "Kick-off",
+    "step5": "Delivery",
+    "step6": "Acceptance",
+    "empty": "No services listed yet — you can still submit a request",
+    "tag": "Service",
+    "viewDetail": "View details →",
+    "noFit": "Nothing fits?",
+    "noFitDesc": "Describe what you need and we will send a formal quote after assessment.",
+    "submitDemand": "Submit a request"
   }
 }

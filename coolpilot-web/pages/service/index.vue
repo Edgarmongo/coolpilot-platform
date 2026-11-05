@@ -1,7 +1,7 @@
 <template>
 	<div>
-		<h1 class="page-title">技术服务</h1>
-		<p class="page-desc">后端开发、AI 应用、部署运维与咨询，从评估到验收全程可追踪</p>
+		<h1 class="page-title">{{ t('servicePage.title') }}</h1>
+		<p class="page-desc">{{ t('servicePage.desc') }}</p>
 
 		<div class="steps card">
 			<span v-for="(step, index) in steps" :key="step" class="step">
@@ -9,53 +9,61 @@
 			</span>
 		</div>
 
-		<div v-if="!products.length" class="empty card">暂无服务，可直接提交需求</div>
+		<div v-if="!products.length" class="empty card">{{ t('servicePage.empty') }}</div>
 
 		<div class="grid">
-			<NuxtLink v-for="product in products" :key="product.id" :to="`/knowledge/${product.productNo}`" class="card item">
+			<NuxtLink v-for="product in products" :key="product.id" :to="localePath(`/knowledge/${product.productNo}`)" class="card item">
 				<div class="item-head">
-					<span class="tag">技术服务</span>
+					<span class="tag">{{ t('servicePage.tag') }}</span>
 					<span class="muted">{{ modeText(product) }}</span>
 				</div>
 				<h3>{{ product.title }}</h3>
 				<p class="item-desc">{{ product.summary || product.subtitle }}</p>
 				<div class="item-foot">
 					<strong>{{ priceText(product) }}</strong>
-					<span class="muted">查看详情 →</span>
+					<span class="muted">{{ t('servicePage.viewDetail') }}</span>
 				</div>
 			</NuxtLink>
 		</div>
 
 		<div class="card cta">
 			<div>
-				<strong>没有合适的服务？</strong>
-				<p class="muted">把需求写清楚，评估后给你一份正式报价。</p>
+				<strong>{{ t('servicePage.noFit') }}</strong>
+				<p class="muted">{{ t('servicePage.noFitDesc') }}</p>
 			</div>
-			<NuxtLink to="/demand/new" class="btn">提交需求</NuxtLink>
+			<NuxtLink :to="localePath('/demand/new')" class="btn">{{ t('servicePage.submitDemand') }}</NuxtLink>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-useHead({title: '技术服务 - CoolSkyAI'})
-
 const {call} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
-const steps = ['提交需求', '需求评估', '正式报价', '确认立项', '实施交付', '验收完成']
+// 注意顺序：t 是 const，useHead 必须放在它之后，否则 setup 阶段 TDZ 报错
+useHead({title: t('servicePage.title')})
+
+const steps = computed(() => [
+	t('servicePage.step1'), t('servicePage.step2'), t('servicePage.step3'),
+	t('servicePage.step4'), t('servicePage.step5'), t('servicePage.step6')
+])
 
 const {data} = await useAsyncData('service-products', () => call('/products?type=SERVICE&pageNum=1&pageSize=24'))
 const products = computed(() => (data.value as any)?.data?.list || [])
 
 function modeText(product: any) {
-	return {FIXED: '固定价', STARTING: '起步价', CUSTOM: '定制报价'}[product.priceMode] || product.priceMode
+	const key = `knowledgeDetail.modes.${product.priceMode}`
+	return te(key) ? t(key) : product.priceMode
 }
 
 function priceText(product: any) {
 	if (product.priceMode === 'CUSTOM') {
-		return '按需报价'
+		return t('common.quote')
 	}
 	const value = Number(product.price || 0).toFixed(2).replace(/\.00$/, '')
-	return product.priceMode === 'STARTING' ? `¥${value} 起` : `¥${value}`
+	const amount = `¥${value}`
+	return product.priceMode === 'STARTING' ? t('common.from', {price: amount}) : amount
 }
 </script>
 
