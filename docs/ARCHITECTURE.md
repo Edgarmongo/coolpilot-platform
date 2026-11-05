@@ -373,7 +373,7 @@ upload.file.resources-locations=file:${upload.file.path}
 |---|---|---|
 | 本地 Ollama | `http://host.docker.internal:11434/v1` | 容器访问宿主机；不用 Key |
 | 本地 vLLM / LM Studio | `http://host.docker.internal:8000/v1` | 同上 |
-| DeepSeek | `https://api.deepseek.com/v1` | 需 `AI_LLM_API_KEY` |
+| DeepSeek | `https://api.deepseek.com/v1` | 需 `AI_LLM_API_KEY`；只有对话接口（生成侧用它，检索仍走 bge-m3） |
 | 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 需 Key |
 
 - 配置项见 `application-dev.properties` 的 `ai.llm.*`；`base-url` 或 `model` 为空即视为未启用

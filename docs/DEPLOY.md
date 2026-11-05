@@ -327,7 +327,7 @@ BLOG_CMS=https://coolskyai.com/cms
 |---|---|---|---|
 | 本地 Ollama | `http://host.docker.internal:11434/v1` | `qwen2.5:7b` | 不需要 Key；2C4G 建议 3B/4B 量化模型 |
 | 本地 vLLM / LM Studio | `http://host.docker.internal:8000/v1` | 自选 | 需要 GPU 才有速度优势 |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | 便宜、中文好，需 Key |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-flash` | 便宜、中文好，需 Key；只有对话接口，没有 embeddings |
 | 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` | 需 Key |
 
 ### 配置
@@ -347,8 +347,19 @@ AI_LLM_EXTRA_BODY=
 > **DeepSeek 注意**：它的 OpenAI 兼容层只有对话接口，**没有 embeddings**。
 > 用 DeepSeek 生成时，向量侧请继续用本地 bge-m3（或通义 `text-embedding-v4` 等），
 > 两边各配各的：`AI_LLM_*` 指向 DeepSeek，`AI_EMBEDDING_*` 指向向量服务。
-> 模型名以控制台为准：旧的 `deepseek-chat` / `deepseek-reasoner` 已在 2026-07 退役，
-> 现为 `deepseek-v4-flash` / `deepseek-v4-pro`。
+> 模型名以接口返回为准：`curl -s $AI_LLM_BASE_URL/models -H "Authorization: Bearer $KEY"`。
+> 2026-11 实测可用的是 `deepseek-flash`（V4.1 Flash）与 `deepseek-v4-pro`；
+> 旧的 `deepseek-chat` / `deepseek-reasoner` 已退役，写成 `deepseek-v4.1-flash:free` 这类
+> 带后缀的名字会被拒（`The supported API model names are ...`）。
+>
+> V4.1 默认开启思考模式，直接调用会先返回一段 `reasoning_content`：耗时翻倍、
+> 流式还容易出现「等好几秒没输出」。只要正文就配：
+>
+> ```ini
+> AI_LLM_EXTRA_BODY='{"thinking":{"type":"disabled"}}'
+> ```
+>
+> 实测同一句话：开思考 78 tokens / 44 个推理 token，关掉 11 tokens。
 
 改完 `docker compose -f docker-compose.prod.yml up -d api` 生效。
 

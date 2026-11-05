@@ -84,3 +84,6 @@ certbot/
 
 # 临时挪走的旧依赖（清理 node_modules 时用，不进版本库）
 .trash-node-modules/
+
+# 临时调试产物（token、抓取的 HTML 等）
+out/
