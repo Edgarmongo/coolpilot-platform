@@ -2,29 +2,29 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">评论管理</h2>
-				<p class="page-desc">审核、隐藏或删除访客评论</p>
+				<h2 class="page-title">{{ t('评论管理') }}</h2>
+				<p class="page-desc">{{ t('审核、隐藏或删除访客评论') }}</p>
 			</div>
 		</div>
 
 		<el-table :data="list" v-loading="loading" size="small">
-			<el-table-column label="评论内容" min-width="260">
+			<el-table-column :label="t('评论内容')" min-width="260">
 				<template #default="{row}">
 					<div class="content">{{ row.content }}</div>
-					<div class="muted">{{ row.nickname || '匿名' }} · {{ formatDate(row.createTime) }}</div>
+					<div class="muted">{{ row.nickname || t('匿名') }} · {{ formatDate(row.createTime) }}</div>
 				</template>
 			</el-table-column>
-			<el-table-column label="所属文章" min-width="160" show-overflow-tooltip>
-				<template #default="{row}">{{ row.blog ? row.blog.title : (row.page === 3 ? '分享的问答' : (row.pageName || '-')) }}</template>
+			<el-table-column :label="t('所属文章')" min-width="160" show-overflow-tooltip>
+				<template #default="{row}">{{ row.blog ? row.blog.title : (row.page === 3 ? t('分享的问答') : (row.pageName || '-')) }}</template>
 			</el-table-column>
-			<el-table-column label="显示" width="80">
+			<el-table-column :label="t('显示')" width="80">
 				<template #default="{row}">
 					<el-switch :model-value="row.published" size="small" @change="value => changePublished(row, value)"/>
 				</template>
 			</el-table-column>
-			<el-table-column label="操作" width="90" fixed="right">
+			<el-table-column :label="t('操作')" width="90" fixed="right">
 				<template #default="{row}">
-					<el-button link type="danger" @click="remove(row)">删除</el-button>
+					<el-button link type="danger" @click="remove(row)">{{ t('删除') }}</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -36,6 +36,9 @@
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {deleteComment, getCommentList, updateCommentPublished} from '@/api/comment'
@@ -61,17 +64,17 @@ async function load() {
 async function changePublished(row, value) {
 	await updateCommentPublished(row.id, value)
 	row.published = value
-	ElMessage.success(value ? '已通过' : '已隐藏')
+	ElMessage.success(value ? t('已通过') : t('已隐藏'))
 }
 
 async function remove(row) {
 	try {
-		await ElMessageBox.confirm('删除这条评论？其下回复会一并删除。', '删除评论', {type: 'warning'})
+		await ElMessageBox.confirm(t('删除这条评论？其下回复会一并删除。'), '删除评论', {type: 'warning'})
 	} catch (e) {
 		return
 	}
 	await deleteComment(row.id)
-	ElMessage.success('已删除')
+	ElMessage.success(t('已删除'))
 	load()
 }
 

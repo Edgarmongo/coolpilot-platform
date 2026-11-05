@@ -2,33 +2,33 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">问答记录</h2>
-				<p class="page-desc">用户问过什么、有没有检索到资料。引用为 0 的回答最值得看 —— 通常意味着缺内容或说法对不上</p>
+				<h2 class="page-title">{{ t('问答记录') }}</h2>
+				<p class="page-desc">{{ t('用户问过什么、有没有检索到资料。引用为 0 的回答最值得看 —— 通常意味着缺内容或说法对不上') }}</p>
 			</div>
 		</div>
 
 		<el-form inline>
-			<el-form-item label="标题关键词">
-				<el-input v-model="query.keyword" placeholder="会话标题" clearable style="width: 200px"
+			<el-form-item :label="t('标题关键词')">
+				<el-input v-model="query.keyword" :placeholder="t('会话标题')" clearable style="width: 200px"
 				          @keyup.enter="search"/>
 			</el-form-item>
 			<el-form-item>
-				<el-button type="primary" :icon="Search" @click="search">搜索</el-button>
+				<el-button type="primary" :icon="Search" @click="search">{{ t('搜索') }}</el-button>
 			</el-form-item>
 		</el-form>
 
 		<el-table :data="list" v-loading="loading" size="small">
-			<el-table-column prop="userName" label="用户" width="140" show-overflow-tooltip/>
-			<el-table-column prop="title" label="会话" min-width="260" show-overflow-tooltip/>
-			<el-table-column label="消息数" width="90">
+			<el-table-column prop="userName" :label="t('用户')" width="140" show-overflow-tooltip/>
+			<el-table-column prop="title" :label="t('会话')" min-width="260" show-overflow-tooltip/>
+			<el-table-column :label="t('消息数')" width="90">
 				<template #default="{row}">{{ row.messageCount || 0 }}</template>
 			</el-table-column>
-			<el-table-column label="最近更新" width="150">
+			<el-table-column :label="t('最近更新')" width="150">
 				<template #default="{row}">{{ formatDate(row.updateTime, 'YYYY-MM-DD HH:mm') }}</template>
 			</el-table-column>
-			<el-table-column label="操作" width="90" fixed="right">
+			<el-table-column :label="t('操作')" width="90" fixed="right">
 				<template #default="{row}">
-					<el-button link type="primary" @click="openDetail(row)">查看</el-button>
+					<el-button link type="primary" @click="openDetail(row)">{{ t('查看') }}</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -38,40 +38,43 @@
 		               layout="total, sizes, prev, pager, next, jumper"
 		               @size-change="load" @current-change="load"/>
 
-		<el-drawer v-model="detailVisible" title="会话详情" size="620px">
+		<el-drawer v-model="detailVisible" :title="t('会话详情')" size="620px">
 			<div v-if="detail" class="detail">
 				<div class="detail-head">
 					<div class="detail-title">{{ detail.title }}</div>
 					<div class="muted">
-						用户 ID {{ detail.userId }} · {{ detail.messageCount }} 条消息 ·
+						{{ t('用户 ID') }} {{ detail.userId }} · {{ detail.messageCount }} {{ t('条消息') }} ·
 						{{ formatDate(detail.updateTime) }}
 					</div>
 				</div>
 
 				<div v-for="msg in detail.messages" :key="msg.id" :class="['msg', msg.role === 'USER' ? 'ask' : 'answer']">
 					<div class="msg-meta">
-						<span class="who">{{ msg.role === 'USER' ? '问' : '答' }}</span>
+						<span class="who">{{ msg.role === 'USER' ? t('问') : t('答') }}</span>
 						<span class="muted">{{ formatDate(msg.createTime) }}</span>
-						<span v-if="msg.role !== 'USER'" class="muted">· {{ msg.model || '未记录模型' }}</span>
+						<span v-if="msg.role !== 'USER'" class="muted">· {{ msg.model || t('未记录模型') }}</span>
 						<el-tag v-if="msg.role !== 'USER'" size="small"
 						        :type="msg.citationCount > 0 ? 'success' : 'warning'">
-							引用 {{ msg.citationCount }}
+							{{ t('引用') }} {{ msg.citationCount }}
 						</el-tag>
 					</div>
 					<div class="msg-content">{{ msg.content }}</div>
 					<!-- 追问被改写时，把实际检索句摊开：不显示的话，排查召回问题只能靠猜 -->
 					<div v-if="msg.retrievalQuery" class="msg-extra">
-						检索用：{{ msg.retrievalQuery }}
+						{{ t('检索用：') }}{{ msg.retrievalQuery }}
 					</div>
 				</div>
 
-				<div v-if="!detail.messages.length" class="muted">这段会话没有消息</div>
+				<div v-if="!detail.messages.length" class="muted">{{ t('这段会话没有消息') }}</div>
 			</div>
 		</el-drawer>
 	</div>
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {Search} from '@element-plus/icons-vue'
 import {getChatLog, getChatLogs} from '@/api/ai'

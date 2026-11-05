@@ -2,10 +2,10 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">日志中心</h2>
-				<p class="page-desc">访问、登录、操作与异常记录</p>
+				<h2 class="page-title">{{ t('日志中心') }}</h2>
+				<p class="page-desc">{{ t('访问、登录、操作与异常记录') }}</p>
 			</div>
-			<el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
+			<el-button :icon="Refresh" :loading="loading" @click="load">{{ t('刷新') }}</el-button>
 		</div>
 
 		<el-tabs v-model="tab" @tab-change="onTabChange">
@@ -14,12 +14,12 @@
 					<el-table-column v-for="col in item.columns" :key="col.prop" :label="col.label"
 					                 :prop="col.prop" :width="col.width" :min-width="col.minWidth"
 					                 :show-overflow-tooltip="col.tooltip !== false"/>
-					<el-table-column label="时间" width="160">
+					<el-table-column :label="t('时间')" width="160">
 						<template #default="{row}">{{ formatDate(row.createTime) }}</template>
 					</el-table-column>
-					<el-table-column label="操作" width="80" fixed="right">
+					<el-table-column :label="t('操作')" width="80" fixed="right">
 						<template #default="{row}">
-							<el-button link type="danger" @click="remove(row)">删除</el-button>
+							<el-button link type="danger" @click="remove(row)">{{ t('删除') }}</el-button>
 						</template>
 					</el-table-column>
 				</el-table>
@@ -34,6 +34,9 @@
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {computed, onMounted, ref, watch} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Refresh} from '@element-plus/icons-vue'
@@ -42,40 +45,40 @@ import {formatDate} from '@/util/date'
 
 const configs = [
 	{
-		key: 'visit', label: '访问日志', api: getVisitLogs, remove: 'visitLog',
+		key: 'visit', label: t('访问日志'), api: getVisitLogs, remove: 'visitLog',
 		columns: [
 			{prop: 'ip', label: 'IP', width: 130},
-			{prop: 'ipSource', label: '来源', width: 150},
-			{prop: 'os', label: '系统', width: 120},
-			{prop: 'browser', label: '浏览器', minWidth: 160}
+			{prop: 'ipSource', label: t('来源'), width: 150},
+			{prop: 'os', label: t('系统'), width: 120},
+			{prop: 'browser', label: t('浏览器'), minWidth: 160}
 		]
 	},
 	{
-		key: 'login', label: '登录日志', api: getLoginLogs, remove: 'loginLog',
+		key: 'login', label: t('登录日志'), api: getLoginLogs, remove: 'loginLog',
 		columns: [
-			{prop: 'username', label: '账号', width: 120},
+			{prop: 'username', label: t('账号'), width: 120},
 			{prop: 'ip', label: 'IP', width: 130},
-			{prop: 'ipSource', label: '来源', width: 150},
-			{prop: 'browser', label: '浏览器', minWidth: 140}
+			{prop: 'ipSource', label: t('来源'), width: 150},
+			{prop: 'browser', label: t('浏览器'), minWidth: 140}
 		]
 	},
 	{
-		key: 'operation', label: '操作日志', api: getOperationLogs, remove: 'operationLog',
+		key: 'operation', label: t('操作日志'), api: getOperationLogs, remove: 'operationLog',
 		columns: [
-			{prop: 'username', label: '操作者', width: 110},
-			{prop: 'method', label: '方式', width: 80},
-			{prop: 'uri', label: '接口', minWidth: 200},
-			{prop: 'description', label: '描述', minWidth: 160},
+			{prop: 'username', label: t('操作者'), width: 110},
+			{prop: 'method', label: t('方式'), width: 80},
+			{prop: 'uri', label: t('接口'), minWidth: 200},
+			{prop: 'description', label: t('描述'), minWidth: 160},
 			{prop: 'ip', label: 'IP', width: 130},
-			{prop: 'times', label: '耗时(ms)', width: 100}
+			{prop: 'times', label: t('耗时(ms)'), width: 100}
 		]
 	},
 	{
-		key: 'exception', label: '异常日志', api: getExceptionLogs, remove: 'exceptionLog',
+		key: 'exception', label: t('异常日志'), api: getExceptionLogs, remove: 'exceptionLog',
 		columns: [
-			{prop: 'uri', label: '接口', minWidth: 200},
-			{prop: 'method', label: '方式', width: 80},
-			{prop: 'description', label: '描述', minWidth: 220}
+			{prop: 'uri', label: t('接口'), minWidth: 200},
+			{prop: 'method', label: t('方式'), width: 80},
+			{prop: 'description', label: t('描述'), minWidth: 220}
 		]
 	}
 ]
@@ -106,12 +109,12 @@ function onTabChange() {
 
 async function remove(row) {
 	try {
-		await ElMessageBox.confirm('删除这条日志？', '删除日志', {type: 'warning'})
+		await ElMessageBox.confirm(t('删除这条日志？'), '删除日志', {type: 'warning'})
 	} catch (e) {
 		return
 	}
 	await deleteLog(current.value.remove, row.id)
-	ElMessage.success('已删除')
+	ElMessage.success(t('已删除'))
 	load()
 }
 

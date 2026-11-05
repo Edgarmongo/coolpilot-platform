@@ -2,18 +2,18 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">分类管理</h2>
-				<p class="page-desc">文章分类，名称全局唯一</p>
+				<h2 class="page-title">{{ t('分类管理') }}</h2>
+				<p class="page-desc">{{ t('文章分类，名称全局唯一') }}</p>
 			</div>
-			<el-button type="primary" :icon="Plus" @click="openDialog()">新增分类</el-button>
+			<el-button type="primary" :icon="Plus" @click="openDialog()">{{ t('新增分类') }}</el-button>
 		</div>
 
 		<el-table :data="list" v-loading="loading" size="small">
-			<el-table-column prop="name" label="分类名称"/>
-			<el-table-column label="操作" width="160" align="right">
+			<el-table-column prop="name" :label="t('分类名称')"/>
+			<el-table-column :label="t('操作')" width="160" align="right">
 				<template #default="{row}">
-					<el-button link type="primary" @click="openDialog(row)">重命名</el-button>
-					<el-button link type="danger" @click="remove(row)">删除</el-button>
+					<el-button link type="primary" @click="openDialog(row)">{{ t('重命名') }}</el-button>
+					<el-button link type="danger" @click="remove(row)">{{ t('删除') }}</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -21,17 +21,20 @@
 		<el-pagination v-model:current-page="pageNum" :page-size="pageSize" :total="total" background
 		               layout="total, prev, pager, next" @current-change="load"/>
 
-		<el-dialog v-model="visible" :title="form.id ? '重命名分类' : '新增分类'" width="380px">
-			<el-input v-model="form.name" placeholder="分类名称" maxlength="32" @keyup.enter="submit"/>
+		<el-dialog v-model="visible" :title="form.id ? t('重命名分类') : t('新增分类')" width="380px">
+			<el-input v-model="form.name" :placeholder="t('分类名称')" maxlength="32" @keyup.enter="submit"/>
 			<template #footer>
-				<el-button @click="visible = false">取消</el-button>
-				<el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+				<el-button @click="visible = false">{{ t('取消') }}</el-button>
+				<el-button type="primary" :loading="saving" @click="submit">{{ t('保存') }}</el-button>
 			</template>
 		</el-dialog>
 	</div>
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
@@ -65,7 +68,7 @@ function openDialog(row) {
 
 async function submit() {
 	if (!form.name.trim()) {
-		ElMessage.warning('请输入分类名称')
+		ElMessage.warning(t('请输入分类名称'))
 		return
 	}
 	saving.value = true
@@ -75,7 +78,7 @@ async function submit() {
 		} else {
 			await addCategory({name: form.name.trim()})
 		}
-		ElMessage.success('保存成功')
+		ElMessage.success(t('保存成功'))
 		visible.value = false
 		load()
 	} finally {
@@ -85,13 +88,13 @@ async function submit() {
 
 async function remove(row) {
 	try {
-		await ElMessageBox.confirm(`删除分类「${row.name}」？该分类下的文章不会被删除，但会失去分类。`, '删除分类',
+		await ElMessageBox.confirm(`删除分类「${row.name}」？该分类下的文章不会被删除，但会失去分类。`, t('删除分类'),
 			{type: 'warning'})
 	} catch (e) {
 		return
 	}
 	await deleteCategory(row.id)
-	ElMessage.success('已删除')
+	ElMessage.success(t('已删除'))
 	load()
 }
 

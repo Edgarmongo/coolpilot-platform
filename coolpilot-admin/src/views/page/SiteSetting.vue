@@ -2,10 +2,10 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">站点设置</h2>
-				<p class="page-desc">站点名、资料卡、徽标、收款码等展示信息；图片类字段可直接上传，保存后前台即时生效</p>
+				<h2 class="page-title">{{ t('站点设置') }}</h2>
+				<p class="page-desc">{{ t('站点名、资料卡、徽标、收款码等展示信息；图片类字段可直接上传，保存后前台即时生效') }}</p>
 			</div>
-			<el-button type="primary" :loading="saving" @click="save">保存全部</el-button>
+			<el-button type="primary" :loading="saving" @click="save">{{ t('保存全部') }}</el-button>
 		</div>
 
 		<!-- 图片字段共用一个 file input：点哪一项就记下目标，避免 v-for 里挂一堆 ref -->
@@ -23,20 +23,15 @@
 								<img v-if="item.value && previewOk[item.id] !== false" :src="item.value" alt=""
 								     @error="previewOk[item.id] = false"
 								     @load="previewOk[item.id] = true">
-								<span v-else class="thumb-empty">{{ item.value ? '无法预览' : '未设置' }}</span>
+								<span v-else class="thumb-empty">{{ item.value ? t('无法预览') : t('未设置') }}</span>
 							</div>
 							<div class="img-ops">
 								<div class="img-line">
-									<el-input v-model="item.value" placeholder="上传后自动填入，也可粘贴完整地址"
+									<el-input v-model="item.value" :placeholder="t('上传后自动填入，也可粘贴完整地址')"
 									          @input="previewOk[item.id] = true"/>
-									<el-button size="small" :loading="uploadingId === item.id" @click="pick(item)">
-										上传
-									</el-button>
+									<el-button size="small" :loading="uploadingId === item.id" @click="pick(item)">{{ t('上传') }}</el-button>
 								</div>
-								<div class="hint">
-									支持 png / jpg / webp，单张不超过 5 MB。
-									相对路径（/img/…）后台预览不到属正常，建议用上传拿到的完整地址。
-								</div>
+								<div class="hint">{{ t('支持 png / jpg / webp，单张不超过 5 MB。 相对路径（/img/…）后台预览不到属正常，建议用上传拿到的完整地址。') }}</div>
 							</div>
 						</div>
 
@@ -45,7 +40,7 @@
 							<el-input v-else v-model="item.value"/>
 							<!-- 基础设置里有品牌名、页脚这类前台展示文案，英文单独一份 -->
 							<el-input v-if="item.type === 1 && !isImage(item)" v-model="item.valueEn" class="en-input"
-							          placeholder="英文值（留空则英文站沿用中文）"/>
+							          :placeholder="t('英文值（留空则英文站沿用中文）')"/>
 						</template>
 					</div>
 				</div>
@@ -55,6 +50,9 @@
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getSiteSettings, updateSiteSettings} from '@/api/siteSetting'
@@ -78,11 +76,11 @@ const previewOk = reactive({})
 // 分组标题按 type 映射；后端按库里实际存在的 type 动态返回，
 // 所以这里不再写死 1~4 —— 以后加新分组（比如支付设置）不用再改前端。
 const TYPE_LABELS = {
-	1: '基础设置',
-	2: '资料卡',
-	3: '徽标',
-	4: '友链说明',
-	5: '支付设置'
+	1: t('基础设置'),
+	2: t('资料卡'),
+	3: t('徽标'),
+	4: t('友链说明'),
+	5: t('支付设置')
 }
 
 const groups = computed(() => {
@@ -100,7 +98,7 @@ const groups = computed(() => {
 		.sort((a, b) => a[0] - b[0])
 		.map(([type, items]) => ({
 			type,
-			label: TYPE_LABELS[type] || `其他设置（type ${type}）`,
+			label: TYPE_LABELS[type] || t('其他设置（type {type}）', {type}),
 			items
 		}))
 })
@@ -135,11 +133,11 @@ async function onPicked(event) {
 		return
 	}
 	if (!/^image\//.test(file.type)) {
-		ElMessage.warning('只支持图片文件')
+		ElMessage.warning(t('只支持图片文件'))
 		return
 	}
 	if (file.size > MAX_IMAGE_BYTES) {
-		ElMessage.warning('图片超过 5 MB，请先压缩')
+		ElMessage.warning(t('图片超过 5 MB，请先压缩'))
 		return
 	}
 	uploadingId.value = item.id
@@ -155,12 +153,12 @@ async function onPicked(event) {
 			headers: {'Content-Type': 'multipart/form-data'}
 		})
 		if (!res.data || !res.data.url) {
-			ElMessage.error('上传成功但未返回图片地址，请检查文件是否被标记为公开')
+			ElMessage.error(t('上传成功但未返回图片地址，请检查文件是否被标记为公开'))
 			return
 		}
 		item.value = res.data.url
 		previewOk[item.id] = true
-		ElMessage.success('已上传，点右上角「保存全部」后生效')
+		ElMessage.success(t('已上传，点右上角「保存全部」后生效'))
 	} finally {
 		uploadingId.value = null
 	}
@@ -191,7 +189,7 @@ async function save() {
 			})),
 			deleteIds: []
 		})
-		ElMessage.success('已保存')
+		ElMessage.success(t('已保存'))
 	} finally {
 		saving.value = false
 	}

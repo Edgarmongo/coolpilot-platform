@@ -2,27 +2,27 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">动态管理</h2>
-				<p class="page-desc">短内容，发布后在前台「动态」中展示</p>
+				<h2 class="page-title">{{ t('动态管理') }}</h2>
+				<p class="page-desc">{{ t('短内容，发布后在前台「动态」中展示') }}</p>
 			</div>
-			<el-button type="primary" :icon="Plus" @click="openDialog()">发布动态</el-button>
+			<el-button type="primary" :icon="Plus" @click="openDialog()">{{ t('发布动态') }}</el-button>
 		</div>
 
 		<el-table :data="list" v-loading="loading" size="small">
-			<el-table-column prop="content" label="内容" show-overflow-tooltip min-width="320"/>
-			<el-table-column label="点赞" prop="likes" width="80"/>
-			<el-table-column label="公开" width="80">
+			<el-table-column prop="content" :label="t('内容')" show-overflow-tooltip min-width="320"/>
+			<el-table-column :label="t('点赞')" prop="likes" width="80"/>
+			<el-table-column :label="t('公开')" width="80">
 				<template #default="{row}">
 					<el-switch :model-value="row.published" size="small" @change="value => changePublished(row, value)"/>
 				</template>
 			</el-table-column>
-			<el-table-column label="发布时间" width="160">
+			<el-table-column :label="t('发布时间')" width="160">
 				<template #default="{row}">{{ formatDate(row.createTime) }}</template>
 			</el-table-column>
-			<el-table-column label="操作" width="140" fixed="right">
+			<el-table-column :label="t('操作')" width="140" fixed="right">
 				<template #default="{row}">
-					<el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-					<el-button link type="danger" @click="remove(row)">删除</el-button>
+					<el-button link type="primary" @click="openDialog(row)">{{ t('编辑') }}</el-button>
+					<el-button link type="danger" @click="remove(row)">{{ t('删除') }}</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -31,22 +31,25 @@
 		               :total="total" background layout="total, sizes, prev, pager, next"
 		               @size-change="load" @current-change="load"/>
 
-		<el-dialog v-model="visible" :title="form.id ? '编辑动态' : '发布动态'" width="520px">
+		<el-dialog v-model="visible" :title="form.id ? t('编辑动态') : t('发布动态')" width="520px">
 			<el-input v-model="form.content" type="textarea" :rows="5" maxlength="500" show-word-limit
-			          placeholder="此刻的想法…"/>
+			          :placeholder="t('此刻的想法…')"/>
 			<div class="row">
-				<span>公开</span>
+				<span>{{ t('公开') }}</span>
 				<el-switch v-model="form.published"/>
 			</div>
 			<template #footer>
-				<el-button @click="visible = false">取消</el-button>
-				<el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+				<el-button @click="visible = false">{{ t('取消') }}</el-button>
+				<el-button type="primary" :loading="saving" @click="submit">{{ t('保存') }}</el-button>
 			</template>
 		</el-dialog>
 	</div>
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
@@ -82,7 +85,7 @@ function openDialog(row) {
 
 async function submit() {
 	if (!form.content.trim()) {
-		ElMessage.warning('请输入内容')
+		ElMessage.warning(t('请输入内容'))
 		return
 	}
 	saving.value = true
@@ -93,7 +96,7 @@ async function submit() {
 		} else {
 			await saveMoment(payload)
 		}
-		ElMessage.success('保存成功')
+		ElMessage.success(t('保存成功'))
 		visible.value = false
 		load()
 	} finally {
@@ -104,17 +107,17 @@ async function submit() {
 async function changePublished(row, value) {
 	await updateMomentPublished(row.id, value)
 	row.published = value
-	ElMessage.success(value ? '已公开' : '已隐藏')
+	ElMessage.success(value ? t('已公开') : t('已隐藏'))
 }
 
 async function remove(row) {
 	try {
-		await ElMessageBox.confirm('删除这条动态？', '删除动态', {type: 'warning'})
+		await ElMessageBox.confirm(t('删除这条动态？'), '删除动态', {type: 'warning'})
 	} catch (e) {
 		return
 	}
 	await deleteMoment(row.id)
-	ElMessage.success('已删除')
+	ElMessage.success(t('已删除'))
 	load()
 }
 

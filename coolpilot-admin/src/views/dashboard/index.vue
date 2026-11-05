@@ -2,10 +2,10 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">仪表盘</h2>
-				<p class="page-desc">交易概览与待办</p>
+				<h2 class="page-title">{{ t('仪表盘') }}</h2>
+				<p class="page-desc">{{ t('交易概览与待办') }}</p>
 			</div>
-			<el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
+			<el-button :icon="Refresh" :loading="loading" @click="load">{{ t('刷新') }}</el-button>
 		</div>
 
 		<el-row :gutter="14">
@@ -22,16 +22,16 @@
 			<el-col :xs="24" :md="14">
 				<div class="page-card">
 					<div class="card-head">
-						<h3>最近订单</h3>
-						<router-link to="/trade/order" class="card-link">全部订单</router-link>
+						<h3>{{ t('最近订单') }}</h3>
+						<router-link to="/trade/order" class="card-link">{{ t('全部订单') }}</router-link>
 					</div>
-					<el-table :data="orders" size="small" empty-text="暂无订单">
-						<el-table-column prop="orderNo" label="订单号" width="190"/>
-						<el-table-column prop="titleSummary" label="内容" show-overflow-tooltip/>
-						<el-table-column label="金额" width="90">
+					<el-table :data="orders" size="small" :empty-text="t('暂无订单')">
+						<el-table-column prop="orderNo" :label="t('订单号')" width="190"/>
+						<el-table-column prop="titleSummary" :label="t('内容')" show-overflow-tooltip/>
+						<el-table-column :label="t('金额')" width="90">
 							<template #default="{row}"><span class="amount">¥{{ row.payAmount }}</span></template>
 						</el-table-column>
-						<el-table-column label="状态" width="100">
+						<el-table-column :label="t('状态')" width="100">
 							<template #default="{row}">
 								<el-tag size="small" :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
 							</template>
@@ -43,12 +43,12 @@
 			<el-col :xs="24" :md="10">
 				<div class="page-card">
 					<div class="card-head">
-						<h3>待办</h3>
+						<h3>{{ t('待办') }}</h3>
 					</div>
 					<router-link to="/trade/order?status=PENDING_CONFIRM" class="todo">
 						<div>
-							<strong>待确认收款</strong>
-							<p>用户已提交转账凭证，核对后确认即发权益</p>
+							<strong>{{ t('待确认收款') }}</strong>
+							<p>{{ t('用户已提交转账凭证，核对后确认即发权益') }}</p>
 						</div>
 						<el-badge :value="waiting" :hidden="!waiting" type="danger">
 							<el-icon class="todo-icon"><Wallet/></el-icon>
@@ -56,15 +56,15 @@
 					</router-link>
 					<router-link to="/trade/refund" class="todo">
 						<div>
-							<strong>退款处理</strong>
-							<p>同意申请 → 线下打款 → 确认后撤销权益</p>
+							<strong>{{ t('退款处理') }}</strong>
+							<p>{{ t('同意申请 → 线下打款 → 确认后撤销权益') }}</p>
 						</div>
 						<el-icon class="todo-icon"><RefreshLeft/></el-icon>
 					</router-link>
 					<router-link to="/trade/entitlement" class="todo">
 						<div>
-							<strong>权益管理</strong>
-							<p>人工发放、撤销与流水核查</p>
+							<strong>{{ t('权益管理') }}</strong>
+							<p>{{ t('人工发放、撤销与流水核查') }}</p>
 						</div>
 						<el-icon class="todo-icon"><Key/></el-icon>
 					</router-link>
@@ -75,6 +75,9 @@
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {computed, onMounted, ref} from 'vue'
 import {Key, Refresh, RefreshLeft, Wallet} from '@element-plus/icons-vue'
 import {getOrderList, getSalesStats} from '@/api/trade'
@@ -86,10 +89,10 @@ const orders = ref([])
 const waiting = computed(() => stats.value.waitingConfirm || 0)
 
 const cards = computed(() => [
-	{key: 'paid', label: '累计销售额', value: money(stats.value.paidAmount), hint: '含已退款订单', tone: 'tone-teal'},
-	{key: 'net', label: '净收入', value: money(stats.value.netAmount), hint: '销售额 − 退款额', tone: 'tone-green'},
-	{key: 'refund', label: '退款金额', value: money(stats.value.refundAmount), hint: '仅统计已完成退款', tone: 'tone-amber'},
-	{key: 'wait', label: '待确认收款', value: waiting.value, hint: '确认后自动发放权益', tone: 'tone-blue'}
+	{key: 'paid', label: t('累计销售额'), value: money(stats.value.paidAmount), hint: t('含已退款订单'), tone: 'tone-teal'},
+	{key: 'net', label: t('净收入'), value: money(stats.value.netAmount), hint: t('销售额 − 退款额'), tone: 'tone-green'},
+	{key: 'refund', label: t('退款金额'), value: money(stats.value.refundAmount), hint: t('仅统计已完成退款'), tone: 'tone-amber'},
+	{key: 'wait', label: t('待确认收款'), value: waiting.value, hint: t('确认后自动发放权益'), tone: 'tone-blue'}
 ])
 
 function money(value) {
@@ -98,8 +101,8 @@ function money(value) {
 
 function statusText(status) {
 	return {
-		PENDING_PAY: '待支付', PENDING_CONFIRM: '待确认', PAID: '已支付', COMPLETED: '已完成',
-		CANCELLED: '已取消', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款'
+		PENDING_PAY: t('待支付'), PENDING_CONFIRM: t('待确认'), PAID: t('已支付'), COMPLETED: t('已完成'),
+		CANCELLED: t('已取消'), CLOSED: t('已关闭'), REFUNDING: t('退款中'), REFUNDED: t('已退款')
 	}[status] || status
 }
 

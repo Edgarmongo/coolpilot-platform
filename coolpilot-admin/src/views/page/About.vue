@@ -2,34 +2,34 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">关于我</h2>
-				<p class="page-desc">前台 /about 的内容，支持 HTML</p>
+				<h2 class="page-title">{{ t('关于我') }}</h2>
+				<p class="page-desc">{{ t('前台 /about 的内容，支持 HTML') }}</p>
 			</div>
-			<el-button type="primary" :loading="saving" @click="save">保存</el-button>
+			<el-button type="primary" :loading="saving" @click="save">{{ t('保存') }}</el-button>
 		</div>
 
 		<div class="page-card" v-loading="loading">
 			<el-form label-width="90px" size="small">
-				<el-form-item label="标题">
+				<el-form-item :label="t('标题')">
 					<el-input v-model="form.title" maxlength="50"/>
 				</el-form-item>
-				<el-form-item label="网易云ID">
-					<el-input v-model="form.musicId" placeholder="歌单/歌曲 id，可留空"/>
+				<el-form-item :label="t('网易云ID')">
+					<el-input v-model="form.musicId" :placeholder="t('歌单/歌曲 id，可留空')"/>
 				</el-form-item>
-				<el-form-item label="允许评论">
+				<el-form-item :label="t('允许评论')">
 					<el-switch v-model="form.commentEnabled"/>
 				</el-form-item>
-				<el-form-item label="正文(HTML)">
+				<el-form-item :label="t('正文(HTML)')">
 					<el-input v-model="form.content" type="textarea" :rows="12"
-					          placeholder="支持 HTML，例如 &lt;p&gt;简介&lt;/p&gt;"/>
+					          :placeholder="t('支持 HTML，例如 &lt;p&gt;简介&lt;/p&gt;')"/>
 				</el-form-item>
-				<el-divider content-position="left">英文版（留空则英文站显示上面的中文）</el-divider>
-				<el-form-item label="英文标题">
+				<el-divider content-position="left">{{ t('英文版（留空则英文站显示上面的中文）') }}</el-divider>
+				<el-form-item :label="t('英文标题')">
 					<el-input v-model="form.titleEn" maxlength="50" placeholder="About CoolSkyAI"/>
 				</el-form-item>
-				<el-form-item label="英文正文">
+				<el-form-item :label="t('英文正文')">
 					<el-input v-model="form.contentEn" type="textarea" :rows="12"
-					          placeholder="Markdown / HTML，留空则回落中文正文"/>
+					          :placeholder="t('Markdown / HTML，留空则回落中文正文')"/>
 				</el-form-item>
 			</el-form>
 		</div>
@@ -37,6 +37,9 @@
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getAbout, updateAbout} from '@/api/about'
@@ -73,7 +76,7 @@ async function save() {
 			contentEn: form.contentEn,
 			commentEnabled: String(form.commentEnabled)
 		})
-		ElMessage.success('已保存')
+		ElMessage.success(t('已保存'))
 	} finally {
 		saving.value = false
 	}

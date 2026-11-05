@@ -2,24 +2,24 @@
 	<div>
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">标签管理</h2>
-				<p class="page-desc">标签用于聚合文章，可指定展示颜色</p>
+				<h2 class="page-title">{{ t('标签管理') }}</h2>
+				<p class="page-desc">{{ t('标签用于聚合文章，可指定展示颜色') }}</p>
 			</div>
-			<el-button type="primary" :icon="Plus" @click="openDialog()">新增标签</el-button>
+			<el-button type="primary" :icon="Plus" @click="openDialog()">{{ t('新增标签') }}</el-button>
 		</div>
 
 		<el-table :data="list" v-loading="loading" size="small">
-			<el-table-column prop="name" label="标签名称"/>
-			<el-table-column label="颜色" width="140">
+			<el-table-column prop="name" :label="t('标签名称')"/>
+			<el-table-column :label="t('颜色')" width="140">
 				<template #default="{row}">
 					<el-tag v-if="row.color" size="small" :color="colorHex(row.color)" effect="dark">{{ row.name }}</el-tag>
-					<span v-else class="muted">默认</span>
+					<span v-else class="muted">{{ t('默认') }}</span>
 				</template>
 			</el-table-column>
-			<el-table-column label="操作" width="160" align="right">
+			<el-table-column :label="t('操作')" width="160" align="right">
 				<template #default="{row}">
-					<el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-					<el-button link type="danger" @click="remove(row)">删除</el-button>
+					<el-button link type="primary" @click="openDialog(row)">{{ t('编辑') }}</el-button>
+					<el-button link type="danger" @click="remove(row)">{{ t('删除') }}</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -27,20 +27,23 @@
 		<el-pagination v-model:current-page="pageNum" :page-size="pageSize" :total="total" background
 		               layout="total, prev, pager, next" @current-change="load"/>
 
-		<el-dialog v-model="visible" :title="form.id ? '编辑标签' : '新增标签'" width="380px">
-			<el-input v-model="form.name" placeholder="标签名称" maxlength="32" class="mb"/>
-			<el-select v-model="form.color" placeholder="颜色（可选）" clearable style="width: 100%">
+		<el-dialog v-model="visible" :title="form.id ? t('编辑标签') : t('新增标签')" width="380px">
+			<el-input v-model="form.name" :placeholder="t('标签名称')" maxlength="32" class="mb"/>
+			<el-select v-model="form.color" :placeholder="t('颜色（可选）')" clearable style="width: 100%">
 				<el-option v-for="color in colors" :key="color" :label="color" :value="color"/>
 			</el-select>
 			<template #footer>
-				<el-button @click="visible = false">取消</el-button>
-				<el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+				<el-button @click="visible = false">{{ t('取消') }}</el-button>
+				<el-button type="primary" :loading="saving" @click="submit">{{ t('保存') }}</el-button>
 			</template>
 		</el-dialog>
 	</div>
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
@@ -86,7 +89,7 @@ function openDialog(row) {
 
 async function submit() {
 	if (!form.name.trim()) {
-		ElMessage.warning('请输入标签名称')
+		ElMessage.warning(t('请输入标签名称'))
 		return
 	}
 	saving.value = true
@@ -96,7 +99,7 @@ async function submit() {
 		} else {
 			await addTag({name: form.name.trim(), color: form.color})
 		}
-		ElMessage.success('保存成功')
+		ElMessage.success(t('保存成功'))
 		visible.value = false
 		load()
 	} finally {
@@ -106,12 +109,12 @@ async function submit() {
 
 async function remove(row) {
 	try {
-		await ElMessageBox.confirm(`删除标签「${row.name}」？`, '删除标签', {type: 'warning'})
+		await ElMessageBox.confirm(`删除标签「${row.name}」？`, t('删除标签'), {type: 'warning'})
 	} catch (e) {
 		return
 	}
 	await deleteTag(row.id)
-	ElMessage.success('已删除')
+	ElMessage.success(t('已删除'))
 	load()
 }
 

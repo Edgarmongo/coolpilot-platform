@@ -1,75 +1,67 @@
 <template>
 	<div>
 		<el-alert type="info" :closable="false" class="tip">
-			<template #title>
-				索引覆盖：已发布文章（跳过密码文章）、上架商品文案、课时正文。
-				课时属于付费内容，检索时按用户权益过滤；公开内容未登录也能搜到。
-			</template>
+			<template #title>{{ t('索引覆盖：已发布文章（跳过密码文章）、上架商品文案、课时正文。 课时属于付费内容，检索时按用户权益过滤；公开内容未登录也能搜到。') }}</template>
 		</el-alert>
 
 		<el-row :gutter="12" class="stats">
 			<el-col :span="6">
 				<div class="stat-card">
 					<div class="num">{{ stats.documents || 0 }}</div>
-					<div class="label">文档</div>
+					<div class="label">{{ t('文档') }}</div>
 				</div>
 			</el-col>
 			<el-col :span="6">
 				<div class="stat-card">
 					<div class="num">{{ stats.chunks || 0 }}</div>
-					<div class="label">分块</div>
+					<div class="label">{{ t('分块') }}</div>
 				</div>
 			</el-col>
 			<el-col :span="6">
 				<div class="stat-card">
 					<div class="num">{{ stats.loadedEntries || 0 }}</div>
-					<div class="label">已装载向量</div>
+					<div class="label">{{ t('已装载向量') }}</div>
 				</div>
 			</el-col>
 			<el-col :span="6">
 				<div class="stat-card">
 					<div class="num small-num">{{ stats.model || '—' }}</div>
-					<div class="label">{{ stats.dim || 0 }} 维</div>
+					<div class="label">{{ stats.dim || 0 }} {{ t('维') }}</div>
 				</div>
 			</el-col>
 		</el-row>
 
 		<el-form inline class="actions">
 			<el-form-item>
-				<el-button type="primary" :icon="Refresh" :loading="rebuilding" @click="rebuild">
-					重建索引
-				</el-button>
+				<el-button type="primary" :icon="Refresh" :loading="rebuilding" @click="rebuild">{{ t('重建索引') }}</el-button>
 			</el-form-item>
 			<el-form-item>
-				<el-button :icon="RefreshRight" :loading="loading" @click="load">刷新统计</el-button>
+				<el-button :icon="RefreshRight" :loading="loading" @click="load">{{ t('刷新统计') }}</el-button>
 			</el-form-item>
 			<el-form-item v-if="stats.lastIndexedAt">
-				<span class="muted">上次索引：{{ formatTime(stats.lastIndexedAt) }}</span>
+				<span class="muted">{{ t('上次索引：') }}{{ formatTime(stats.lastIndexedAt) }}</span>
 			</el-form-item>
 		</el-form>
 
 		<div class="panel">
 			<div class="llm-head">
-				<h3>问答模型</h3>
-				<el-tag v-if="llm.configured" type="success" size="small">已配置</el-tag>
-				<el-tag v-else type="warning" size="small">未配置</el-tag>
+				<h3>{{ t('问答模型') }}</h3>
+				<el-tag v-if="llm.configured" type="success" size="small">{{ t('已配置') }}</el-tag>
+				<el-tag v-else type="warning" size="small">{{ t('未配置') }}</el-tag>
 			</div>
 			<div class="llm-row">
-				<span class="muted">模型</span>
+				<span class="muted">{{ t('模型') }}</span>
 				<code>{{ llm.model || '—' }}</code>
-				<span class="muted">引用上限</span>
+				<span class="muted">{{ t('引用上限') }}</span>
 				<code>{{ llm.topK || 6 }}</code>
-				<span class="muted">最低相似度</span>
+				<span class="muted">{{ t('最低相似度') }}</span>
 				<code>{{ llm.minScore ?? '—' }}</code>
 			</div>
-			<p class="muted small" v-if="!llm.configured">
-				未配置时问答只返回检索片段、不调用模型。在 .env 里设置 AI_LLM_BASE_URL 与
-				AI_LLM_MODEL（本地 Ollama 与云端 DeepSeek、通义都支持）后重启生效。
-			</p>
+			<p class="muted small" v-if="!llm.configured">{{ t('未配置时问答只返回检索片段、不调用模型。在 .env 里设置 AI_LLM_BASE_URL 与 AI_LLM_MODEL（本地 Ollama 与云端 DeepSeek、通义都支持）后重启生效。') }}</p>
 			<div class="llm-actions">
-				<el-button :icon="Connection" :loading="testing" @click="testModel">测试连通</el-button>
+				<el-button :icon="Connection" :loading="testing" @click="testModel">{{ t('测试连通') }}</el-button>
 				<span v-if="testResult" :class="['test-result', testResult.ok ? 'ok' : 'bad']">
-					{{ testResult.ok ? `连通正常，${testResult.tookMs}ms，返回：${testResult.reply}` : testResult.message }}
+					{{ testResult.ok ? t('连通正常，{ms}ms，返回：{reply}', {ms: testResult.tookMs, reply: testResult.reply}) : testResult.message }}
 				</span>
 			</div>
 		</div>
@@ -77,39 +69,35 @@
 
 		<div class="panel">
 			<div class="llm-head">
-				<h3>检索质量</h3>
+				<h3>{{ t('检索质量') }}</h3>
 				<el-tag :type="suggestionType" size="small">{{ suggestionText }}</el-tag>
-				<el-tag type="info" size="small">当前严格度：{{ quality.strictness || '—' }}</el-tag>
+				<el-tag type="info" size="small">{{ t('当前严格度：') }}{{ quality.strictness || '—' }}</el-tag>
 			</div>
 			<div class="llm-row">
-				<span class="muted">近 {{ quality.days || 7 }} 天提问</span>
+				<span class="muted">{{ t('近 {n} 天提问', {n: quality.days || 7}) }}</span>
 				<code>{{ quality.questions || 0 }}</code>
-				<span class="muted">0 引用</span>
+				<span class="muted">{{ t('0 引用') }}</span>
 				<code>{{ percent(quality.zeroRate) }}</code>
-				<span class="muted">平均引用</span>
+				<span class="muted">{{ t('平均引用') }}</span>
 				<code>{{ quality.avgCitations ?? 0 }}</code>
-				<span class="muted">改写率</span>
+				<span class="muted">{{ t('改写率') }}</span>
 				<code>{{ percent(quality.rewriteRate) }}</code>
 			</div>
 			<p class="muted small" v-if="quality.distribution">
-				引用分布：0 条 {{ quality.distribution['0'] }} · 1 条 {{ quality.distribution['1'] }} ·
-				2 条 {{ quality.distribution['2'] }} · 3 条以上 {{ quality.distribution['3+'] }}
+				{{ t('引用分布：0 条 {a} · 1 条 {b} · 2 条 {c} · 3 条以上 {d}', {a: quality.distribution['0'], b: quality.distribution['1'], c: quality.distribution['2'], d: quality.distribution['3+']}) }}
 			</p>
 			<p class="small" :class="['advice', suggestionType]">{{ quality.reason }}</p>
-			<p class="muted small">
-				严格度由 .env 的 AI_RERANK_STRICTNESS 决定（strict / balanced / loose），改完重启生效。
-				系统只给建议，不自动切换 —— 「宁可答不出来还是宁可答偏」是运营判断。
-			</p>
+			<p class="muted small">{{ t('严格度由 .env 的 AI_RERANK_STRICTNESS 决定（strict / balanced / loose），改完重启生效。 系统只给建议，不自动切换 —— 「宁可答不出来还是宁可答偏」是运营判断。') }}</p>
 		</div>
 
 		<div class="panel">
-			<h3>检索自测</h3>
+			<h3>{{ t('检索自测') }}</h3>
 			<div class="test-row">
-				<el-input v-model="query" placeholder="输入关键词，检查召回效果" clearable @keyup.enter="search"/>
-				<el-button type="primary" :loading="searching" @click="search">检索</el-button>
+				<el-input v-model="query" :placeholder="t('输入关键词，检查召回效果')" clearable @keyup.enter="search"/>
+				<el-button type="primary" :loading="searching" @click="search">{{ t('检索') }}</el-button>
 			</div>
 			<div v-if="searchMeta" class="muted small">
-				{{ searchMeta.candidates }} 个候选 · {{ searchMeta.tookMs }}ms
+				{{ t('{n} 个候选 · {ms}ms', {n: searchMeta.candidates, ms: searchMeta.tookMs}) }}
 			</div>
 			<div v-for="item in results" :key="item.docId" class="hit">
 				<div class="hit-head">
@@ -119,12 +107,15 @@
 				</div>
 				<p class="hit-snippet">{{ item.snippet }}</p>
 			</div>
-			<div v-if="searched && !results.length" class="muted small">没有匹配片段</div>
+			<div v-if="searched && !results.length" class="muted small">{{ t('没有匹配片段') }}</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
+import {useT} from '@/i18n/ui'
+const t = useT()
+
 import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Connection, Refresh, RefreshRight} from '@element-plus/icons-vue'
@@ -145,10 +136,10 @@ const searching = ref(false)
 const searched = ref(false)
 
 const SUGGESTIONS = {
-	keep: {text: '保持当前档位', type: 'success'},
-	strict: {text: '建议收紧到 strict', type: 'warning'},
-	loose: {text: '建议放宽到 loose', type: 'warning'},
-	insufficient: {text: '样本不足', type: 'info'}
+	keep: {text: t('保持当前档位'), type: 'success'},
+	strict: {text: t('建议收紧到 strict'), type: 'warning'},
+	loose: {text: t('建议放宽到 loose'), type: 'warning'},
+	insufficient: {text: t('样本不足'), type: 'info'}
 }
 
 const suggestionType = computed(() => (SUGGESTIONS[quality.value.suggestion] || SUGGESTIONS.keep).type)
@@ -178,7 +169,7 @@ async function load() {
 
 async function rebuild() {
 	try {
-		await ElMessageBox.confirm('会清空并重新生成全部索引，期间检索结果可能短暂为空。继续？', '重建索引', {
+		await ElMessageBox.confirm(t('会清空并重新生成全部索引，期间检索结果可能短暂为空。继续？'), '重建索引', {
 			type: 'warning'
 		})
 	} catch {
@@ -187,7 +178,7 @@ async function rebuild() {
 	rebuilding.value = true
 	try {
 		const res = await reindexKnowledge()
-		ElMessage.success(`索引完成：${res.data.documents} 篇 / ${res.data.chunks} 块`)
+		ElMessage.success(t('索引完成：{docs} 篇 / {chunks} 块', {docs: res.data.documents, chunks: res.data.chunks}))
 		await load()
 	} finally {
 		rebuilding.value = false
@@ -199,7 +190,7 @@ async function testModel() {
 	testResult.value = null
 	try {
 		const res = await testLlm()
-		testResult.value = res.data || {ok: false, message: '无返回'}
+		testResult.value = res.data || {ok: false, message: t('无返回')}
 	} finally {
 		testing.value = false
 	}
@@ -221,7 +212,7 @@ async function search() {
 }
 
 function sourceText(type) {
-	return {BLOG: '文章', PRODUCT: '商品', LESSON: '课时'}[type] || type
+	return {BLOG: t('文章'), PRODUCT: t('商品'), LESSON: t('课时')}[type] || type
 }
 
 function formatTime(value) {
