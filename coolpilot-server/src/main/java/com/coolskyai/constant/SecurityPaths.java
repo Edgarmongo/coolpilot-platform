@@ -89,7 +89,7 @@ public final class SecurityPaths {
 			// 权益探测：未登录返回 NOT_LOGIN，而不是 401
 			"/resource/access",
 			// 知识库检索与问答：公开内容可匿名用，付费块在服务层按权益过滤
-			"/ai/search", "/ai/chat",
+			"/ai/search", "/ai/chat", "/ai/chat/stream",
 			// 问题反馈：允许未登录提交
 			"/feedback",
 			// Telegram webhook：路径里带 bot token，本身就是凭证

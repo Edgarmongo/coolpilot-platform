@@ -35,7 +35,8 @@
 							<p v-if="msg.role === 'ASSISTANT' && msg.degraded" class="degraded">
 								{{ msg.note || '当前未生成回答，先看下面的检索片段' }}
 							</p>
-							<p class="text">{{ msg.content }}</p>
+							<p v-if="msg.streaming && !msg.content" class="thinking">正在检索并组织回答…</p>
+							<p v-else class="text">{{ msg.content }}<span v-if="msg.streaming" class="caret"/></p>
 							<div v-if="msg.citations && msg.citations.length" class="citations">
 								<div class="cite-title">来源</div>
 								<a v-for="cite in msg.citations" :key="cite.index" :href="cite.url" class="cite">
@@ -47,11 +48,6 @@
 						</div>
 					</div>
 
-					<div v-if="loading" class="msg assistant">
-						<div class="bubble thinking">
-							正在检索并组织回答…
-						</div>
-					</div>
 				</div>
 
 				<div class="composer">
@@ -72,10 +68,17 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const {call, isLogin} = useApi()
+const {call, token, isLogin} = useApi()
 
 type Citation = {index: number, title: string, url: string, sourceType: string, snippet?: string}
-type ChatMessage = {role: 'USER' | 'ASSISTANT', content: string, citations?: Citation[], degraded?: boolean, note?: string}
+type ChatMessage = {
+	role: 'USER' | 'ASSISTANT'
+	content: string
+	citations?: Citation[]
+	degraded?: boolean
+	note?: string
+	streaming?: boolean
+}
 
 const messages = ref<ChatMessage[]>([])
 const question = ref(String(route.query.q || ''))
@@ -109,38 +112,142 @@ async function send() {
 	messages.value.push({role: 'USER', content: text})
 	question.value = ''
 	loading.value = true
+
+	// 先占位再流式填充：这样第一个字出现前用户就看到「正在…」，不会以为没反应
+	const assistant: ChatMessage = {role: 'ASSISTANT', content: '', citations: [], streaming: true}
+	messages.value.push(assistant)
 	scrollToBottom()
 
 	try {
-		const res: any = await call('/ai/chat', {
-			method: 'POST',
-			body: {question: text, conversationId: conversationId.value}
-		})
-		if (res && res.code === 200 && res.data) {
-			const data = res.data
-			conversationId.value = data.conversationId || conversationId.value
-			messages.value.push({
-				role: 'ASSISTANT',
-				content: data.answer || '（没有生成回答，可以先看下面的来源）',
-				citations: data.citations || [],
-				degraded: !!data.degraded,
-				note: data.note || ''
-			})
-			if (isLogin.value) {
-				loadHistory()
-			}
-		} else {
-			messages.value.push({
-				role: 'ASSISTANT',
-				content: (res && res.msg) || '提问失败，请稍后再试'
-			})
+		await streamAnswer(text, assistant)
+	} catch (e) {
+		// 流式通道不通（代理缓冲、断网、浏览器不支持流）时退回一次性接口，别让用户白问
+		try {
+			await fallbackAnswer(text, assistant)
+		} catch (err: any) {
+			assistant.content = '提问失败，请稍后再试'
 		}
-	} catch (e: any) {
-		messages.value.push({role: 'ASSISTANT', content: '网络异常，请稍后再试'})
 	} finally {
+		assistant.streaming = false
 		loading.value = false
+		if (isLogin.value) {
+			loadHistory()
+		}
 		scrollToBottom()
 	}
+}
+
+/**
+ * SSE 流式提问
+ *
+ * 用 fetch 而不是 EventSource：EventSource 只支持 GET，发不了请求体
+ * （问题可能很长，不适合塞进 URL）。
+ */
+async function streamAnswer(text: string, assistant: ChatMessage) {
+	const headers: Record<string, string> = {'Content-Type': 'application/json'}
+	if (token.value) {
+		headers.authorization = token.value
+	}
+	const res = await fetch('/api/ai/chat/stream', {
+		method: 'POST',
+		headers,
+		body: JSON.stringify({question: text, conversationId: conversationId.value})
+	})
+	if (!res.ok || !res.body) {
+		throw new Error('stream unavailable')
+	}
+
+	const reader = res.body.getReader()
+	const decoder = new TextDecoder()
+	let buffer = ''
+	let received = false
+
+	while (true) {
+		const {done, value} = await reader.read()
+		if (done) {
+			break
+		}
+		buffer += decoder.decode(value, {stream: true})
+		let index = buffer.indexOf('\n\n')
+		while (index >= 0) {
+			const chunk = buffer.slice(0, index)
+			buffer = buffer.slice(index + 2)
+			const event = parseEvent(chunk)
+			if (event) {
+				received = true
+				if (event.name === 'meta') {
+					assistant.citations = event.data.citations || []
+					assistant.degraded = !!event.data.degraded
+					if (event.data.note) {
+						assistant.note = event.data.note
+					}
+					if (event.data.conversationId) {
+						conversationId.value = event.data.conversationId
+					}
+				} else if (event.name === 'delta') {
+					assistant.content += event.data.text || ''
+					scrollToBottom()
+				} else if (event.name === 'error') {
+					assistant.degraded = true
+					assistant.note = event.data.message || '生成中断'
+				} else if (event.name === 'done') {
+					if (!assistant.content && event.data.answer) {
+						assistant.content = event.data.answer
+					}
+					if (event.data.note) {
+						assistant.note = event.data.note
+						assistant.degraded = true
+					}
+					if (event.data.conversationId) {
+						conversationId.value = event.data.conversationId
+					}
+				}
+			}
+			index = buffer.indexOf('\n\n')
+		}
+	}
+
+	if (!received) {
+		throw new Error('empty stream')
+	}
+}
+
+function parseEvent(chunk: string): {name: string, data: any} | null {
+	let name = 'message'
+	const dataLines: string[] = []
+	for (const rawLine of chunk.split('\n')) {
+		const line = rawLine.replace(/\r$/, '')
+		if (line.startsWith('event:')) {
+			name = line.slice(6).trim()
+		} else if (line.startsWith('data:')) {
+			dataLines.push(line.slice(5).trim())
+		}
+	}
+	if (!dataLines.length) {
+		return null
+	}
+	try {
+		return {name, data: JSON.parse(dataLines.join('\n'))}
+	} catch (e) {
+		return null
+	}
+}
+
+async function fallbackAnswer(text: string, assistant: ChatMessage) {
+	const res: any = await call('/ai/chat', {
+		method: 'POST',
+		body: {question: text, conversationId: conversationId.value}
+	})
+	if (res && res.code === 200 && res.data) {
+		const data = res.data
+		conversationId.value = data.conversationId || conversationId.value
+		assistant.content = data.answer || ''
+		assistant.citations = data.citations || []
+		assistant.degraded = !!data.degraded
+		assistant.note = data.note || ''
+		return
+	}
+	throw new Error((res && res.msg) || 'failed')
 }
 
 function askSample(text: string) {
@@ -463,6 +570,23 @@ useHead({title: '智能问答 - CoolSkyAI'})
 	.history {
 		width: 100%;
 		position: static;
+	}
+}
+
+.caret {
+	display: inline-block;
+	width: 7px;
+	height: 15px;
+	margin-left: 2px;
+	vertical-align: -2px;
+	background: var(--teal);
+	border-radius: 1px;
+	animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+	to {
+		visibility: hidden;
 	}
 }
 </style>

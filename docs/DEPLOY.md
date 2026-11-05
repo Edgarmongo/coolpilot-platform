@@ -361,6 +361,23 @@ AI_LLM_TEMPERATURE=0.3
 | `Connection timed out` | 容器到宿主机不通，检查 `host.docker.internal` 或换成内网 IP |
 | 答案里没有引用编号 | 命中的片段太少，或模型没遵守提示；可以换更强的模型 |
 
+### 流式输出
+
+问答默认走 SSE：答案边生成边显示，长回答不用干等十几秒。
+
+如果自己在外层再加一层反代，必须关掉缓冲，否则会退化成「一次性返回」：
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:8091/;
+    proxy_buffering off;
+    proxy_read_timeout 300s;
+}
+```
+
+仓库自带的 gateway 已经配好了，用 `docker compose -f docker-compose.prod.yml` 部署无需额外操作。
+后端也会返回 `X-Accel-Buffering: no` 作为兜底。
+
 ### 成本与限制
 
 - 每次提问 = 1 次模型调用，上下文最多 6 个片段（约 2k 字符）

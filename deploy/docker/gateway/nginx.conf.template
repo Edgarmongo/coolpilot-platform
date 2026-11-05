@@ -82,6 +82,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        # AI 问答走 SSE：关掉缓冲，否则增量会被攒起来一次性下发
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Connection "";
     }
 
     # 图片直链：数据库里存的是 https://域名/image/... 绝对地址

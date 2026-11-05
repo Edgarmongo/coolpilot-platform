@@ -385,6 +385,24 @@ upload.file.resources-locations=file:${upload.file.path}
   （不是真正的指代消解，但零成本救回大部分「那退款呢」这类短追问）
 - 会话只在登录后落库，匿名可问但无历史 —— 不给匿名用户建垃圾数据
 
+**流式输出（SSE）**：`POST /ai/chat/stream`
+
+| 事件 | 内容 | 时机 |
+|---|---|---|
+| `meta` | `conversationId`、`citations`、`model`、`degraded`、`note` | 检索完成后立刻发，来源先于答案出现 |
+| `delta` | `{text}` | 上游每吐一段就转发一段 |
+| `done` | `answer`、`tookMs`、`conversationId` | 生成结束（含落库） |
+| `error` | `message`、`partial` | 生成中断；已生成的部分保留 |
+
+- 检索与校验在主线程同步完成（毫秒级），生成放 `TaskExecutor`，
+  控制器立刻返回 `SseEmitter`，不占着请求线程等模型
+- **不写 `produces`**：经过 Nitro / nginx 代理时可能带 `Accept: application/json`，
+  声明 `produces=text/event-stream` 会直接 406/500；`SseEmitter` 自己会设 Content-Type
+- 响应头带 `X-Accel-Buffering: no`，gateway 的 `/api/` 也关掉了 `proxy_buffering`，
+  否则增量会被攒成一次性下发，流式名存实亡
+- 前端用 `fetch` + `ReadableStream` 手工解析 SSE（`EventSource` 只支持 GET，发不了请求体）；
+  流式通道不可用时自动退回一次性接口 `/ai/chat`
+
 ### 4.11 V1.3 知识库检索（第一阶段）
 
 模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；

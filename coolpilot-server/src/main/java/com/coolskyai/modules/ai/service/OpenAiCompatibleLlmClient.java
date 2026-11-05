@@ -13,10 +13,15 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import com.coolskyai.util.JacksonUtils;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * @Description: OpenAI 兼容协议的大模型客户端
@@ -86,18 +91,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 			throw new LlmException("未配置大模型");
 		}
 
-		List<Map<String, String>> messages = new ArrayList<>(2);
-		messages.add(Map.of("role", "system", "content", systemPrompt == null ? "" : systemPrompt));
-		messages.add(Map.of("role", "user", "content", userPrompt == null ? "" : userPrompt));
-
-		Map<String, Object> body = new LinkedHashMap<>(8);
-		body.put("model", model);
-		body.put("messages", messages);
-		body.put("temperature", temperature);
-		body.put("max_tokens", maxTokens);
+		Map<String, Object> body = buildBody(systemPrompt, userPrompt);
 		body.put("stream", false);
-
-		String endpoint = baseUrl.replaceAll("/+$", "") + "/chat/completions";
+		String endpoint = endpoint();
 		try {
 			/*
 			 * 显式序列化成字符串再发：RestClient 的 body(Object) 对 Map 有歧义，
@@ -135,6 +131,117 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 			log.warn("调用大模型异常 model={}: {}", model, e.getMessage());
 			throw new LlmException("调用大模型失败：" + e.getMessage(), e);
 		}
+	}
+
+	@Override
+	public void stream(String systemPrompt, String userPrompt, Consumer<String> onDelta) {
+		if (!available()) {
+			throw new LlmException("未配置大模型");
+		}
+		Map<String, Object> body = buildBody(systemPrompt, userPrompt);
+		body.put("stream", true);
+		String endpoint = endpoint();
+		String payload = JacksonUtils.writeValueAsString(body);
+
+		try {
+			restClient.post()
+					.uri(endpoint)
+					.contentType(MediaType.APPLICATION_JSON)
+					.accept(MediaType.TEXT_EVENT_STREAM)
+					.headers(headers -> {
+						if (notBlank(apiKey)) {
+							headers.setBearerAuth(apiKey.trim());
+						}
+					})
+					.body(payload)
+					.exchange((request, response) -> {
+						int status = response.getStatusCode().value();
+						if (status != 200) {
+							String detail = readAll(response.getBody());
+							throw new LlmException("大模型返回错误：" + status
+									+ (detail.isEmpty() ? "" : "，" + truncate(detail)));
+						}
+						readStream(response.getBody(), onDelta);
+						return null;
+					});
+		} catch (LlmException e) {
+			throw e;
+		} catch (ResourceAccessException e) {
+			log.warn("连接大模型超时或不可达 endpoint={}: {}", endpoint, e.getMessage());
+			throw new LlmException("连接大模型超时，请稍后再试", e);
+		} catch (Exception e) {
+			log.warn("流式调用大模型异常 model={}: {}", model, e.getMessage());
+			throw new LlmException("调用大模型失败：" + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * 逐行读 SSE：只关心 data: 行，忽略 event:/id:/空行与 [DONE]
+	 */
+	private void readStream(java.io.InputStream stream, Consumer<String> onDelta) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				if (!line.startsWith("data:")) {
+					continue;
+				}
+				String data = line.substring(5).trim();
+				if (data.isEmpty() || "[DONE]".equals(data)) {
+					continue;
+				}
+				String delta = extractDelta(data);
+				if (delta != null && !delta.isEmpty()) {
+					onDelta.accept(delta);
+				}
+			}
+		}
+	}
+
+	private String extractDelta(String data) {
+		Map<String, Object> root = JacksonUtils.readValue(data, Map.class);
+		if (root == null) {
+			return null;
+		}
+		Object choices = root.get("choices");
+		if (!(choices instanceof List) || ((List<?>) choices).isEmpty()) {
+			return null;
+		}
+		Object first = ((List<?>) choices).get(0);
+		Object delta = first instanceof Map ? ((Map<?, ?>) first).get("delta") : null;
+		Object content = delta instanceof Map ? ((Map<?, ?>) delta).get("content") : null;
+		return content == null ? null : String.valueOf(content);
+	}
+
+	private String readAll(java.io.InputStream stream) {
+		try (java.io.InputStream in = stream) {
+			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
+	private String truncate(String text) {
+		return text.length() <= 200 ? text : text.substring(0, 200) + "…";
+	}
+
+	/**
+	 * 请求体：单轮对话的公共部分
+	 */
+	private Map<String, Object> buildBody(String systemPrompt, String userPrompt) {
+		List<Map<String, String>> messages = new ArrayList<>(2);
+		messages.add(Map.of("role", "system", "content", systemPrompt == null ? "" : systemPrompt));
+		messages.add(Map.of("role", "user", "content", userPrompt == null ? "" : userPrompt));
+
+		Map<String, Object> body = new LinkedHashMap<>(8);
+		body.put("model", model);
+		body.put("messages", messages);
+		body.put("temperature", temperature);
+		body.put("max_tokens", maxTokens);
+		return body;
+	}
+
+	private String endpoint() {
+		return baseUrl.replaceAll("/+$", "") + "/chat/completions";
 	}
 
 	private String extractContent(String raw) {

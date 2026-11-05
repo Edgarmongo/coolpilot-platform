@@ -31,4 +31,15 @@ public interface LlmClient {
 	 * @throws LlmException 调用失败（超时、鉴权、返回格式异常等）
 	 */
 	String chat(String systemPrompt, String userPrompt);
+
+	/**
+	 * 流式问答：每收到一段增量就回调一次
+	 *
+	 * 回调式而不是返回 Stream，是为了让上层能把增量直接写进 SSE，
+	 * 不必关心上游的分包格式（OpenAI 兼容实现都是 data: {...} 逐行）。
+	 *
+	 * @param onDelta 增量文本回调，可能被调用几十次
+	 * @throws LlmException 调用失败（超时、鉴权、返回格式异常等）
+	 */
+	void stream(String systemPrompt, String userPrompt, java.util.function.Consumer<String> onDelta);
 }

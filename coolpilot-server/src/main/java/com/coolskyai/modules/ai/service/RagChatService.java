@@ -4,7 +4,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.ai.dto.ChatDTO;
@@ -69,6 +72,8 @@ public class RagChatService {
 	private LlmClient llmClient;
 	@Autowired
 	private AiConversationMapper conversationMapper;
+	@Autowired
+	private TaskExecutor taskExecutor;
 
 	/**
 	 * 提问
@@ -124,6 +129,115 @@ public class RagChatService {
 		data.put("note", note);
 		data.put("tookMs", System.currentTimeMillis() - start);
 		return data;
+	}
+
+	/**
+	 * 流式提问（SSE）
+	 *
+	 * 事件约定：
+	 *   meta  → 引用、会话 id、模型、是否降级（先给前端，让来源先出现）
+	 *   delta → 增量文本
+	 *   done  → 完整答案与耗时（用于收尾与落库后的 id 回传）
+	 *   error → 生成中出错（前端保留已收到的部分）
+	 *
+	 * 检索与校验在主线程同步做完（毫秒级），生成放线程池，
+	 * 这样控制器能立刻返回 emitter，不至于占着请求线程等模型。
+	 */
+	public void chatStream(Long userId, ChatDTO dto, SseEmitter emitter) {
+		String question = dto == null || dto.getQuestion() == null ? "" : dto.getQuestion().trim();
+		if (question.isEmpty()) {
+			throw new BadRequestException("请输入你的问题");
+		}
+		if (question.length() > MAX_QUESTION) {
+			throw new BadRequestException("问题不要超过 " + MAX_QUESTION + " 个字符");
+		}
+
+		AiConversation conversation = resolveConversation(userId, dto.getConversationId(), question);
+		List<Retrieved> retrieved = retrieve(question, userId, conversation);
+		List<Map<String, Object>> citations = toCitations(retrieved);
+
+		Map<String, Object> meta = new LinkedHashMap<>(8);
+		meta.put("conversationId", conversation == null ? null : conversation.getId());
+		meta.put("citations", citations);
+		meta.put("model", llmClient.model());
+		meta.put("degraded", !retrieved.isEmpty() && !llmClient.available());
+		meta.put("note", retrieved.isEmpty() ? "" :
+				(llmClient.available() ? "" : "当前未配置大模型，先展示检索到的片段"));
+		send(emitter, "meta", meta);
+
+		taskExecutor.execute(() -> runStream(emitter, conversation, question, retrieved, citations));
+	}
+
+	private void runStream(SseEmitter emitter, AiConversation conversation, String question,
+	                       List<Retrieved> retrieved, List<Map<String, Object>> citations) {
+		long start = System.currentTimeMillis();
+		StringBuilder answer = new StringBuilder();
+		String note = "";
+		boolean degraded = false;
+		String model = llmClient.model();
+
+		try {
+			if (retrieved.isEmpty()) {
+				// 没有资料就不调模型，直接把结论当作一次增量推给前端
+				String text = "站内暂时没有找到和「" + shortQuestion(question) + "」相关的内容。"
+						+ "可以换个说法再问一次，或者到「意见反馈」里直接提问。";
+				answer.append(text);
+				send(emitter, "delta", Map.of("text", text));
+			} else if (!llmClient.available()) {
+				degraded = true;
+				note = "当前未配置大模型，先展示检索到的片段";
+			} else {
+				llmClient.stream(SYSTEM_PROMPT, buildUserPrompt(question, retrieved), delta -> {
+					answer.append(delta);
+					send(emitter, "delta", Map.of("text", delta));
+				});
+			}
+		} catch (LlmException e) {
+			degraded = true;
+			note = e.getMessage();
+			// 已生成的半截答案照样保留：比清空重来更接近用户预期
+			send(emitter, "error", Map.of("message", note,
+					"partial", answer.length() > 0));
+			log.warn("流式问答中断 question={}: {}", shortQuestion(question), e.getMessage());
+		} catch (Exception e) {
+			// 客户端断开时 send 会抛 IOException，这里静默结束，不当成业务错误
+			log.debug("流式输出中止: {}", e.getMessage());
+		}
+
+		String finalAnswer = answer.length() > 0 ? answer.toString() : null;
+		if (conversation != null) {
+			saveMessages(conversation, question, finalAnswer, note, citations, model);
+		}
+
+		Map<String, Object> done = new LinkedHashMap<>(8);
+		done.put("conversationId", conversation == null ? null : conversation.getId());
+		done.put("answer", finalAnswer);
+		done.put("degraded", degraded);
+		done.put("note", note);
+		done.put("tookMs", System.currentTimeMillis() - start);
+		try {
+			send(emitter, "done", done);
+		} catch (Exception e) {
+			// 客户端已断开：答案已经落库，这里静默结束即可
+			log.debug("推送 done 失败（客户端可能已断开）: {}", e.getMessage());
+		} finally {
+			try {
+				emitter.complete();
+			} catch (Exception ignored) {
+				// complete 在已超时/已断开时会抛，忽略
+			}
+		}
+	}
+
+	/**
+	 * 写一个 SSE 事件；客户端已断开时抛异常，由调用方决定是否忽略
+	 */
+	private void send(SseEmitter emitter, String event, Object data) {
+		try {
+			emitter.send(SseEmitter.event().name(event).data(data, MediaType.APPLICATION_JSON));
+		} catch (Exception e) {
+			throw new IllegalStateException("SSE 发送失败", e);
+		}
 	}
 
 	public PageResult<AiConversation> myConversations(Long userId, Integer pageNum, Integer pageSize) {

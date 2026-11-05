@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import jakarta.servlet.http.HttpServletResponse;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.service.AccountService;
@@ -52,6 +55,27 @@ public class AiController {
 	public Result chat(@RequestBody ChatDTO dto) {
 		Long userId = accountService.currentUserId();
 		return Result.ok("OK", ragChatService.chat(userId, dto));
+	}
+
+	/**
+	 * 流式提问：边生成边返回，长回答不用干等
+	 *
+	 * 用 SSE 而不是 WebSocket：单向输出、走同一套鉴权与限流、断线自动结束。
+	 *
+	 * 注意这里**不写 produces**：前端经过 Nitro / nginx 代理时，代理可能带
+	 * Accept: application/json，声明 produces 会直接 406/500；
+	 * SseEmitter 自己会把 Content-Type 设为 text/event-stream。
+	 */
+	@AccessLimit(seconds = 60, maxCount = 12, msg = "提问过于频繁，请稍后再试")
+	@PostMapping("/ai/chat/stream")
+	public SseEmitter chatStream(@RequestBody ChatDTO dto, HttpServletResponse response) {
+		// 告诉 nginx 不要缓冲：否则增量会被攒成一次性返回，流式就名存实亡
+		response.setHeader("X-Accel-Buffering", "no");
+		response.setHeader("Cache-Control", "no-cache");
+		Long userId = accountService.currentUserId();
+		SseEmitter emitter = new SseEmitter(180_000L);
+		ragChatService.chatStream(userId, dto, emitter);
+		return emitter;
 	}
 
 	@GetMapping("/ai/conversations")
