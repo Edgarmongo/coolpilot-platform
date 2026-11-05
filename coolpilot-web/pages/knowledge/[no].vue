@@ -6,22 +6,22 @@
 				<h1 class="page-title">{{ product.title }}</h1>
 				<p class="page-desc">{{ product.subtitle }}</p>
 				<div class="post-meta">
-					<span>{{ product.salesCount || 0 }} 人已购</span>
-					<span>· {{ product.viewCount || 0 }} 次浏览</span>
+					<span>{{ t('knowledgeDetail.sold', {n: product.salesCount || 0}) }}</span>
+					<span>· {{ t('knowledgeDetail.views', {n: product.viewCount || 0}) }}</span>
 				</div>
 			</div>
 			<div class="buy">
 				<div class="price">{{ priceLabel }}</div>
 				<template v-if="isService && !isFixed">
-					<button class="btn buy-btn" @click="goDemand">提交需求</button>
-					<p class="muted tip">评估后给出正式报价</p>
+					<button class="btn buy-btn" @click="goDemand">{{ t('knowledgeDetail.submitDemand') }}</button>
+					<p class="muted tip">{{ t('knowledgeDetail.quoteAfter') }}</p>
 				</template>
 				<template v-else>
 					<button class="btn buy-btn" :disabled="buying" @click="onBuy">
-						{{ owned ? '已拥有' : (buying ? '处理中…' : '立即购买') }}
+						{{ owned ? t('knowledgeDetail.owned') : (buying ? t('knowledgeDetail.processing') : t('knowledgeDetail.buyNow')) }}
 					</button>
-					<button v-if="isService" class="btn ghost buy-btn second" @click="goDemand">先提需求</button>
-					<p class="muted tip">{{ isService ? '支付后进入实施与交付流程' : '人工确认到账后自动开通' }}</p>
+					<button v-if="isService" class="btn ghost buy-btn second" @click="goDemand">{{ t('knowledgeDetail.demandFirst') }}</button>
+					<p class="muted tip">{{ isService ? t('knowledgeDetail.tipService') : t('knowledgeDetail.tipProduct') }}</p>
 				</template>
 			</div>
 		</div>
@@ -30,46 +30,48 @@
 
 		<!-- 服务类商品：交付周期与流程 -->
 		<div v-if="serviceItem" class="service-info">
-			<h3>服务说明</h3>
+			<h3>{{ t('knowledgeDetail.serviceInfo') }}</h3>
 			<div class="service-grid">
 				<div>
-					<span class="muted">预计交付</span>
-					<strong>{{ serviceItem.deliveryDays ? serviceItem.deliveryDays + ' 天' : '面议' }}</strong>
+					<span class="muted">{{ t('knowledgeDetail.delivery') }}</span>
+					<strong>{{ serviceItem.deliveryDays ? t('knowledgeDetail.days', {n: serviceItem.deliveryDays}) : t('knowledgeDetail.negotiable') }}</strong>
 				</div>
 				<div>
-					<span class="muted">计价方式</span>
+					<span class="muted">{{ t('knowledgeDetail.priceMode') }}</span>
 					<strong>{{ priceModeText }}</strong>
 				</div>
 			</div>
 			<div v-if="serviceItem.scope" class="service-block">
-				<h4>服务范围</h4>
+				<h4>{{ t('knowledgeDetail.scope') }}</h4>
 				<p>{{ serviceItem.scope }}</p>
 			</div>
 			<div v-if="serviceItem.process" class="service-block">
-				<h4>服务流程</h4>
+				<h4>{{ t('knowledgeDetail.process') }}</h4>
 				<p>{{ serviceItem.process }}</p>
 			</div>
 			<div v-if="serviceItem.faq" class="service-block">
-				<h4>常见问题</h4>
+				<h4>{{ t('knowledgeDetail.faq') }}</h4>
 				<p>{{ serviceItem.faq }}</p>
 			</div>
 		</div>
 
 		<div v-if="resources.length" class="resources">
-			<h3>配套资源</h3>
+			<h3>{{ t('knowledgeDetail.resources') }}</h3>
 			<p v-for="item in resources" :key="item.id" class="resource">
 				<span>{{ item.displayName }}</span>
-				<span class="muted">{{ item.version }}{{ owned ? '' : ' · 购买后可下载' }}</span>
+				<span class="muted">{{ item.version }}{{ owned ? '' : ' · ' + t('knowledgeDetail.downloadAfterBuy') }}</span>
 			</p>
 		</div>
 	</div>
-	<div v-else class="empty card">商品不存在或已下架</div>
+	<div v-else class="empty card">{{ t('knowledgeDetail.notFound') }}</div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
 const {call, isLogin} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
 const buying = ref(false)
 const owned = ref(false)
@@ -81,23 +83,28 @@ const resources = computed(() => (data.value as any)?.data?.resources || [])
 const serviceItem = computed(() => (data.value as any)?.data?.serviceItem || null)
 const isService = computed(() => product.value?.productType === 'SERVICE')
 const isFixed = computed(() => product.value?.priceMode === 'FIXED')
-const priceModeText = computed(() => ({FIXED: '固定价', STARTING: '起步价', CUSTOM: '定制报价'}[product.value?.priceMode] || ''))
+const priceModeText = computed(() => {
+	const mode = product.value?.priceMode
+	const key = `knowledgeDetail.modes.${mode}`
+	return mode && te(key) ? t(key) : ''
+})
 const priceLabel = computed(() => {
 	const mode = product.value?.priceMode
 	if (mode === 'CUSTOM') {
-		return '按需报价'
+		return t('common.quote')
 	}
 	const value = price(product.value?.price || 0)
-	return mode === 'STARTING' ? `¥${value} 起` : `¥${value}`
+	const amount = `¥${value}`
+	return mode === 'STARTING' ? t('common.from', {price: amount}) : amount
 })
 
 function goDemand() {
 	const query = product.value ? `?productNo=${product.value.productNo}` : ''
-	router.push(`/demand/new${query}`)
+	router.push(localePath(`/demand/new${query}`))
 }
 
 if (product.value) {
-	useHead({title: `${product.value.title} - CoolSkyAI`})
+	useHead({title: product.value.title})
 	// 登录态下判断是否已购买，避免重复下单
 	if (isLogin.value) {
 		const access = await call(`/resource/access?productNo=${route.params.no}`).catch(() => null)
@@ -106,7 +113,8 @@ if (product.value) {
 }
 
 function typeLabel(type: string) {
-	return {COURSE: '视频课程', DOC: '付费文档', COLUMN: '知识专栏', CODE: '代码资源', SERVICE: '技术服务'}[type] || type
+	const key = `knowledge.types.${type}`
+	return te(key) ? t(key) : type
 }
 
 function price(value: number) {
@@ -115,11 +123,11 @@ function price(value: number) {
 
 async function onBuy() {
 	if (owned.value) {
-		router.push('/me')
+		router.push(localePath('/me'))
 		return
 	}
 	if (!isLogin.value) {
-		router.push(`/login?redirect=/knowledge/${route.params.no}`)
+		router.push(localePath(`/login?redirect=/knowledge/${route.params.no}`))
 		return
 	}
 	buying.value = true

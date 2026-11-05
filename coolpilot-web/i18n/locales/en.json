@@ -264,5 +264,33 @@
     "linkCopied": "Link copied",
     "linkCopyFailed": "Copy failed — copy it manually",
     "regenerated": "Link regenerated with the new expiry"
+  },
+  "knowledgeDetail": {
+    "sold": "{n} sold",
+    "views": "{n} views",
+    "submitDemand": "Request a quote",
+    "quoteAfter": "We will send a formal quote after assessment",
+    "owned": "Owned",
+    "processing": "Processing…",
+    "buyNow": "Buy now",
+    "demandFirst": "Request first",
+    "tipService": "Payment starts the delivery process",
+    "tipProduct": "Access opens once payment is confirmed",
+    "serviceInfo": "Service details",
+    "delivery": "Estimated delivery",
+    "days": "{n} days",
+    "negotiable": "On request",
+    "priceMode": "Pricing",
+    "scope": "Scope",
+    "process": "Process",
+    "faq": "FAQ",
+    "resources": "Included resources",
+    "downloadAfterBuy": "available after purchase",
+    "notFound": "This product does not exist or is no longer available",
+    "modes": {
+      "FIXED": "Fixed price",
+      "STARTING": "Starting at",
+      "CUSTOM": "Custom quote"
+    }
   }
 }
