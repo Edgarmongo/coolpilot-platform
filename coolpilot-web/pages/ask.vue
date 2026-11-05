@@ -37,15 +37,27 @@
 							</p>
 							<p v-if="msg.stopped" class="stopped-note">已停止生成</p>
 							<p v-if="msg.streaming && !msg.content" class="thinking">正在检索并组织回答…</p>
-							<p v-else class="text"><span v-html="renderContent(msg.content, msg.citations)"/><span
-								v-if="msg.streaming" class="caret"/></p>
+							<p v-else class="text" @click="onAnswerClick($event, msg)">
+								<span v-html="renderAnswer(msg.content, msg.citations, msg.uid)"/>
+								<span v-if="msg.streaming" class="caret"/>
+							</p>
 							<div v-if="msg.citations && msg.citations.length" class="citations">
 								<div class="cite-title">来源</div>
-								<a v-for="cite in msg.citations" :key="cite.index" :href="cite.url" class="cite">
+								<a v-for="cite in msg.citations" :key="cite.index"
+								   :id="`cite-${msg.uid}-${cite.index}`"
+								   :class="['cite', {active: isHighlighted(msg.uid, cite.index)}]"
+								   :href="cite.url" target="_blank" rel="noopener noreferrer">
 									<span class="cite-idx">[{{ cite.index }}]</span>
 									<span class="cite-name">{{ cite.title }}</span>
 									<span class="tag">{{ sourceText(cite.sourceType) }}</span>
 								</a>
+							</div>
+							<div v-if="msg.role === 'ASSISTANT' && !msg.streaming && msg.content" class="msg-actions">
+								<button v-if="msg.id" :class="['mini', {on: msg.favorited}]" @click="toggleFavorite(msg)">
+									{{ msg.favorited ? '已收藏' : '收藏' }}
+								</button>
+								<button v-if="msg.id" class="mini" @click="shareAnswer(msg)">分享</button>
+								<button class="mini" @click="copyAnswer(msg)">复制</button>
 							</div>
 						</div>
 					</div>
@@ -64,6 +76,22 @@
 				</p>
 			</section>
 		</div>
+
+		<!-- 分享弹窗 -->
+		<div v-if="shareVisible" class="mask" @click.self="shareVisible = false">
+			<div class="dialog">
+				<h3>分享这条回答</h3>
+				<p class="muted small">拿到链接的人无需登录即可查看问答与来源，对话里的其他内容不会暴露</p>
+				<input class="share-input" :value="shareLink" readonly @focus="($event.target as HTMLInputElement).select()"/>
+				<div class="dialog-actions">
+					<button class="btn" @click="copyShareLink">复制链接</button>
+					<button class="btn ghost" @click="revokeShare">取消分享</button>
+					<button class="btn ghost" @click="shareVisible = false">关闭</button>
+				</div>
+			</div>
+		</div>
+
+		<div v-if="hint" class="toast">{{ hint }}</div>
 	</div>
 </template>
 
@@ -80,6 +108,12 @@ type ChatMessage = {
 	note?: string
 	streaming?: boolean
 	stopped?: boolean
+	/** 服务端消息 id，收藏/分享依赖它 */
+	id?: number
+	favorited?: boolean
+	shareToken?: string
+	/** 本地唯一标识，用于引用卡片的锚点（历史消息用 id，新消息用序号） */
+	uid: number
 }
 
 const messages = ref<ChatMessage[]>([])
@@ -87,9 +121,15 @@ const question = ref(String(route.query.q || ''))
 const loading = ref(false)
 const conversationId = ref<number | null>(null)
 const history = ref<any[]>([])
+const shareVisible = ref(false)
+const shareLink = ref('')
+const shareMessage = ref<ChatMessage | null>(null)
+const hint = ref('')
 const listRef = ref<HTMLElement | null>(null)
 /** 当前流式请求的中止句柄，点「停止」时用它掐断连接 */
 let currentAbort: AbortController | null = null
+let uidSeed = 1
+const highlighted = ref('')
 
 const samples = [
 	'站内的付费内容都讲什么？',
@@ -100,6 +140,11 @@ const samples = [
 onMounted(() => {
 	if (isLogin.value) {
 		loadHistory()
+	}
+	// 从「我的收藏」点进来会带会话 id，直接打开那次对话
+	const conv = Number(route.query.conversation || 0)
+	if (conv > 0) {
+		openConversation(conv)
 	}
 })
 
@@ -113,12 +158,12 @@ async function send() {
 	if (!text || loading.value) {
 		return
 	}
-	messages.value.push({role: 'USER', content: text})
+	messages.value.push({role: 'USER', content: text, uid: uidSeed++})
 	question.value = ''
 	loading.value = true
 
 	// 先占位再流式填充：这样第一个字出现前用户就看到「正在…」，不会以为没反应
-	const assistant: ChatMessage = {role: 'ASSISTANT', content: '', citations: [], streaming: true}
+	const assistant: ChatMessage = {role: 'ASSISTANT', content: '', citations: [], streaming: true, uid: uidSeed++}
 	messages.value.push(assistant)
 	scrollToBottom()
 
@@ -213,6 +258,9 @@ async function streamAnswer(text: string, assistant: ChatMessage, signal: AbortS
 					if (event.data.conversationId) {
 						conversationId.value = event.data.conversationId
 					}
+					if (event.data.answerMessageId) {
+						assistant.id = event.data.answerMessageId
+					}
 				}
 			}
 			index = buffer.indexOf('\n\n')
@@ -237,32 +285,110 @@ function isAbortError(error: any) {
 	return error && (error.name === 'AbortError' || error.code === 20)
 }
 
-/**
- * 把答案里的 [1] 变成可点击的引用标记
- *
- * 模型输出一律当不可信文本处理：先转义再替换，
- * 只对「确实存在于引用列表里的编号」生成链接，避免模型编出 [9] 时出现死链。
- * 换行交给容器的 white-space: pre-wrap，不额外插 <br/>。
- */
-function renderContent(text: string, citations?: Citation[]) {
-	if (!text) {
-		return ''
+/** 正文点击：把 [n] 变成「滚到对应来源卡片并高亮」，而不是跳走 */
+function onAnswerClick(event: MouseEvent, msg: ChatMessage) {
+	const target = (event.target as HTMLElement | null)?.closest('a[data-cite]')
+	if (!target) {
+		return
 	}
-	const safe = text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-	return safe.replace(/\[(\d{1,2})\]/g, (match, num) => {
-		const index = Number(num)
-		const cite = (citations || []).find(item => item.index === index)
-		if (!cite) {
-			return match
+	event.preventDefault()
+	const index = Number((target as HTMLElement).dataset.cite)
+	if (!index) {
+		return
+	}
+	const card = document.getElementById(`cite-${msg.uid}-${index}`)
+	if (!card) {
+		return
+	}
+	card.scrollIntoView({behavior: 'smooth', block: 'center'})
+	const key = `${msg.uid}-${index}`
+	highlighted.value = key
+	window.setTimeout(() => {
+		if (highlighted.value === key) {
+			highlighted.value = ''
 		}
-		// href 里也要转义 &，否则带查询参数的链接在 XHTML 严格解析下会断
-		const url = String(cite.url || '').replace(/&/g, '&amp;').replace(/"/g, '%22')
-		return `<a class="cite-ref" href="${url}" target="_blank" rel="noopener noreferrer">[${index}]</a>`
-	})
+	}, 1600)
+}
+
+function isHighlighted(uid: number, index: number) {
+	return highlighted.value === `${uid}-${index}`
+}
+
+/** 收藏 / 取消收藏这条回答 */
+async function toggleFavorite(msg: ChatMessage) {
+	if (!isLogin.value) {
+		navigateTo('/login')
+		return
+	}
+	if (!msg.id) {
+		return
+	}
+	const method = msg.favorited ? 'DELETE' : 'POST'
+	const res: any = await call(`/favorite?targetType=AI_ANSWER&targetId=${msg.id}`, {method})
+	if (res && res.code === 200) {
+		msg.favorited = !msg.favorited
+	}
+}
+
+/** 分享：后端生成/复用 token，弹窗里给出链接 */
+async function shareAnswer(msg: ChatMessage) {
+	if (!isLogin.value) {
+		navigateTo('/login')
+		return
+	}
+	if (!msg.id) {
+		return
+	}
+	const res: any = await call(`/ai/answer/${msg.id}/share`, {method: 'POST'})
+	if (res && res.code === 200 && res.data) {
+		shareMessage.value = msg
+		msg.shareToken = res.data.token
+		shareLink.value = `${location.origin}${res.data.path}`
+		shareVisible.value = true
+	}
+}
+
+/** 撤销分享：链接立刻失效 */
+async function revokeShare() {
+	if (!shareMessage.value || !shareMessage.value.id) {
+		return
+	}
+	const res: any = await call(`/ai/answer/${shareMessage.value.id}/share`, {method: 'DELETE'})
+	if (res && res.code === 200) {
+		shareMessage.value.shareToken = undefined
+		shareVisible.value = false
+	}
+}
+
+/** 复制问答与来源，方便贴到聊天窗口 */
+async function copyAnswer(msg: ChatMessage) {
+	const question = [...messages.value].reverse()
+		.find(item => item.role === 'USER' && item.uid < msg.uid)?.content || ''
+	const text = answerToText(question, msg.content, msg.citations)
+	try {
+		await navigator.clipboard.writeText(text)
+		toast('已复制')
+	} catch (e) {
+		toast('复制失败，请手动选择文本')
+	}
+}
+
+async function copyShareLink() {
+	try {
+		await navigator.clipboard.writeText(shareLink.value)
+		toast('链接已复制')
+	} catch (e) {
+		toast('复制失败，请手动复制')
+	}
+}
+
+function toast(message: string) {
+	hint.value = message
+	window.setTimeout(() => {
+		if (hint.value === message) {
+			hint.value = ''
+		}
+	}, 1800)
 }
 
 function parseEvent(chunk: string): {name: string, data: any} | null {
@@ -298,6 +424,7 @@ async function fallbackAnswer(text: string, assistant: ChatMessage) {
 		assistant.citations = data.citations || []
 		assistant.degraded = !!data.degraded
 		assistant.note = data.note || ''
+		assistant.id = data.answerMessageId || assistant.id
 		return
 	}
 	throw new Error((res && res.msg) || 'failed')
@@ -326,7 +453,11 @@ async function openConversation(id: number) {
 	messages.value = (res.data.messages || []).map((msg: any) => ({
 		role: msg.role,
 		content: msg.content,
-		citations: msg.citations || []
+		citations: msg.citations || [],
+		id: msg.id,
+		favorited: !!msg.favorited,
+		shareToken: msg.shareToken || undefined,
+		uid: msg.id || uidSeed++
 	}))
 	scrollToBottom()
 }
@@ -669,5 +800,107 @@ useHead({title: '智能问答 - CoolSkyAI'})
 
 .btn.stop:hover {
 	background: #fdecea;
+}
+
+.msg-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 8px;
+	padding-top: 6px;
+	border-top: 1px dashed var(--line);
+}
+
+.mini {
+	border: 1px solid var(--line);
+	background: #fff;
+	color: var(--muted);
+	font-size: 12px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	cursor: pointer;
+}
+
+.mini:hover {
+	border-color: var(--teal);
+	color: var(--teal);
+}
+
+.mini.on {
+	border-color: var(--teal);
+	color: var(--teal);
+	background: #eef7f5;
+}
+
+.cite.active {
+	background: #fff7ed;
+	box-shadow: 0 0 0 2px #fed7aa;
+	border-radius: 6px;
+}
+
+.mask {
+	position: fixed;
+	inset: 0;
+	background: rgba(17, 24, 39, .38);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	z-index: 50;
+}
+
+.dialog {
+	width: 440px;
+	max-width: 100%;
+	background: #fff;
+	border-radius: 12px;
+	padding: 20px 22px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, .18);
+}
+
+.dialog h3 {
+	margin: 0 0 6px;
+	font-size: 16px;
+}
+
+.dialog .small {
+	font-size: 12.5px;
+	margin: 0 0 12px;
+}
+
+.share-input {
+	width: 100%;
+	box-sizing: border-box;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 9px 10px;
+	font-size: 13px;
+	color: var(--ink);
+	background: #f9fbfa;
+}
+
+.dialog-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 14px;
+	flex-wrap: wrap;
+}
+
+.btn.ghost {
+	background: #fff;
+	color: var(--teal);
+	border: 1px solid var(--teal);
+}
+
+.toast {
+	position: fixed;
+	left: 50%;
+	bottom: 32px;
+	transform: translateX(-50%);
+	background: rgba(17, 24, 39, .9);
+	color: #fff;
+	font-size: 13px;
+	padding: 8px 16px;
+	border-radius: 999px;
+	z-index: 60;
 }
 </style>

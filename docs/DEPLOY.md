@@ -378,6 +378,11 @@ location /api/ {
 仓库自带的 gateway 已经配好了，用 `docker compose -f docker-compose.prod.yml` 部署无需额外操作。
 后端也会返回 `X-Accel-Buffering: no` 作为兜底。
 
+### 分享链接
+
+用户可以对单条回答生成 `/share/{token}` 公开页，不需要额外配置；
+链接不带过期时间，撤销由用户自己点「取消分享」，删除对话时会一并失效。
+
 ### 成本与限制
 
 - 每次提问 = 1 次模型调用，上下文最多 6 个片段（约 2k 字符）

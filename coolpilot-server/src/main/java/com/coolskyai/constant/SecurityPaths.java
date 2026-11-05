@@ -50,8 +50,9 @@ public final class SecurityPaths {
 			"/payment", "/payment/**",
 			"/refund", "/refunds", "/refund/**",
 			"/entitlements",
-			// AI 问答历史：未登录可以问，但不落库、不建会话
+			// AI 问答历史与分享：未登录可以问，但不落库、不建会话
 			"/ai/conversations", "/ai/conversation/**",
+			"/ai/answer/**",
 			// V1.2 技术服务：需求提交/报价确认/项目验收
 			"/demand", "/demands", "/demand/**",
 			"/quote/**",
@@ -90,6 +91,8 @@ public final class SecurityPaths {
 			"/resource/access",
 			// 知识库检索与问答：公开内容可匿名用，付费块在服务层按权益过滤
 			"/ai/search", "/ai/chat", "/ai/chat/stream",
+			// 分享出去的答案：本身就是公开快照，不需要登录
+			"/share/answer/*",
 			// 问题反馈：允许未登录提交
 			"/feedback",
 			// Telegram webhook：路径里带 bot token，本身就是凭证

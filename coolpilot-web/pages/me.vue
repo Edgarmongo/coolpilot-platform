@@ -80,7 +80,7 @@
 
 			<!-- 收藏 -->
 			<template v-else-if="tab === 'fav'">
-				<div v-if="!favorites.length" class="empty">还没有收藏，在文章底部点「收藏」即可</div>
+				<div v-if="!favorites.length" class="empty">还没有收藏，文章底部或问答回答下点「收藏」即可</div>
 				<div v-for="fav in favorites" :key="fav.id" class="item">
 					<NuxtLink v-if="favLink(fav)" :to="favLink(fav)" class="item-main">
 						<strong>{{ fav.targetTitle || '内容已删除' }}</strong>
@@ -308,7 +308,7 @@ function projectStatusText(status: string) {
 }
 
 function typeText(type: string) {
-	return {ARTICLE: '文章', MOMENT: '动态', PRODUCT: '商品'}[type] || type
+	return {ARTICLE: '文章', MOMENT: '动态', PRODUCT: '商品', AI_ANSWER: '问答'}[type] || type
 }
 
 /**
@@ -318,6 +318,8 @@ function typeText(type: string) {
 function favLink(fav: any) {
 	if (fav.targetType === 'ARTICLE') return `/blog/${fav.targetId}`
 	if (fav.targetType === 'MOMENT') return '/moments'
+	// 问答收藏：跳到对应会话，targetRef 是会话 id
+	if (fav.targetType === 'AI_ANSWER' && fav.targetRef) return `/ask?conversation=${fav.targetRef}`
 	return ''
 }
 

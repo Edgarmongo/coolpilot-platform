@@ -18,6 +18,9 @@ import com.coolskyai.modules.ai.dto.ChatDTO;
 import com.coolskyai.modules.ai.service.AiSearchService;
 import com.coolskyai.modules.ai.service.RagChatService;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @Description: 知识库检索与问答
  *
@@ -89,6 +92,37 @@ public class AiController {
 	public Result conversation(@PathVariable Long id) {
 		Long userId = accountService.requireUserId();
 		return Result.ok("OK", ragChatService.conversationDetail(id, userId));
+	}
+
+	/**
+	 * 分享一条回答：返回 12 位 token，前端拼成 /share/{token}
+	 */
+	@PostMapping("/ai/answer/{id}/share")
+	public Result share(@PathVariable Long id) {
+		Long userId = accountService.requireUserId();
+		String token = ragChatService.shareAnswer(id, userId);
+		Map<String, Object> data = new HashMap<>(2);
+		data.put("token", token);
+		data.put("path", "/share/" + token);
+		return Result.ok("OK", data);
+	}
+
+	/**
+	 * 撤销分享：链接立即失效
+	 */
+	@DeleteMapping("/ai/answer/{id}/share")
+	public Result revokeShare(@PathVariable Long id) {
+		Long userId = accountService.requireUserId();
+		ragChatService.revokeShare(id, userId);
+		return Result.ok("已取消分享");
+	}
+
+	/**
+	 * 公开读取分享的答案（无需登录）
+	 */
+	@GetMapping("/share/answer/{token}")
+	public Result sharedAnswer(@PathVariable String token) {
+		return Result.ok("OK", ragChatService.sharedAnswer(token));
 	}
 
 	@DeleteMapping("/ai/conversation/{id}")

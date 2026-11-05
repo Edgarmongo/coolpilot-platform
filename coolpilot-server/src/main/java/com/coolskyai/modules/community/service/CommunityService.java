@@ -26,7 +26,7 @@ import java.util.Set;
  */
 @Service
 public class CommunityService {
-	private static final Set<String> FAVORITE_TYPES = Set.of("ARTICLE", "MOMENT", "PRODUCT");
+	private static final Set<String> FAVORITE_TYPES = Set.of("ARTICLE", "MOMENT", "PRODUCT", "AI_ANSWER");
 	private static final Set<String> LIKE_TYPES = Set.of("ARTICLE", "MOMENT", "COMMENT");
 
 	@Autowired
@@ -48,6 +48,9 @@ public class CommunityService {
 		checkType(targetType, FAVORITE_TYPES);
 		if (targetId == null || targetId <= 0) {
 			throw new BadRequestException("目标ID无效");
+		}
+		if ("AI_ANSWER".equals(targetType) && favoriteMapper.countOwnedAnswer(targetId, userId) == 0) {
+			throw new BadRequestException("只能收藏自己的问答记录");
 		}
 		Favorite favorite = new Favorite();
 		favorite.setUserId(userId);

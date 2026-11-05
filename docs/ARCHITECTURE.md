@@ -415,12 +415,26 @@ upload.file.resources-locations=file:${upload.file.path}
    全局异常处理单独接住它并只记 DEBUG —— 否则会往已断的 `text/event-stream` 里写 JSON，
    再抛一次 `HttpMessageNotWritableException`，日志里出现两段无意义堆栈
 
-**答案内引用高亮**
+**答案内引用联动**
 
-- 答案里的 `[1]` 渲染成可点击标记，直达对应来源（新标签打开）
+- 答案里的 `[1]` 渲染成标记，点击**滚到下方对应的来源卡片并高亮 1.6 秒**，不跳走；
+  卡片本身仍是外链，想深入阅读再点卡片
+- 渲染函数抽到 `composables/useCitation.ts`（问答页与分享页共用），`v-html` 里绑不了事件，
+  所以用事件委托：容器上监听 click，读 `data-cite` 找锚点
 - 模型输出一律按不可信文本处理：先转义 `& < > "`，再做编号替换；
-  只对**确实存在于引用列表里的编号**生成链接，模型编出 `[9]` 时保持纯文本，避免死链
+  只对**确实存在于引用列表里的编号**生成标记，模型编出 `[9]` 时保持纯文本
 - 换行仍交给 `white-space: pre-wrap`，不额外插 `<br/>`
+
+**答案收藏与分享**
+
+| 能力 | 实现 |
+|---|---|
+| 收藏 | 复用通用 `favorite` 表，`target_type=AI_ANSWER`、`target_id=ai_message.id`；**必须校验回答归属**（否则填别人 messageId 就能把内容收进自己列表） |
+| 收藏列表 | 收藏页联表取答案开头，`target_ref` 带回会话 id，点击跳 `/ask?conversation=` |
+| 分享 | `POST /ai/answer/{id}/share` 生成 12 位 token 存 `ai_message.share_token`；重复点返回同一个链接 |
+| 公开页 | `/share/{token}` → `GET /share/answer/{token}`（无鉴权），只回问题、答案、引用、模型与时间，不含任何用户信息 |
+| 撤销 | `DELETE /ai/answer/{id}/share` 清空 token，链接立即失效；删除对话时随消息一起消失 |
+| 复制 | 前端把「问题 + 答案 + 来源列表」拼成纯文本写入剪贴板 |
 
 ### 4.11 V1.3 知识库检索（第一阶段）
 

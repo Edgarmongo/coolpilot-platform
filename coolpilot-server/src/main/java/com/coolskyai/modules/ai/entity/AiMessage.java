@@ -25,5 +25,7 @@ public class AiMessage {
 	/** 引用快照 JSON */
 	private String citations;
 	private String model;
+	/** 分享令牌，为空表示未分享 */
+	private String shareToken;
 	private Date createTime;
 }

@@ -28,4 +28,6 @@ public class Favorite {
 	private String targetTitle;
 	private String targetCover;
 	private Date targetTime;
+	/** AI 回答收藏时为会话 id，用于跳回对话 */
+	private Long targetRef;
 }

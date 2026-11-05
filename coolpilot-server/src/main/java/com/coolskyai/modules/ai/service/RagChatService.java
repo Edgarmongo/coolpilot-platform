@@ -22,8 +22,10 @@ import tools.jackson.core.type.TypeReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -52,6 +54,8 @@ public class RagChatService {
 	private static final int MAX_TITLE = 40;
 	/** 检索侧只接受 100 字以内，长问题截断后再检索 */
 	private static final int MAX_RETRIEVE_QUERY = 100;
+
+	private static final java.security.SecureRandom random = new java.security.SecureRandom();
 
 	private static final String SYSTEM_PROMPT = """
 			你是 CoolSkyAI 站点的技术助理，面向中文读者。
@@ -117,12 +121,15 @@ public class RagChatService {
 			}
 		}
 
+		Long answerMessageId = null;
 		if (conversation != null) {
-			saveMessages(conversation, question, answer, note, citations, model);
+			answerMessageId = saveMessages(conversation, question, answer, note, citations, model);
 		}
 
-		Map<String, Object> data = new LinkedHashMap<>(10);
+		Map<String, Object> data = new LinkedHashMap<>(12);
 		data.put("conversationId", conversation == null ? null : conversation.getId());
+		data.put("answerMessageId", answerMessageId);
+		data.put("favorited", false);
 		data.put("answer", answer);
 		data.put("citations", citations);
 		data.put("model", model);
@@ -224,9 +231,10 @@ public class RagChatService {
 		}
 
 		String finalAnswer = answer.length() > 0 ? answer.toString() : null;
+		Long answerMessageId = null;
 		if (conversation != null) {
 			// 断连时也保存：用户下次打开历史能看到已经生成的部分
-			saveMessages(conversation, question, finalAnswer, note, citations, model);
+			answerMessageId = saveMessages(conversation, question, finalAnswer, note, citations, model);
 		}
 
 		if (cancelled.get()) {
@@ -237,6 +245,8 @@ public class RagChatService {
 
 		Map<String, Object> done = new LinkedHashMap<>(8);
 		done.put("conversationId", conversation == null ? null : conversation.getId());
+		done.put("answerMessageId", answerMessageId);
+		done.put("favorited", false);
 		done.put("answer", finalAnswer);
 		done.put("degraded", degraded);
 		done.put("note", note);
@@ -303,15 +313,19 @@ public class RagChatService {
 		if (conversation == null || !conversation.getUserId().equals(userId)) {
 			throw new BadRequestException("会话不存在");
 		}
+		List<AiMessage> rows = conversationMapper.listMessages(id, 100);
+		Set<Long> favorited = favoritedIds(userId, rows);
 		List<Map<String, Object>> messages = new ArrayList<>();
-		for (AiMessage message : conversationMapper.listMessages(id, 100)) {
-			Map<String, Object> row = new LinkedHashMap<>(8);
+		for (AiMessage message : rows) {
+			Map<String, Object> row = new LinkedHashMap<>(10);
 			row.put("id", message.getId());
 			row.put("role", message.getRole());
 			row.put("content", message.getContent());
 			row.put("citations", parseCitations(message.getCitations()));
 			row.put("model", message.getModel());
 			row.put("createTime", message.getCreateTime());
+			row.put("favorited", favorited.contains(message.getId()));
+			row.put("shareToken", message.getShareToken());
 			messages.add(row);
 		}
 		Map<String, Object> data = new LinkedHashMap<>(4);
@@ -364,6 +378,94 @@ public class RagChatService {
 			data.put("message", e.getMessage());
 		}
 		return data;
+	}
+
+	// ---------------- 收藏与分享 ----------------
+
+	/**
+	 * 这一批回答里哪些被当前用户收藏了（一次查询，避免每条消息打一次接口）
+	 */
+	private Set<Long> favoritedIds(Long userId, List<AiMessage> messages) {
+		if (userId == null || messages.isEmpty()) {
+			return Set.of();
+		}
+		List<Long> ids = new ArrayList<>();
+		for (AiMessage message : messages) {
+			if ("ASSISTANT".equals(message.getRole())) {
+				ids.add(message.getId());
+			}
+		}
+		if (ids.isEmpty()) {
+			return Set.of();
+		}
+		return new HashSet<>(conversationMapper.listFavoritedAnswerIds(userId, ids));
+	}
+
+	/**
+	 * 分享某条回答：第一次点生成 token，之后重复点返回同一个链接
+	 */
+	public String shareAnswer(Long messageId, Long userId) {
+		AiMessage message = conversationMapper.findAnswerOwned(messageId, userId);
+		if (message == null) {
+			throw new BadRequestException("回答不存在");
+		}
+		if (message.getShareToken() != null && !message.getShareToken().isEmpty()) {
+			return message.getShareToken();
+		}
+		for (int i = 0; i < 5; i++) {
+			String token = randomToken();
+			try {
+				conversationMapper.updateShareToken(messageId, token);
+				return token;
+			} catch (Exception e) {
+				// 撞上唯一索引（概率极低）就换一个
+				log.debug("分享 token 冲突，重试：{}", e.getMessage());
+			}
+		}
+		throw new BadRequestException("生成分享链接失败，请稍后再试");
+	}
+
+	/**
+	 * 撤销分享：链接立即失效
+	 */
+	public void revokeShare(Long messageId, Long userId) {
+		AiMessage message = conversationMapper.findAnswerOwned(messageId, userId);
+		if (message == null) {
+			throw new BadRequestException("回答不存在");
+		}
+		conversationMapper.updateShareToken(messageId, null);
+	}
+
+	/**
+	 * 公开读取分享的答案（不含任何用户信息）
+	 */
+	public Map<String, Object> sharedAnswer(String token) {
+		if (token == null || token.trim().isEmpty() || token.length() > 32) {
+			throw new BadRequestException("分享链接无效");
+		}
+		AiMessage message = conversationMapper.findByShareToken(token.trim());
+		if (message == null) {
+			throw new BadRequestException("分享内容不存在或已失效");
+		}
+		Map<String, Object> data = new LinkedHashMap<>(8);
+		data.put("question", conversationMapper.findQuestionBefore(message.getConversationId(), message.getId()));
+		data.put("answer", message.getContent());
+		data.put("citations", parseCitations(message.getCitations()));
+		data.put("model", message.getModel());
+		data.put("createTime", message.getCreateTime());
+		return data;
+	}
+
+	/**
+	 * 12 位小写字母数字，够用且短到能贴进聊天框
+	 */
+	private String randomToken() {
+		String alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+		StringBuilder sb = new StringBuilder(12);
+		for (int i = 0; i < 12; i++) {
+			sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
+		}
+		return sb.toString();
 	}
 
 	// ---------------- 内部 ----------------
@@ -421,7 +523,7 @@ public class RagChatService {
 		return created;
 	}
 
-	private void saveMessages(AiConversation conversation, String question, String answer,
+	private Long saveMessages(AiConversation conversation, String question, String answer,
 	                          String note, List<Map<String, Object>> citations, String model) {
 		AiMessage userMessage = new AiMessage();
 		userMessage.setConversationId(conversation.getId());
@@ -440,6 +542,8 @@ public class RagChatService {
 		conversationMapper.insertMessage(assistant);
 
 		conversationMapper.touchConversation(conversation.getId(), 2);
+		// 返回 id：前端拿到它才能收藏 / 分享这一条回答
+		return assistant.getId();
 	}
 
 	/**

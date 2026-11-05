@@ -70,4 +70,39 @@ public interface AiConversationMapper {
 
 	@Select("SELECT COUNT(*) FROM ai_message WHERE conversation_id = #{conversationId}")
 	int countMessages(@Param("conversationId") Long conversationId);
+
+	// ---------------- 分享 ----------------
+
+	/**
+	 * 取一条属于该用户的助手回答
+	 *
+	 * 分享和收藏都只能针对自己的回答：一条 JOIN 里同时校验角色与会话归属，
+	 * 避免「拿到别人 messageId 就能读内容」。
+	 */
+	@Select("SELECT m.* FROM ai_message m JOIN ai_conversation c ON c.id = m.conversation_id " +
+			"WHERE m.id = #{id} AND m.role = 'ASSISTANT' AND c.user_id = #{userId}")
+	AiMessage findAnswerOwned(@Param("id") Long id, @Param("userId") Long userId);
+
+	@Update("UPDATE ai_message SET share_token = #{token} WHERE id = #{id}")
+	int updateShareToken(@Param("id") Long id, @Param("token") String token);
+
+	@Select("SELECT * FROM ai_message WHERE share_token = #{token} AND role = 'ASSISTANT'")
+	AiMessage findByShareToken(@Param("token") String token);
+
+	/**
+	 * 分享页要显示「问题是什么」，取同会话里这条回答之前最近的一条用户消息
+	 */
+	@Select("SELECT content FROM ai_message WHERE conversation_id = #{conversationId} " +
+			"AND role = 'USER' AND id < #{beforeId} ORDER BY id DESC LIMIT 1")
+	String findQuestionBefore(@Param("conversationId") Long conversationId, @Param("beforeId") Long beforeId);
+
+	/**
+	 * 这些回答里哪些已被当前用户收藏（会话详情回显「已收藏」）
+	 */
+	@Select("<script>" +
+			"SELECT target_id FROM favorite WHERE user_id = #{userId} AND target_type = 'AI_ANSWER' " +
+			"AND target_id IN " +
+			"<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
+			"</script>")
+	List<Long> listFavoritedAnswerIds(@Param("userId") Long userId, @Param("ids") List<Long> ids);
 }
