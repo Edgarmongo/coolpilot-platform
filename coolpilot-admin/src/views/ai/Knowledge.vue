@@ -74,6 +74,34 @@
 			</div>
 		</div>
 
+
+		<div class="panel">
+			<div class="llm-head">
+				<h3>检索质量</h3>
+				<el-tag :type="suggestionType" size="small">{{ suggestionText }}</el-tag>
+				<el-tag type="info" size="small">当前严格度：{{ quality.strictness || '—' }}</el-tag>
+			</div>
+			<div class="llm-row">
+				<span class="muted">近 {{ quality.days || 7 }} 天提问</span>
+				<code>{{ quality.questions || 0 }}</code>
+				<span class="muted">0 引用</span>
+				<code>{{ percent(quality.zeroRate) }}</code>
+				<span class="muted">平均引用</span>
+				<code>{{ quality.avgCitations ?? 0 }}</code>
+				<span class="muted">改写率</span>
+				<code>{{ percent(quality.rewriteRate) }}</code>
+			</div>
+			<p class="muted small" v-if="quality.distribution">
+				引用分布：0 条 {{ quality.distribution['0'] }} · 1 条 {{ quality.distribution['1'] }} ·
+				2 条 {{ quality.distribution['2'] }} · 3 条以上 {{ quality.distribution['3+'] }}
+			</p>
+			<p class="small" :class="['advice', suggestionType]">{{ quality.reason }}</p>
+			<p class="muted small">
+				严格度由 .env 的 AI_RERANK_STRICTNESS 决定（strict / balanced / loose），改完重启生效。
+				系统只给建议，不自动切换 —— 「宁可答不出来还是宁可答偏」是运营判断。
+			</p>
+		</div>
+
 		<div class="panel">
 			<h3>检索自测</h3>
 			<div class="test-row">
@@ -97,13 +125,14 @@
 </template>
 
 <script setup>
-import {onMounted, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Connection, Refresh, RefreshRight} from '@element-plus/icons-vue'
-import {getAiStats, getLlmStatus, reindexKnowledge, searchAi, testLlm} from '@/api/ai'
+import {getAiStats, getLlmStatus, getRetrievalQuality, reindexKnowledge, searchAi, testLlm} from '@/api/ai'
 
 const stats = ref({})
 const llm = ref({})
+const quality = ref({})
 const testResult = ref(null)
 const testing = ref(false)
 const loading = ref(false)
@@ -115,17 +144,33 @@ const searchMeta = ref(null)
 const searching = ref(false)
 const searched = ref(false)
 
+const SUGGESTIONS = {
+	keep: {text: '保持当前档位', type: 'success'},
+	strict: {text: '建议收紧到 strict', type: 'warning'},
+	loose: {text: '建议放宽到 loose', type: 'warning'},
+	insufficient: {text: '样本不足', type: 'info'}
+}
+
+const suggestionType = computed(() => (SUGGESTIONS[quality.value.suggestion] || SUGGESTIONS.keep).type)
+const suggestionText = computed(() => (SUGGESTIONS[quality.value.suggestion] || SUGGESTIONS.keep).text)
+
+function percent(value) {
+	return `${Math.round((Number(value) || 0) * 100)}%`
+}
+
 onMounted(load)
 
 async function load() {
 	loading.value = true
 	try {
-		const [res, llmRes] = await Promise.all([
+		const [res, llmRes, qualityRes] = await Promise.all([
 			getAiStats(),
-			getLlmStatus().catch(() => null)
+			getLlmStatus().catch(() => null),
+			getRetrievalQuality(7).catch(() => null)
 		])
 		stats.value = res.data || {}
 		llm.value = (llmRes && llmRes.data) || {}
+		quality.value = (qualityRes && qualityRes.data) || {}
 	} finally {
 		loading.value = false
 	}
@@ -309,5 +354,22 @@ function formatTime(value) {
 
 .test-result.bad {
 	color: #b42318;
+}
+
+.advice {
+	margin: 6px 0 0;
+	line-height: 1.7;
+}
+
+.advice.success {
+	color: #047857;
+}
+
+.advice.warning {
+	color: #b45309;
+}
+
+.advice.info {
+	color: #6b7280;
 }
 </style>

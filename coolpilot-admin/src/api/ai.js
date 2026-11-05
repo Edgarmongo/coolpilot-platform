@@ -45,3 +45,11 @@ export function getChatLogs(params) {
 export function getChatLog(id) {
 	return request({url: `ai/conversation/${id}`, method: 'GET'})
 }
+
+
+/**
+ * 检索质量：0 引用占比、平均引用数、改写率，以及严格度建议
+ */
+export function getRetrievalQuality(days = 7) {
+	return request({url: 'ai/quality', method: 'GET', params: {days}})
+}

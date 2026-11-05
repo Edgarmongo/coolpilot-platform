@@ -388,6 +388,8 @@ AI_CHAT_REWRITE_HISTORY=3      # 带进 prompt 的历史轮数（用改写后的
 AI_CHAT_REWRITE_ANSWER_ROUNDS=2 # 带进 prompt 的回答轮数（序号指代常指向更早那条）
 AI_CHAT_REWRITE_ANSWER=300      # 单条回答节选长度（≈列表前三条）
 AI_CHAT_REWRITE_ANSWER_BUDGET=600  # 回答节选总预算，超出按轮数均分
+AI_CHAT_REWRITE_MAX_ROUNDS=5    # 首次没解开时最多回溯几轮（序号指代不依赖它）
+AI_CHAT_REWRITE_ESCALATE=true   # 关掉就固定轮数，不再回溯
 AI_CHAT_REWRITE_CACHE=3600      # 改写结果缓存秒数（键含模型名）
 
 # 重排：none / llm / http
@@ -414,6 +416,10 @@ AI_RERANK_CACHE=900            # 重排结果缓存秒数
 但「与最高分的比例」语义一致，相对下限天然跨模型；再把它和截断下限、兜底分数线
 绑成三档语义，部署方只需回答一个问题 —— 你更怕漏还是更怕噪音。
 真要业务硬卡某条线时才动 `AI_RERANK_MIN_SCORE`。
+
+改之前先看数据：后台「知识库索引 › 检索质量」（`GET /admin/ai/quality?days=7`）会给
+0 引用占比、平均引用数、改写率与引用分布，并据此建议 strict / balanced / loose。
+建议只是建议 —— 系统不会自己切档。
 
 重排可以选择「只保留相关项」，因此结果条数可能少于上限：模型判断无关的会被丢掉，
 但至少保留 `AI_RERANK_MIN_KEEP` 条；全都不相关且首位原始分低于 0.5 时返回 0 条，

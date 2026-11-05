@@ -71,6 +71,16 @@ public interface AiConversationMapper {
 	String lastUserQuestion(@Param("conversationId") Long conversationId);
 
 	/**
+	 * 会话从头开始的回答正文（正序），用于「第 N 份」这类序号指代
+	 *
+	 * 序号对应的是用户最早看到的那个列表，所以必须从会话开头扫，
+	 * 不能像改写那样只看最近几轮 —— 问了几轮之后，列表早已滑出窗口。
+	 */
+	@Select("SELECT content FROM ai_message WHERE conversation_id = #{conversationId} " +
+			"AND role = 'ASSISTANT' ORDER BY id ASC LIMIT #{limit}")
+	List<String> answersFromStart(@Param("conversationId") Long conversationId, @Param("limit") int limit);
+
+	/**
 	 * 最近 N 轮回答正文，按时间倒序
 	 *
 	 * 追问里的「它」「第一篇」有时只出现在回答里（「站内有哪些方案？」→ 回答列了三篇）。
@@ -97,6 +107,27 @@ public interface AiConversationMapper {
 	 */
 	@Select("SELECT user_id FROM ai_conversation WHERE id = #{id}")
 	Long findOwnerId(@Param("id") Long id);
+
+	// ---------------- 后台：检索质量 ----------------
+
+	@Select("SELECT COUNT(*) FROM ai_message WHERE role = 'USER' " +
+			"AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)")
+	int countQuestions(@Param("days") int days);
+
+	/** 追问改写过的问题数：改写率过高说明用户习惯连续追问，值得把上下文再调宽 */
+	@Select("SELECT COUNT(*) FROM ai_message WHERE role = 'USER' AND retrieval_query IS NOT NULL " +
+			"AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)")
+	int countRewritten(@Param("days") int days);
+
+	/**
+	 * 近 N 天回答的引用快照（只取这一列，别把正文也拉出来）
+	 *
+	 * 用条数上限兜住：统计近 7 天，正常站点几千条以内，取最近 500 条足够反映分布。
+	 */
+	@Select("SELECT citations FROM ai_message WHERE role = 'ASSISTANT' " +
+			"AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY) " +
+			"ORDER BY id DESC LIMIT #{limit}")
+	List<String> recentCitations(@Param("days") int days, @Param("limit") int limit);
 
 	// ---------------- 后台：问答记录 ----------------
 

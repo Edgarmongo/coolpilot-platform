@@ -37,6 +37,8 @@ public class AiAdminService {
 
 	@Autowired
 	private AiConversationMapper conversationMapper;
+	@Autowired
+	private RerankPolicy rerankPolicy;
 
 	public PageResult<Map<String, Object>> conversations(String keyword, Integer pageNum, Integer pageSize) {
 		int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
@@ -78,6 +80,94 @@ public class AiAdminService {
 		data.put("updateTime", conversation.getUpdateTime());
 		data.put("messages", rows);
 		return data;
+	}
+
+	/**
+	 * 检索质量：用真实数据回答「严格度该设哪一档」
+	 *
+	 * 严格度的默认值不是拍出来的：0 引用占比太高说明截断过狠或语料不够，
+	 * 引用数常年顶格说明弱相关片段被大量放进来。这里把两个信号摆出来，并给一句建议。
+	 *
+	 * 刻意只做「建议」不做「自动改」：严格度影响答不出来还是答偏，属于运营判断，
+	 * 让系统自动切会出现「今天松明天紧」的不可预期行为。
+	 */
+	public Map<String, Object> quality(Integer days, Integer limit) {
+		int window = days == null || days < 1 ? 7 : Math.min(days, 90);
+		int cap = limit == null || limit < 1 ? 500 : Math.min(limit, 2000);
+
+		List<String> citations = conversationMapper.recentCitations(window, cap);
+		int answers = citations.size();
+		int zero = 0;
+		int one = 0;
+		int two = 0;
+		int many = 0;
+		int total = 0;
+		for (String snapshot : citations) {
+			int count = citationCount(snapshot);
+			total += count;
+			if (count == 0) {
+				zero++;
+			} else if (count == 1) {
+				one++;
+			} else if (count == 2) {
+				two++;
+			} else {
+				many++;
+			}
+		}
+		int questions = conversationMapper.countQuestions(window);
+		int rewritten = conversationMapper.countRewritten(window);
+
+		double zeroRate = answers == 0 ? 0 : round(zero * 1.0 / answers, 3);
+		double avg = answers == 0 ? 0 : round(total * 1.0 / answers, 2);
+		double rewriteRate = questions == 0 ? 0 : round(rewritten * 1.0 / questions, 3);
+
+		String suggestion;
+		String reason;
+		if (answers < 5) {
+			suggestion = "insufficient";
+			reason = "近 " + window + " 天只有 " + answers + " 次回答，样本太少，先把内容做起来再调严格度";
+		} else if (zeroRate >= 0.30) {
+			suggestion = "loose";
+			reason = "有 " + percent(zeroRate) + " 的回答没引用到任何资料：要么截断过严，要么站内确实缺内容。"
+					+ "如果这些提问本身是站内该有的，先调宽松（loose）或补内容";
+		} else if (avg >= 5) {
+			suggestion = "strict";
+			reason = "平均引用 " + avg + " 条、几乎每次都能凑满，说明弱相关片段被大量放进上下文；"
+					+ "严格一档可以让答案更聚焦";
+		} else {
+			suggestion = "keep";
+			reason = "0 引用占比 " + percent(zeroRate) + "、平均引用 " + avg + " 条，处于合理区间，保持当前档位";
+		}
+
+		Map<String, Object> data = new LinkedHashMap<>(16);
+		data.put("days", window);
+		data.put("questions", questions);
+		data.put("answers", answers);
+		data.put("rewritten", rewritten);
+		data.put("rewriteRate", rewriteRate);
+		data.put("zeroCitation", zero);
+		data.put("zeroRate", zeroRate);
+		data.put("avgCitations", avg);
+		Map<String, Object> distribution = new LinkedHashMap<>(4);
+		distribution.put("0", zero);
+		distribution.put("1", one);
+		distribution.put("2", two);
+		distribution.put("3+", many);
+		data.put("distribution", distribution);
+		data.put("strictness", rerankPolicy.strictness());
+		data.put("suggestion", suggestion);
+		data.put("reason", reason);
+		return data;
+	}
+
+	private double round(double value, int scale) {
+		double factor = Math.pow(10, scale);
+		return Math.round(value * factor) / factor;
+	}
+
+	private String percent(double rate) {
+		return Math.round(rate * 100) + "%";
 	}
 
 	/**

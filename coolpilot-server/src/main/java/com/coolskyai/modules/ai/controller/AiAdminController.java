@@ -52,6 +52,14 @@ public class AiAdminController {
 	/**
 	 * 问答会话列表（后台排查用）
 	 */
+	/**
+	 * 检索质量：0 引用占比、平均引用数、改写率，以及「严格度该设哪档」的建议
+	 */
+	@GetMapping("/ai/quality")
+	public Result quality(@RequestParam(defaultValue = "7") Integer days) {
+		return Result.ok("请求成功", aiAdminService.quality(days, 500));
+	}
+
 	@GetMapping("/ai/conversations")
 	public Result conversations(@RequestParam(required = false) String keyword,
 	                            @RequestParam(defaultValue = "1") Integer pageNum,
