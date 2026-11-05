@@ -71,11 +71,15 @@ public class MarkdownUtils {
 	private static class CustomAttributeProvider implements AttributeProvider {
 		@Override
 		public void setAttributes(Node node, String tagName, Map<String, String> attributes) {
-			// 为懒加载提供属性
+			// 图片：保留 src，用原生 loading="lazy" 做懒加载
+			//
+			// 这里原来把 src 删掉、只留 data-src，本意是交给前端懒加载库，
+			// 但 Nuxt 前台并没有对应的实现，结果所有 Markdown 图片都渲染不出来
+			// （img 没有 src 就没有内容）。原生 loading="lazy" 由浏览器负责，
+			// 不需要任何 JS，且不阻塞首屏。
 			if (node instanceof Image) {
-				Image n = (Image) node;
-				attributes.put("data-src", n.getDestination());
-				attributes.remove("src");
+				attributes.put("loading", "lazy");
+				attributes.put("decoding", "async");
 			}
 			//改变a标签的target属性为_blank
 			if (node instanceof Link) {

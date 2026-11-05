@@ -6,7 +6,7 @@
 		<div v-if="!moments.length" class="empty card">{{ t('moments.empty') }}</div>
 
 		<div v-for="moment in moments" :key="moment.id" class="card moment">
-			<p class="content">{{ moment.content }}</p>
+			<div class="content" v-html="moment.content"/>
 			<div class="foot">
 				<span class="muted">{{ formatDate(moment.createTime) }}</span>
 				<button class="like" :class="{liked: liked.includes(moment.id)}" @click="like(moment)">
@@ -68,7 +68,20 @@ useHead({title: t('moments.title')})
 	margin: 0 0 12px;
 	font-size: 14.5px;
 	line-height: 1.85;
-	white-space: pre-wrap;
+}
+
+/* 后端已把正文转成 HTML，这里补上段落与图片的排版 */
+.content :deep(p) {
+	margin: 0 0 8px;
+}
+
+.content :deep(p:last-child) {
+	margin-bottom: 0;
+}
+
+.content :deep(img) {
+	max-width: 100%;
+	border-radius: 8px;
 }
 
 .foot {
