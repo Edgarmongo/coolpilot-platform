@@ -1,5 +1,7 @@
 package com.coolskyai.modules.ai.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ import java.util.Set;
 @Service
 public class AiSearchService {
 
+	private static final Logger log = LoggerFactory.getLogger(AiSearchService.class);
+
 	@Value("${ai.search.min-score:0.05}")
 	private float minScore;
 
@@ -43,6 +47,30 @@ public class AiSearchService {
 
 	@Value("${ai.search.max-limit:20}")
 	private int maxLimit;
+
+	/** 混合检索里向量的权重；剩下的给字面分 */
+	@Value("${ai.search.hybrid-alpha:0.65}")
+	private double hybridAlpha;
+
+	/**
+	 * 纯语义命中的门槛
+	 *
+	 * bge-m3 这类模型对任意中文短句的余弦都在 0.3~0.5 之间（各向异性），
+	 * 用统一的低阈值会把「今天天气怎么样」也检出 8 条。
+	 * 所以：完全没有字面重合时，要求向量相似度更高才认。
+	 */
+	@Value("${ai.search.semantic-floor:0.5}")
+	private double semanticFloor;
+
+
+	/**
+	 * 标题加成
+	 *
+	 * 标题是「这段讲什么」的最强信号，但打分主体仍是正文。
+	 * 单列一个加成，而不是并进正文覆盖率：并进去会稀释正文信号。
+	 */
+	@Value("${ai.search.title-boost:0.15}")
+	private double titleBoost;
 
 	@Autowired
 	private KbMapper kbMapper;
@@ -105,8 +133,18 @@ public class AiSearchService {
 		int size = limit <= 0 ? 8 : Math.min(limit, maxLimit);
 
 		Snapshot current = snapshot();
-		float[] queryVector = embeddingClient.embed(text);
+		/*
+		 * 向量拿不到（模型服务挂了 / 配置错）时降级为纯字面检索：
+		 * 搜索是基础能力，不该因为 embedding 不可用就整页报错。
+		 */
+		float[] queryVector = null;
+		try {
+			queryVector = embeddingClient.embed(text);
+		} catch (Exception e) {
+			log.warn("查询向量化失败，本次降级为字面检索：{}", e.getMessage());
+		}
 		Set<Integer> queryTokens = toTokenSet(embeddingClient.tokenHashes(text));
+		Set<String> queryTerms = TextTokenizer.terms(text);
 		Set<Long> allowedProducts = allowedProducts(userId);
 
 		Map<Long, Scored> bestPerDocument = new LinkedHashMap<>();
@@ -124,7 +162,29 @@ public class AiSearchService {
 			if (!queryTokens.isEmpty() && !sharesToken(queryTokens, entry.tokenHashes())) {
 				continue;
 			}
-			float score = VectorCodec.cosine(queryVector, entry.vector());
+			/*
+			 * 混合打分：语义相似度 + 字面覆盖率。
+			 * 语义模型擅长「换个说法也能找到」，但对型号、专有名词这类精确匹配偏弱；
+			 * 字面分正好补上这一块，两者加权后既不会跑题，也不会漏掉关键词命中。
+			 */
+			double vectorScore = queryVector == null ? 0 : VectorCodec.cosine(queryVector, entry.vector());
+			double lexicalScore = lexicalScore(queryTerms, text, entry.content());
+			KbDocument doc = current.documents().get(entry.docId());
+			double titleCoverage = doc == null ? 0 : coverage(queryTerms, doc.getTitle());
+			/*
+			 * 字面证据取「正文覆盖率」与「标题覆盖率」的较大者：
+			 * 有些文档正文里只写「本手册」，真正的关键词在标题上，
+			 * 只看正文会把它判成纯语义命中，反而被语义门槛挡掉。
+			 */
+			double evidence = Math.max(lexicalScore, titleCoverage);
+			if (evidence == 0 && vectorScore < semanticFloor) {
+				continue;
+			}
+			double mixed = queryVector == null
+					? evidence
+					: hybridAlpha * vectorScore + (1 - hybridAlpha) * evidence;
+			mixed += titleBoost * titleCoverage;
+			float score = (float) Math.min(1.0, mixed);
 			if (score < minScore) {
 				continue;
 			}
@@ -161,6 +221,36 @@ public class AiSearchService {
 		return results;
 	}
 
+	/**
+	 * 字面覆盖率：查询词有多少出现在这段正文里
+	 *
+	 * 不做 TF-IDF：语料只有几百块，IDF 估不准，反而让常见词权重失真。
+	 * 覆盖率 + 整句命中加成，方向足够正确。
+	 */
+	private double lexicalScore(Set<String> terms, String query, String content) {
+		double coverage = coverage(terms, content);
+		if (coverage > 0 && query.length() >= 4 && content != null
+				&& content.toLowerCase().contains(query.toLowerCase())) {
+			// 整句原样出现，说明这段就是讲这件事的
+			coverage = Math.min(1.0, coverage + 0.2);
+		}
+		return coverage;
+	}
+
+	private double coverage(Set<String> terms, String text) {
+		if (terms.isEmpty() || text == null || text.isEmpty()) {
+			return 0;
+		}
+		String lower = text.toLowerCase();
+		int matched = 0;
+		for (String term : terms) {
+			if (lower.contains(term)) {
+				matched++;
+			}
+		}
+		return (double) matched / terms.size();
+	}
+
 	private String normalizeQuery(String query) {
 		String text = query == null ? "" : query.trim();
 		if (text.isEmpty()) {
@@ -184,6 +274,9 @@ public class AiSearchService {
 		stats.put("loadedEntries", current == null ? 0 : current.entries().size());
 		stats.put("model", embeddingClient.model());
 		stats.put("dim", embeddingClient.dim());
+		stats.put("provider", embeddingClient.provider());
+		stats.put("hybridAlpha", hybridAlpha);
+		stats.put("ignoredChunks", current == null ? 0 : current.ignored());
 		stats.put("minScore", minScore);
 		stats.put("lastIndexedAt", kbMapper.lastIndexedAt());
 		stats.put("cacheSeconds", cacheSeconds);
@@ -227,13 +320,16 @@ public class AiSearchService {
 		}
 
 		List<Entry> entries = new ArrayList<>();
+		int ignored = 0;
 		for (KbChunk chunk : kbMapper.listAllChunks()) {
 			// 维度或模型对不上说明索引是旧模型建的，跳过而不是拿错向量硬算
 			if (chunk.getDim() == null || chunk.getDim() != embeddingClient.dim()) {
+				ignored++;
 				continue;
 			}
 			if (chunk.getModel() != null && !chunk.getModel().isEmpty()
 					&& !chunk.getModel().equals(embeddingClient.model())) {
+				ignored++;
 				continue;
 			}
 			float[] vector = VectorCodec.decode(chunk.getEmbedding());
@@ -246,7 +342,7 @@ public class AiSearchService {
 					embeddingClient.tokenHashes(chunk.getContent())));
 		}
 		return new Snapshot(entries, documents, System.currentTimeMillis(), embeddingClient.model(),
-				embeddingClient.dim());
+				embeddingClient.dim(), ignored);
 	}
 
 	private String snippet(String content) {
@@ -282,6 +378,6 @@ public class AiSearchService {
 	}
 
 	private record Snapshot(List<Entry> entries, Map<Long, KbDocument> documents, long builtAt,
-	                        String model, int dim) {
+	                        String model, int dim, int ignored) {
 	}
 }

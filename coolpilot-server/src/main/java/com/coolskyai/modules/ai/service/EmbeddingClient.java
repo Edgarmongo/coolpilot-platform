@@ -21,6 +21,25 @@ public interface EmbeddingClient {
 	float[] embed(String text);
 
 	/**
+	 * 批量向量化
+	 *
+	 * 真实模型一次请求几十毫秒，逐条发在建索引时会慢到不可接受；
+	 * 默认实现退化为逐条调用，远程实现覆盖它走一次批量请求。
+	 */
+	default java.util.List<float[]> embedBatch(java.util.List<String> texts) {
+		java.util.List<float[]> vectors = new java.util.ArrayList<>(texts.size());
+		for (String text : texts) {
+			vectors.add(embed(text));
+		}
+		return vectors;
+	}
+
+	/** 实现标识（hashing / openai），用于后台展示与排查 */
+	default String provider() {
+		return "custom";
+	}
+
+	/**
 	 * 词元哈希（去重）。
 	 *
 	 * 只有字面向量（哈希/BM25 这类）才需要：用它做「必须有共同词」的护栏，

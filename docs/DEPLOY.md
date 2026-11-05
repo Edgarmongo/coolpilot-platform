@@ -343,6 +343,26 @@ AI_LLM_TEMPERATURE=0.3
 
 改完 `docker compose -f docker-compose.prod.yml up -d api` 生效。
 
+### 向量模型（检索侧）
+
+检索与生成是两套配置，可以只配其一：
+
+```ini
+# hashing（默认，离线字面召回）或 openai（任意 OpenAI 兼容 /embeddings）
+AI_EMBEDDING_PROVIDER=openai
+AI_EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
+AI_EMBEDDING_API_KEY=        # 本地留空，云端填 Key
+AI_EMBEDDING_MODEL=bge-m3
+AI_EMBEDDING_DIM=1024        # 必须与模型一致：bge-m3=1024，text-embedding-3-small=1536
+AI_EMBEDDING_BATCH=16        # 重建索引时每批条数
+# 混合检索权重：向量占比，其余给关键词
+AI_SEARCH_HYBRID_ALPHA=0.65
+```
+
+**换 provider 或 dim 后必须重建索引**（后台「知识库索引 → 重建」，或 `POST /admin/ai/reindex`），
+否则旧向量维度对不上会被跳过，检索结果为空 —— 后台 stats 里的 `ignoredChunks` 就是提示。
+这一节的取舍与阈值说明见 `docs/ADR-0002-HYBRID-RETRIEVAL.md`。
+
 > 本地模型跑在宿主机时，容器内要用 `host.docker.internal` 访问；
 > 仓库的 compose 已经加了 `extra_hosts: host.docker.internal:host-gateway`（Linux 也适用）。
 > 如果 Ollama 跑在另一台机器上，直接写那台机器的内网 IP。

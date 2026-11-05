@@ -453,11 +453,17 @@ upload.file.resources-locations=file:${upload.file.path}
 
 ```
 索引：文章（跳过密码文章） / 上架商品文案 / 课时正文
-      → 清洗 Markdown → 350 字切块（60 字重叠）→ 向量化 → kb_chunk
-检索：query 向量 → 按「公开 或 已购商品」筛候选 → 余弦打分 → 文档级去重 → TopN
+      → 清洗 Markdown → 350 字切块（60 字重叠）→ 批量向量化 → kb_chunk
+检索：query 向量 → 按「公开 或 已购商品」筛候选
+      → 混合打分（alpha×余弦 + (1-alpha)×字面覆盖率 + 标题加成）→ 文档级去重 → TopN
 ```
 
-- 向量存 MySQL（`MEDIUMBLOB`，512 维 float32），进程内快照做余弦检索；1e4 块约 20MB、毫秒级
+- 向量存 MySQL（`MEDIUMBLOB`，float32），进程内快照做余弦检索；1e4 块约 20MB、毫秒级
+- 向量模型可切换（`ai.embedding.provider`）：`hashing` 512 维离线兜底 / `openai` 走任意兼容端点
+  （本地 bge-m3 = 1024 维）。`kb_chunk` 存了 `dim` 与 `model`，切模型后旧向量自动跳过，
+  后台 stats 的 `ignoredChunks` 提示需要重建索引
+- 混合打分解决「语义模型对型号/专有名词反而偏弱」：语义余弦 + 查询词覆盖率（正文与标题取大者），
+  阈值分两层 —— 没有字面证据时向量必须 ≥ `semantic-floor`，最终分 ≥ `min-score`；详见 ADR-0002
 - 权限在**打分前**过滤：付费课时只有持有权益才进入候选，避免越权召回
 - 本地哈希向量带「共同词」护栏：无任何共同词时跳过，防止哈希碰撞造成误召回；
   接语义模型后该护栏自动失效（`tokenHashes` 返回空）

@@ -39,6 +39,10 @@ public class KnowledgeIndexService {
 	private static final int MIN_CHUNK = 20;
 	private static final long KB_ID = 1L;
 
+	/** 每批向量化的块数：远程模型下一次请求比发 N 次快得多 */
+	@org.springframework.beans.factory.annotation.Value("${ai.embedding.batch-size:16}")
+	private int embeddingBatchSize;
+
 	@Autowired
 	private KbMapper kbMapper;
 	@Autowired
@@ -142,19 +146,25 @@ public class KnowledgeIndexService {
 		document.setChunkCount(chunks.size());
 		kbMapper.insertDocument(document);
 
-		for (int i = 0; i < chunks.size(); i++) {
-			String content = chunks.get(i);
-			KbChunk chunk = new KbChunk();
-			chunk.setDocId(document.getId());
-			chunk.setKbId(KB_ID);
-			chunk.setChunkIndex(i);
-			chunk.setContent(content);
-			chunk.setProductId(productId);
-			chunk.setIsPublic(isPublic);
-			chunk.setEmbedding(VectorCodec.encode(embeddingClient.embed(content)));
-			chunk.setDim(embeddingClient.dim());
-			chunk.setModel(embeddingClient.model());
-			kbMapper.insertChunk(chunk);
+		int batchSize = Math.max(1, embeddingBatchSize);
+		for (int start = 0; start < chunks.size(); start += batchSize) {
+			int end = Math.min(chunks.size(), start + batchSize);
+			List<String> batch = chunks.subList(start, end);
+			List<float[]> vectors = embeddingClient.embedBatch(batch);
+			for (int i = 0; i < batch.size(); i++) {
+				String content = batch.get(i);
+				KbChunk chunk = new KbChunk();
+				chunk.setDocId(document.getId());
+				chunk.setKbId(KB_ID);
+				chunk.setChunkIndex(start + i);
+				chunk.setContent(content);
+				chunk.setProductId(productId);
+				chunk.setIsPublic(isPublic);
+				chunk.setEmbedding(VectorCodec.encode(vectors.get(i)));
+				chunk.setDim(embeddingClient.dim());
+				chunk.setModel(embeddingClient.model());
+				kbMapper.insertChunk(chunk);
+			}
 		}
 		return true;
 	}
