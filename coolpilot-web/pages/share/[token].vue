@@ -1,25 +1,25 @@
 <template>
 	<div class="share-page">
 		<div class="ribbon">
-			<span>来自 <NuxtLink to="/" class="brand">CoolSkyAI</NuxtLink> 的问答分享</span>
-			<NuxtLink to="/ask" class="try">我也去问一个 →</NuxtLink>
+			<span>{{ t('share.ribbonFrom', {name: brand.brandName}) }}</span>
+			<NuxtLink :to="localePath('/ask')" class="try">{{ t('share.tryAsk') }}</NuxtLink>
 		</div>
 
 		<div v-if="!answer" class="empty card">
 			<p>{{ errorMessage }}</p>
 			<p class="muted">{{ errorHint }}</p>
-			<NuxtLink to="/ask" class="btn">去站内问答</NuxtLink>
+			<NuxtLink :to="localePath('/ask')" class="btn">{{ t('share.goAsk') }}</NuxtLink>
 		</div>
 
 		<template v-else>
 			<div v-if="question" class="question">
-				<span class="label">问</span>
+				<span class="label">{{ t('share.q') }}</span>
 				<p>{{ question }}</p>
 			</div>
 
 			<article class="answer card">
 				<div class="label-row">
-					<span class="label">答</span>
+					<span class="label">{{ t('share.a') }}</span>
 					<span class="muted small">{{ formatDate(createTime) }}<template v-if="model"> · {{ model }}</template></span>
 				</div>
 				<div class="text" @click="onCitationClick">
@@ -27,7 +27,7 @@
 				</div>
 
 				<div v-if="citations.length" class="citations">
-					<div class="cite-title">来源</div>
+					<div class="cite-title">{{ t('share.sources') }}</div>
 					<a v-for="cite in citations" :key="cite.index"
 					   :id="`cite-share-${cite.index}`"
 					   :class="['cite', {active: highlighted === cite.index}]"
@@ -42,16 +42,16 @@
 					<button :class="['like', {on: liked}]" :disabled="liking" @click="toggleLike">
 						<span class="heart">{{ liked ? '♥' : '♡' }}</span>{{ likes }}
 					</button>
-					<span class="stat">阅读 {{ views }}</span>
+					<span class="stat">{{ t('share.views', {n: views}) }}</span>
 					<span class="stat">{{ expiryText }}</span>
 				</div>
 			</article>
 
 			<section id="discuss" ref="talkRef" class="talk card">
 				<div class="talk-head">
-					<span class="talk-title">讨论</span>
+					<span class="talk-title">{{ t('share.commentsTitle') }}</span>
 					<div class="talk-tools">
-						<span class="muted small">{{ totalCount ? `${totalCount} 条留言` : '还没有留言' }}</span>
+						<span class="muted small">{{ totalCount ? t('share.commentCount', {n: totalCount}) : t('share.noComments') }}</span>
 						<span class="sorter">
 							<!--
 								这些链接只差查询串，NuxtLink 会把它们全判成「当前页」，
@@ -59,9 +59,9 @@
 								改用原生 a：href 给爬虫，点击交给我们自己跳。
 							-->
 							<a :class="['sort', {on: sort === 'newest'}]" :href="sortHref('newest')"
-							   @click.prevent="go(sortTo('newest'), $event)">最新</a>
+							   @click.prevent="go(sortTo('newest'), $event)">{{ t('share.newest') }}</a>
 							<a :class="['sort', {on: sort === 'oldest'}]" :href="sortHref('oldest')"
-							   @click.prevent="go(sortTo('oldest'), $event)">最早</a>
+							   @click.prevent="go(sortTo('oldest'), $event)">{{ t('share.oldest') }}</a>
 						</span>
 					</div>
 				</div>
@@ -72,26 +72,26 @@
 						<div class="body">
 							<div class="meta">
 								<span class="name">{{ item.nickname }}</span>
-								<span v-if="item.admin" class="badge">作者</span>
+								<span v-if="item.admin" class="badge">{{ t('share.author') }}</span>
 								<span class="muted time">{{ formatDate(item.createTime) }}</span>
 							</div>
 							<p class="content">{{ item.content }}</p>
 							<div class="ops">
-								<button v-if="isLogin" class="link" @click="startReply(item)">回复</button>
-								<button v-if="canDelete(item)" class="link" @click="removeComment(item)">删除</button>
+								<button v-if="isLogin" class="link" @click="startReply(item)">{{ t('share.reply') }}</button>
+								<button v-if="canDelete(item)" class="link" @click="removeComment(item)">{{ t('share.delete') }}</button>
 							</div>
 
 							<ul v-if="repliesOf(item.id).length" class="reply-list">
 								<li v-for="reply in repliesOf(item.id)" :key="reply.id" class="reply-item">
 									<div class="meta">
 										<span class="name">{{ reply.nickname }}</span>
-										<span v-if="reply.admin" class="badge">作者</span>
+										<span v-if="reply.admin" class="badge">{{ t('share.author') }}</span>
 										<span class="muted time">{{ formatDate(reply.createTime) }}</span>
 									</div>
 									<p class="content">{{ reply.content }}</p>
 									<div class="ops">
-										<button v-if="isLogin" class="link" @click="startReply(item, reply)">回复</button>
-										<button v-if="canDelete(reply)" class="link" @click="removeComment(reply)">删除</button>
+										<button v-if="isLogin" class="link" @click="startReply(item, reply)">{{ t('share.reply') }}</button>
+										<button v-if="canDelete(reply)" class="link" @click="removeComment(reply)">{{ t('share.delete') }}</button>
 									</div>
 								</li>
 							</ul>
@@ -100,43 +100,43 @@
 				</ul>
 
 				<p v-else-if="!comments.length" class="muted empty-talk">
-					还没有人说话。看完有疑问或补充，留言让作者知道。
+					{{ t('share.emptyTalk') }}
 				</p>
 
 				<div v-if="totalPages > 1" class="pager">
 					<a v-if="hasPrev" class="page-btn" :href="pagerHref(currentPage - 1)" rel="prev"
-					   @click.prevent="go(pagerTo(currentPage - 1), $event)">上一页</a>
-					<span v-else class="page-btn disabled">上一页</span>
-					<span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+					   @click.prevent="go(pagerTo(currentPage - 1), $event)">{{ t('common.prev') }}</a>
+					<span v-else class="page-btn disabled">{{ t('common.prev') }}</span>
+					<span class="page-info">{{ t('share.pageInfo', {page: currentPage, total: totalPages}) }}</span>
 					<a v-if="hasNext" class="page-btn" :href="pagerHref(currentPage + 1)" rel="next"
-					   @click.prevent="go(pagerTo(currentPage + 1), $event)">下一页</a>
-					<span v-else class="page-btn disabled">下一页</span>
+					   @click.prevent="go(pagerTo(currentPage + 1), $event)">{{ t('common.next') }}</a>
+					<span v-else class="page-btn disabled">{{ t('common.next') }}</span>
 				</div>
 
 				<div v-if="isLogin" class="talk-form">
 					<div v-if="replyTo" class="replying">
-						<span>回复 {{ replyTo.nickname }}</span>
-						<button class="link" @click="cancelReply">取消</button>
+						<span>{{ t('share.replying', {name: replyTo.nickname}) }}</span>
+						<button class="link" @click="cancelReply">{{ t('share.cancel') }}</button>
 					</div>
 					<textarea v-model="draft" rows="3" maxlength="500"
-					          :placeholder="replyTo ? `回复 ${replyTo.nickname}…` : '说说你的看法，或追问一句'"
+					          :placeholder="replyTo ? t('share.placeholderReply', {name: replyTo.nickname}) : t('share.placeholder')"
 					          @keydown.ctrl.enter="submitComment"/>
 					<p v-if="notice" class="notice">{{ notice }}</p>
 					<div class="form-actions">
 						<span class="muted counter">{{ draft.length }}/500</span>
 						<button class="btn" :disabled="sending || !draft.trim()" @click="submitComment">
-							{{ sending ? '发送中…' : '发送' }}
+							{{ sending ? t('share.sending') : t('share.send') }}
 						</button>
 					</div>
 				</div>
 				<div v-else class="login-tip">
-					<NuxtLink :to="`/login?redirect=${encodeURIComponent(route.fullPath)}`" class="btn">登录后参与讨论</NuxtLink>
-					<span class="muted small">留言需要登录，避免匿名刷屏</span>
+					<NuxtLink :to="localePath(`/login?redirect=${encodeURIComponent(route.fullPath)}`)" class="btn">{{ t('share.loginToJoin') }}</NuxtLink>
+					<span class="muted small">{{ t('share.loginHint') }}</span>
 				</div>
 			</section>
 
 			<p class="muted foot">
-				回答由模型基于站内资料生成，可能有偏差；重要信息请点开来源核对。
+				{{ t('share.foot') }}
 			</p>
 		</template>
 	</div>
@@ -144,6 +144,9 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
+const brand = useBrand()
 const token = computed(() => String(route.params.token))
 const {call, isLogin, user} = useApi()
 
@@ -175,11 +178,9 @@ const errorMessage = computed(() => {
 	if (payload.value) {
 		return ''
 	}
-	return expired.value ? '这个分享链接已经过期' : '分享内容不存在或已失效'
+	return expired.value ? t('share.expired') : t('share.invalid')
 })
-const errorHint = computed(() => expired.value
-	? '作者设置了有效期，到期后链接自动关闭；可以让作者重新分享一次。'
-	: '作者可能取消了分享，或这段对话已被删除。')
+const errorHint = computed(() => expired.value ? t('share.expiredHint') : t('share.invalidHint'))
 
 const highlighted = ref<number | null>(null)
 const views = ref(Number(payload.value?.views || 0))
@@ -189,11 +190,11 @@ const liking = ref(false)
 
 const expiryText = computed(() => {
 	if (!expiresAt.value) {
-		return '长期有效'
+		return t('share.forever')
 	}
 	const date = new Date(expiresAt.value)
 	const days = Math.ceil((date.getTime() - Date.now()) / 86400000)
-	return days > 0 ? `${days} 天后过期` : '即将过期'
+	return days > 0 ? t('share.expiring', {n: days}) : t('share.soon')
 })
 
 /*
@@ -422,7 +423,8 @@ function onCitationClick(event: MouseEvent) {
 }
 
 function sourceText(type: string) {
-	return {BLOG: '文章', PRODUCT: '商品', LESSON: '课时'}[type] || '内容'
+	const key = `search.sources.${String(type).toLowerCase()}`
+	return te(key) ? t(key) : type
 }
 
 const siteUrl = String(useRuntimeConfig().public.siteUrl || '').replace(/\/$/, '')
