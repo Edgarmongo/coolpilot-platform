@@ -1,73 +1,73 @@
 <template>
 	<div class="wrap">
-		<h1 class="page-title">提交需求</h1>
-		<p class="page-desc">描述越具体，报价越准确。提交后平台会先评估，再给你一份正式报价。</p>
+		<h1 class="page-title">{{ t('demandNew.title') }}</h1>
+		<p class="page-desc">{{ t('demandNew.desc') }}</p>
 
 		<div v-if="product" class="card picked">
-			<span class="tag">已选服务</span>
+			<span class="tag">{{ t('demandNew.picked') }}</span>
 			<strong>{{ product.title }}</strong>
 			<span class="muted">{{ product.subtitle }}</span>
 		</div>
 
 		<div class="card">
 			<div class="field">
-				<label>需求标题 <em>*</em></label>
-				<input v-model="form.title" maxlength="120" placeholder="例如：内部知识库问答系统">
+				<label>{{ t('demandNew.fieldTitle') }} <em>*</em></label>
+				<input v-model="form.title" maxlength="120" :placeholder="t('demandNew.titlePlaceholder')">
 			</div>
 
 			<div class="row">
 				<div class="field">
-					<label>项目类型 <em>*</em></label>
+					<label>{{ t('demandNew.projectType') }} <em>*</em></label>
 					<select v-model="form.projectType">
 						<option v-for="item in projectTypes" :key="item.value" :value="item.value">{{ item.label }}</option>
 					</select>
 				</div>
 				<div class="field">
-					<label>期望交付日期</label>
+					<label>{{ t('demandNew.expectDate') }}</label>
 					<input v-model="form.expectDate" type="date">
 				</div>
 			</div>
 
 			<div class="field">
-				<label>技术要求</label>
-				<input v-model="form.techStack" maxlength="500" placeholder="技术栈、系统规模、需要对接的系统等">
+				<label>{{ t('demandNew.tech') }}</label>
+				<input v-model="form.techStack" maxlength="500" :placeholder="t('demandNew.techPlaceholder')">
 			</div>
 
 			<div class="field">
-				<label>预算区间</label>
+				<label>{{ t('demandNew.budget') }}</label>
 				<div class="budget">
-					<input v-model.number="form.budgetMin" type="number" min="0" placeholder="最低">
+					<input v-model.number="form.budgetMin" type="number" min="0" :placeholder="t('demandNew.min')">
 					<span class="muted">—</span>
-					<input v-model.number="form.budgetMax" type="number" min="0" placeholder="最高">
-					<label class="check"><input v-model="form.budgetNegotiable" type="checkbox"> 面议</label>
+					<input v-model.number="form.budgetMax" type="number" min="0" :placeholder="t('demandNew.max')">
+					<label class="check"><input v-model="form.budgetNegotiable" type="checkbox"> {{ t('demandNew.negotiable') }}</label>
 				</div>
 			</div>
 
 			<div class="field">
-				<label>需求描述 <em>*</em></label>
+				<label>{{ t('demandNew.description') }} <em>*</em></label>
 				<textarea v-model="form.description" rows="8"
-				          placeholder="背景、目标、功能点、交付物要求、验收标准……"/>
+				          :placeholder="t('demandNew.descPlaceholder')"/>
 			</div>
 
 			<div class="field">
-				<label>附件</label>
+				<label>{{ t('demandNew.attachment') }}</label>
 				<input ref="fileInput" type="file" hidden @change="uploadAttachment">
 				<div class="attach">
 					<button class="btn ghost" type="button" :disabled="uploading" @click="$refs.fileInput.click()">
-						{{ uploading ? '上传中…' : (attachmentName || '上传需求文档') }}
+						{{ uploading ? t('demandNew.uploading') : (attachmentName || t('demandNew.uploadDoc')) }}
 					</button>
-					<span class="muted">可选，支持 pdf / docx / zip / 图片，100MB 以内</span>
+					<span class="muted">{{ t('demandNew.attachHint') }}</span>
 				</div>
 			</div>
 
 			<div class="field">
-				<label>联系方式 <em>*</em></label>
-				<input v-model="form.contact" maxlength="120" placeholder="手机 / 微信 / 邮箱，仅平台可见">
+				<label>{{ t('demandNew.contact') }} <em>*</em></label>
+				<input v-model="form.contact" maxlength="120" :placeholder="t('demandNew.contactPlaceholder')">
 			</div>
 
 			<div class="actions">
 				<button class="btn" :disabled="submitting" @click="submit">
-					{{ submitting ? '提交中…' : '提交需求' }}
+					{{ submitting ? t('demandNew.submitting') : t('demandNew.submit') }}
 				</button>
 				<span v-if="error" class="error">{{ error }}</span>
 			</div>
@@ -79,20 +79,16 @@
 const route = useRoute()
 const router = useRouter()
 const {call, isLogin, token} = useApi()
+const {t} = useI18n()
 
-useHead({title: '提交需求 - CoolSkyAI'})
+useHead({title: t('demandNew.title')})
 
 if (!isLogin.value) {
 	await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
 }
 
-const projectTypes = [
-	{value: 'BACKEND', label: '后端开发'},
-	{value: 'AI', label: 'AI 应用'},
-	{value: 'DEPLOY', label: '部署运维'},
-	{value: 'CONSULT', label: '技术咨询'},
-	{value: 'OTHER', label: '其他'}
-]
+const projectTypes = computed(() => ['BACKEND', 'AI', 'DEPLOY', 'CONSULT', 'OTHER']
+	.map(value => ({value, label: t(`demandNew.types.${value}`)})))
 
 const form = reactive({
 	productId: null as number | null,
@@ -137,7 +133,7 @@ async function uploadAttachment(event: any) {
 			form.attachmentFileId = res.data.fileId
 			attachmentName.value = file.name
 		} else {
-			alert(res.msg || '上传失败')
+			alert(res.msg || t('demandNew.uploadFailed'))
 		}
 	} finally {
 		uploading.value = false

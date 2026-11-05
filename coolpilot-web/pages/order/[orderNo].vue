@@ -2,8 +2,8 @@
 	<div class="card" v-if="order">
 		<div class="head">
 			<div>
-				<h1 class="page-title">收银台</h1>
-				<p class="page-desc">订单 {{ order.orderNo }}</p>
+				<h1 class="page-title">{{ t('order.title') }}</h1>
+				<p class="page-desc">{{ t('order.orderNo', {no: order.orderNo}) }}</p>
 			</div>
 			<span class="status">{{ statusText(order.status) }}</span>
 		</div>
@@ -14,7 +14,7 @@
 				<span>¥{{ price(item.amount) }}</span>
 			</div>
 			<div class="row total">
-				<span>应付金额</span>
+				<span>{{ t('order.amountDue') }}</span>
 				<strong>¥{{ price(order.payAmount) }}</strong>
 			</div>
 		</div>
@@ -22,72 +22,74 @@
 		<!--待支付-->
 		<template v-if="order.status === 'PENDING_PAY'">
 			<div v-if="!payInfo" class="block">
-				<h3>选择收款方式</h3>
+				<h3>{{ t('order.chooseChannel') }}</h3>
 				<div class="channels">
 					<button v-for="(name, code) in channels" :key="code"
 					        :class="['channel', {active: channel === code}]" @click="channel = code">
-						{{ name }}
+						{{ channelLabel(code, name) }}
 					</button>
 				</div>
 				<button class="btn" :disabled="busy" @click="startPay">
-					{{ busy ? '生成中…' : '生成收款信息' }}
+					{{ busy ? t('order.generating') : t('order.generate') }}
 				</button>
 			</div>
 
 			<div v-else class="block">
-				<h3>请完成转账</h3>
+				<h3>{{ t('order.completeTransfer') }}</h3>
 				<ul class="info">
-					<li><span>收款方式</span><b>{{ payInfo.channelName }}</b></li>
+					<li><span>{{ t('order.channel') }}</span><b>{{ payInfo.channelName }}</b></li>
 					<li><span>应付金额</span><b class="amount">¥{{ price(payInfo.amount) }}</b></li>
-					<li><span>转账备注</span><b>{{ payInfo.transferRemark }}</b></li>
-					<li v-if="payInfo.payeeName"><span>收款人</span><b>{{ payInfo.payeeName }}</b></li>
+					<li><span>{{ t('order.remark') }}</span><b>{{ payInfo.transferRemark }}</b></li>
+					<li v-if="payInfo.payeeName"><span>{{ t('order.payee') }}</span><b>{{ payInfo.payeeName }}</b></li>
 				</ul>
-				<p class="tip">{{ payInfo.tip }}</p>
+				<p class="tip">{{ payTip }}</p>
 
 				<!-- 收款码：后端一直有返回 qrCodeUrl，之前这里没渲染，买家只能自己找收款方 -->
 				<template v-if="payInfo.qrCodeUrl">
 					<div v-if="!qrFailed" class="qr-box">
-						<img :src="payInfo.qrCodeUrl" alt="收款码" @error="qrFailed = true">
-						<p class="qr-tip">扫码后请核对收款人，金额与备注照上方填写</p>
+						<img :src="payInfo.qrCodeUrl" :alt="t('order.channel')" @error="qrFailed = true">
+						<p class="qr-tip">{{ t('order.qrTip') }}</p>
 					</div>
-					<p v-else class="tip warn">收款码加载失败，可能尚未配置好，请联系站长。</p>
+					<p v-else class="tip warn">{{ t('order.qrFailed') }}</p>
 				</template>
 				<a v-else-if="payInfo.payUrl" class="pay-link btn" :href="payInfo.payUrl"
-				   target="_blank" rel="noopener noreferrer">前往 PayPal 付款</a>
+				   target="_blank" rel="noopener noreferrer">{{ t('order.paypal') }}</a>
 
 				<div class="proof">
-					<h4>已转账？填写付款信息</h4>
+					<h4>{{ t('order.proofTitle') }}</h4>
 					<div class="form">
-						<input v-model="payerName" placeholder="付款人姓名">
+						<input v-model="payerName" :placeholder="t('order.payerName')">
 						<input v-model="transferTime" type="datetime-local">
 					</div>
-					<button class="btn" :disabled="busy" @click="submitProof">提交付款凭证</button>
+					<button class="btn" :disabled="busy" @click="submitProof">{{ t('order.submitProof') }}</button>
 				</div>
 			</div>
 		</template>
 
 		<div v-else-if="order.status === 'PENDING_CONFIRM'" class="block">
-			<h3>已收到付款信息</h3>
-			<p class="tip">我会在 24 小时内核对到账，确认后自动开通，无需重复提交。</p>
+			<h3>{{ t('order.waitConfirm') }}</h3>
+			<p class="tip">{{ t('order.waitConfirmTip') }}</p>
 		</div>
 
 		<div v-else-if="order.status === 'COMPLETED'" class="block">
-			<h3>开通成功</h3>
-			<p class="tip">权益已发放，可返回商品页查看内容。</p>
-			<NuxtLink :to="`/knowledge/${productNo}`" class="btn">去查看商品</NuxtLink>
+			<h3>{{ t('order.completed') }}</h3>
+			<p class="tip">{{ t('order.completedTip') }}</p>
+			<NuxtLink :to="localePath(`/knowledge/${productNo}`)" class="btn">{{ t('order.viewProduct') }}</NuxtLink>
 		</div>
 
 		<div v-else class="block">
 			<h3>{{ statusText(order.status) }}</h3>
-			<p class="tip">该订单当前不可支付，如有疑问请联系站长。</p>
+			<p class="tip">{{ t('order.notPayable') }}</p>
 		</div>
 	</div>
-	<div v-else class="empty card">订单不存在</div>
+	<div v-else class="empty card">{{ t('order.notFound') }}</div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const {call, isLogin} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
 const busy = ref(false)
 const channel = ref('MANUAL_WECHAT')
@@ -126,7 +128,7 @@ async function startPay() {
 			qrFailed.value = false
 			payInfo.value = res.data
 		} else {
-			alert(res.msg || '生成收款信息失败')
+			alert(res.msg || t('order.failedGenerate'))
 		}
 	} finally {
 		busy.value = false
@@ -135,7 +137,7 @@ async function startPay() {
 
 async function submitProof() {
 	if (!payerName.value.trim()) {
-		alert('请填写付款人姓名')
+		alert(t('order.needPayer'))
 		return
 	}
 	busy.value = true
@@ -148,7 +150,7 @@ async function submitProof() {
 		if (res.code === 200) {
 			await load()
 		} else {
-			alert(res.msg || '提交失败')
+			alert(res.msg || t('order.failedSubmit'))
 		}
 	} finally {
 		busy.value = false
@@ -156,11 +158,21 @@ async function submitProof() {
 }
 
 function statusText(status: string) {
-	return {
-		PENDING_PAY: '待支付', PENDING_CONFIRM: '待确认收款', PAID: '已支付', COMPLETED: '已完成',
-		CANCELLED: '已取消', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款'
-	}[status] || status
+	const key = `order.status.${status}`
+	return te(key) ? t(key) : status
 }
+
+/** 渠道显示名与提示都由前端按代码取词条，后端返回的中文只在未知渠道时兜底 */
+function channelLabel(code: string, fallback: string) {
+	const key = `order.channelName.${code}`
+	return te(key) ? t(key) : fallback
+}
+
+const payTip = computed(() => {
+	const code = payInfo.value?.channel
+	const key = `order.tip.${code}`
+	return code && te(key) ? t(key) : (payInfo.value?.tip || '')
+})
 
 function price(value: number) {
 	return Number(value || 0).toFixed(2).replace(/\.00$/, '')
