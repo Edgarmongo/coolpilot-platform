@@ -47,6 +47,71 @@
 				</div>
 			</article>
 
+			<section class="talk card">
+				<div class="talk-head">
+					<span class="talk-title">讨论</span>
+					<span class="muted small">{{ comments.length ? `${comments.length} 条留言` : '还没有留言' }}</span>
+				</div>
+
+				<ul v-if="topComments.length" class="talk-list">
+					<li v-for="item in topComments" :key="item.id" class="talk-item">
+						<img class="avatar" :src="item.avatar" alt=""/>
+						<div class="body">
+							<div class="meta">
+								<span class="name">{{ item.nickname }}</span>
+								<span v-if="item.admin" class="badge">作者</span>
+								<span class="muted time">{{ formatDate(item.createTime) }}</span>
+							</div>
+							<p class="content">{{ item.content }}</p>
+							<div class="ops">
+								<button v-if="isLogin" class="link" @click="startReply(item)">回复</button>
+								<button v-if="canDelete(item)" class="link" @click="removeComment(item)">删除</button>
+							</div>
+
+							<ul v-if="repliesOf(item.id).length" class="reply-list">
+								<li v-for="reply in repliesOf(item.id)" :key="reply.id" class="reply-item">
+									<div class="meta">
+										<span class="name">{{ reply.nickname }}</span>
+										<span v-if="reply.admin" class="badge">作者</span>
+										<span class="muted time">{{ formatDate(reply.createTime) }}</span>
+									</div>
+									<p class="content">{{ reply.content }}</p>
+									<div class="ops">
+										<button v-if="isLogin" class="link" @click="startReply(item, reply)">回复</button>
+										<button v-if="canDelete(reply)" class="link" @click="removeComment(reply)">删除</button>
+									</div>
+								</li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+
+				<p v-else-if="!comments.length" class="muted empty-talk">
+					还没有人说话。看完有疑问或补充，留言让作者知道。
+				</p>
+
+				<div v-if="isLogin" class="talk-form">
+					<div v-if="replyTo" class="replying">
+						<span>回复 {{ replyTo.nickname }}</span>
+						<button class="link" @click="cancelReply">取消</button>
+					</div>
+					<textarea v-model="draft" rows="3" maxlength="500"
+					          :placeholder="replyTo ? `回复 ${replyTo.nickname}…` : '说说你的看法，或追问一句'"
+					          @keydown.ctrl.enter="submitComment"/>
+					<p v-if="notice" class="notice">{{ notice }}</p>
+					<div class="form-actions">
+						<span class="muted counter">{{ draft.length }}/500</span>
+						<button class="btn" :disabled="sending || !draft.trim()" @click="submitComment">
+							{{ sending ? '发送中…' : '发送' }}
+						</button>
+					</div>
+				</div>
+				<div v-else class="login-tip">
+					<NuxtLink :to="`/login?redirect=${encodeURIComponent(route.fullPath)}`" class="btn">登录后参与讨论</NuxtLink>
+					<span class="muted small">留言需要登录，避免匿名刷屏</span>
+				</div>
+			</section>
+
 			<p class="muted foot">
 				回答由模型基于站内资料生成，可能有偏差；重要信息请点开来源核对。
 			</p>
@@ -57,6 +122,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const token = computed(() => String(route.params.token))
+const {call, isLogin, user} = useApi()
 
 /*
  * 分享可能已经过期（410）或作者撤销了（400），两者对访问者的意义不同：
@@ -142,6 +208,86 @@ async function toggleLike() {
 		// 失败就保持原样，不弹窗打断阅读
 	} finally {
 		liking.value = false
+	}
+}
+
+/* ---------------- 讨论 ---------------- */
+
+const {data: commentData} = await useAsyncData(`share-comments-${token.value}`, async () => {
+	try {
+		return await call<any>(`/share/answer/${token.value}/comments`)
+	} catch (error) {
+		return null
+	}
+})
+
+const comments = computed<any[]>(() => {
+	const res = commentData.value
+	return res && res.code === 200 ? (res.data?.comments || []) : []
+})
+/** 只有两层：顶楼 + 直接回复 */
+const topComments = computed(() => comments.value.filter(item => !item.parentId || item.parentId === -1))
+
+function repliesOf(id: number) {
+	return comments.value.filter(item => item.parentId === id)
+}
+
+const draft = ref('')
+const sending = ref(false)
+const replyTo = ref<any | null>(null)
+/** 失败原因就地提示，比弹窗打断阅读友好 */
+const notice = ref('')
+
+function startReply(top: any, reply?: any) {
+	// 回复「回复」时仍然挂在顶楼下，和后端的两层规则保持一致
+	replyTo.value = reply || top
+}
+
+function cancelReply() {
+	replyTo.value = null
+}
+
+/** 只能删自己的；平台所有者删别人的由后端放行，前端不额外显示入口 */
+function canDelete(item: any) {
+	return isLogin.value && user.value && Number(user.value.id) === Number(item.userId)
+}
+
+async function submitComment() {
+	const text = draft.value.trim()
+	if (!text || sending.value) {
+		return
+	}
+	sending.value = true
+	try {
+		const res: any = await call(`/share/answer/${token.value}/comments`, {
+			method: 'POST',
+			body: {content: text, parentId: replyTo.value?.id ?? -1}
+		})
+		if (res && res.code === 200) {
+			commentData.value = res
+			draft.value = ''
+			replyTo.value = null
+			notice.value = ''
+		} else {
+			notice.value = res?.msg || '留言失败，请稍后再试'
+		}
+	} catch (e) {
+		notice.value = '留言失败，请稍后再试'
+	} finally {
+		sending.value = false
+	}
+}
+
+async function removeComment(item: any) {
+	if (!confirm('删除这条留言？')) {
+		return
+	}
+	const res: any = await call(`/share/answer/${token.value}/comments/${item.id}`, {method: 'DELETE'})
+	if (res && res.code === 200) {
+		commentData.value = res
+		notice.value = ''
+	} else {
+		notice.value = res?.msg || '删除失败，请稍后再试'
 	}
 }
 
@@ -363,5 +509,190 @@ useHead(() => ({
 .foot {
 	margin-top: 12px;
 	text-align: center;
+}
+
+.talk {
+	margin-top: 14px;
+}
+
+.talk-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.talk-title {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.talk-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.talk-item {
+	display: flex;
+	gap: 10px;
+}
+
+.avatar {
+	flex: none;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	object-fit: cover;
+	background: #f1f5f4;
+}
+
+.body {
+	flex: 1;
+	min-width: 0;
+}
+
+.meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12.5px;
+}
+
+.name {
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.badge {
+	font-size: 11px;
+	line-height: 16px;
+	padding: 0 4px;
+	border-radius: 4px;
+	background: #eef7f5;
+	color: var(--teal);
+}
+
+.time {
+	font-size: 11.5px;
+}
+
+.content {
+	margin: 3px 0 0;
+	font-size: 13.5px;
+	line-height: 1.75;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.ops {
+	display: flex;
+	gap: 12px;
+	margin-top: 2px;
+}
+
+.link {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--muted);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.link:hover {
+	color: var(--teal);
+}
+
+.reply-list {
+	list-style: none;
+	margin: 8px 0 0;
+	padding: 8px 0 0 10px;
+	border-left: 2px solid var(--line);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.reply-item .content {
+	font-size: 13px;
+}
+
+.empty-talk {
+	margin: 4px 0 0;
+	font-size: 13px;
+}
+
+.talk-form {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px dashed var(--line);
+}
+
+.replying {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.talk-form textarea {
+	width: 100%;
+	box-sizing: border-box;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 9px 10px;
+	font-size: 13.5px;
+	line-height: 1.7;
+	font-family: inherit;
+	color: var(--ink);
+	background: #f9fbfa;
+	resize: vertical;
+}
+
+.talk-form textarea:focus {
+	outline: none;
+	border-color: var(--teal);
+	background: #fff;
+}
+
+.form-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 8px;
+}
+
+.counter {
+	font-size: 11.5px;
+}
+
+.login-tip {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px dashed var(--line);
+}
+
+.login-tip .btn,
+.talk .btn {
+	padding: 6px 16px;
+	font-size: 13px;
+}
+
+.notice {
+	margin: 8px 0 0;
+	font-size: 12.5px;
+	color: #b91c1c;
 }
 </style>

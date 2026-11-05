@@ -69,6 +69,12 @@ public interface AiConversationMapper {
 			"ORDER BY id DESC LIMIT 1")
 	String lastUserQuestion(@Param("conversationId") Long conversationId);
 
+	/**
+	 * 会话归属人：分享页收到评论时通知他
+	 */
+	@Select("SELECT user_id FROM ai_conversation WHERE id = #{id}")
+	Long findOwnerId(@Param("id") Long id);
+
 	@Select("SELECT COUNT(*) FROM ai_message WHERE conversation_id = #{conversationId}")
 	int countMessages(@Param("conversationId") Long conversationId);
 

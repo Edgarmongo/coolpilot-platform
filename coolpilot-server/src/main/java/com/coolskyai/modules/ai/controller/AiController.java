@@ -18,6 +18,7 @@ import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.modules.ai.dto.ChatDTO;
 import com.coolskyai.modules.ai.service.AiSearchService;
 import com.coolskyai.modules.ai.service.RagChatService;
+import com.coolskyai.modules.ai.service.ShareCommentService;
 import com.coolskyai.util.ClientIpResolver;
 
 import java.util.Map;
@@ -43,6 +44,8 @@ public class AiController {
 	private AccountService accountService;
 	@Autowired
 	private ClientIpResolver clientIpResolver;
+	@Autowired
+	private ShareCommentService shareCommentService;
 
 	@GetMapping("/ai/search")
 	public Result search(@RequestParam String q,
@@ -149,6 +152,48 @@ public class AiController {
 	@PostMapping("/share/answer/{token}/like")
 	public Result likeShare(@PathVariable String token, HttpServletRequest request) {
 		return Result.ok("OK", ragChatService.likeShare(token, clientIpResolver.resolve(request), true));
+	}
+
+	/**
+	 * 分享页的讨论（公开可读，不需要登录）
+	 */
+	@GetMapping("/share/answer/{token}/comments")
+	public Result shareComments(@PathVariable String token) {
+		return Result.ok("OK", shareCommentService.list(token));
+	}
+
+	/**
+	 * 发表留言：只允许登录用户，未登录由 SecurityPaths 拦在 403
+	 */
+	@AccessLimit(seconds = 30, maxCount = 3, msg = "留言太频繁，稍后再试")
+	@PostMapping("/share/answer/{token}/comments")
+	public Result postShareComment(@PathVariable String token,
+	                               @RequestBody(required = false) Map<String, Object> body,
+	                               HttpServletRequest request) {
+		if (body == null) {
+			throw new com.coolskyai.exception.BadRequestException("说点什么吧");
+		}
+		Long parentId = null;
+		Object raw = body.get("parentId");
+		if (raw != null && !"-1".equals(String.valueOf(raw))) {
+			try {
+				parentId = Long.parseLong(String.valueOf(raw).trim());
+			} catch (NumberFormatException e) {
+				throw new com.coolskyai.exception.BadRequestException("回复的评论不存在");
+			}
+		}
+		Object content = body.get("content");
+		return Result.ok("留言成功", shareCommentService.add(token,
+				content == null ? null : String.valueOf(content), parentId,
+				clientIpResolver.resolve(request)));
+	}
+
+	/**
+	 * 删除自己的留言
+	 */
+	@DeleteMapping("/share/answer/{token}/comments/{id}")
+	public Result deleteShareComment(@PathVariable String token, @PathVariable Long id) {
+		return Result.ok("已删除", shareCommentService.delete(token, id));
 	}
 
 	@DeleteMapping("/share/answer/{token}/like")

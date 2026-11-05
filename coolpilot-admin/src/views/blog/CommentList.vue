@@ -15,7 +15,7 @@
 				</template>
 			</el-table-column>
 			<el-table-column label="所属文章" min-width="160" show-overflow-tooltip>
-				<template #default="{row}">{{ row.blog ? row.blog.title : (row.pageName || '-') }}</template>
+				<template #default="{row}">{{ row.blog ? row.blog.title : (row.page === 3 ? '分享的问答' : (row.pageName || '-')) }}</template>
 			</el-table-column>
 			<el-table-column label="显示" width="80">
 				<template #default="{row}">

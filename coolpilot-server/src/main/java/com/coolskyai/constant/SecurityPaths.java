@@ -53,6 +53,8 @@ public final class SecurityPaths {
 			// AI 问答历史与分享：未登录可以问，但不落库、不建会话
 			"/ai/conversations", "/ai/conversation/**",
 			"/ai/answer/**",
+			// 分享页留言：读走 PUBLIC_GET 提前放行，能走到这里的只有 POST/DELETE
+			"/share/answer/*/comments", "/share/answer/*/comments/*",
 			// V1.2 技术服务：需求提交/报价确认/项目验收
 			"/demand", "/demands", "/demand/**",
 			"/quote/**",
@@ -69,6 +71,17 @@ public final class SecurityPaths {
 	 *
 	 * 每一项都要能说清为什么公开，说不清的就该进 AUTHENTICATED。
 	 */
+	/**
+	 * 匿名可读、但同一路径的写操作需要登录（按 HTTP 方法区分）
+	 *
+	 * 分享页留言天然是「谁都能看，留言要登录」：
+	 * 只靠路径表达不了，拆成 /share/comments 读、/share/answer/{token}/comments 写
+	 * 又会让前端记两个 URL。这里单列一张 GET 白名单，读写在同一个资源路径上。
+	 */
+	public static final String[] PUBLIC_GET = {
+			"/share/answer/*/comments"
+	};
+
 	public static final String[] PUBLIC = {
 			// 内容浏览
 			"/blogs", "/blog", "/blog/*/products", "/blog/*/topics", "/archives", "/searchBlog", "/category", "/tag",

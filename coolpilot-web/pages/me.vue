@@ -331,7 +331,7 @@ async function removeFavorite(fav: any) {
 }
 
 function msgTypeText(type: string) {
-	return {ORDER: '订单', DEMAND: '需求', PROJECT: '项目', SYSTEM: '系统'}[type] || '通知'
+	return {ORDER: '订单', DEMAND: '需求', PROJECT: '项目', COMMENT: '互动', SYSTEM: '系统'}[type] || '通知'
 }
 
 async function readMessage(msg: any) {

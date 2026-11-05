@@ -508,8 +508,10 @@ public class RagChatService {
 
 	/**
 	 * 取分享内容并校验有效期
+	 *
+	 * 公开读、阅读统计、点赞、评论都要先过这一关，所以暴露给同包的服务用。
 	 */
-	private AiMessage requireShare(String token) {
+	public AiMessage requireShare(String token) {
 		if (token == null || token.trim().isEmpty() || token.length() > 32) {
 			throw new BadRequestException("分享链接无效");
 		}

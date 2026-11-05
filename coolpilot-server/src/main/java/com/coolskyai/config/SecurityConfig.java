@@ -1,6 +1,7 @@
 package com.coolskyai.config;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -88,6 +89,11 @@ public class SecurityConfig {
 						 * 路径清单集中在 SecurityPaths.AUTHENTICATED，新增接口只改那一处；
 						 * 漏加的请求会被 anyRequest().permitAll() 静默放行，这是历史踩过的坑。
 						 */
+						/*
+						 * 读公开、写要登录的路径（如分享页留言）：只放行 GET，
+						 * POST/DELETE 继续往下走，由 AUTHENTICATED 要求登录。
+						 */
+						.requestMatchers(HttpMethod.GET, SecurityPaths.PUBLIC_GET).permitAll()
 						.requestMatchers(SecurityPaths.AUTHENTICATED).hasAnyAuthority(Role.OWNER, Role.USER)
 						/*
 						 * 公开接口：显式白名单，每一项都在 SecurityPaths.PUBLIC 里写明理由。
