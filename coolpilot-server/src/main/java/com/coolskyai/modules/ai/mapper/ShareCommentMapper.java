@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Update;
 import com.coolskyai.modules.ai.entity.ShareComment;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: 分享页评论（复用 comment 表，target_type='SHARE'）
@@ -85,6 +86,29 @@ public interface ShareCommentMapper {
 
 	@Select("SELECT COUNT(*) FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} AND is_published = 1")
 	int countPublished(@Param("targetId") Long targetId);
+
+	/**
+	 * 我的留言：带上是哪条分享、分享还在不在
+	 *
+	 * question 用相关子查询取「这条回答之前最近的一个提问」，
+	 * 比先查一遍再逐条查问题省得多 —— 一页最多 50 条。
+	 *
+	 * 分享已撤销/过期/对话被删的留言**仍然列出来**（JOIN 内连的 ai_message 保证对话还在，
+	 * 撤销与过期靠字段判断）：用户需要知道「我说过这句」，只是点不进去。
+	 */
+	@Select("SELECT c.id, c.content, c.create_time AS createTime, c.parent_comment_id AS parentCommentId, " +
+			"m.id AS messageId, m.share_token AS shareToken, m.share_expires_at AS shareExpiresAt, " +
+			"(SELECT q.content FROM ai_message q WHERE q.conversation_id = m.conversation_id " +
+			" AND q.role = 'USER' AND q.id < m.id ORDER BY q.id DESC LIMIT 1) AS question " +
+			"FROM comment c JOIN ai_message m ON m.id = c.target_id " +
+			"WHERE c.target_type = 'SHARE' AND c.user_id = #{userId} AND c.is_published = 1 " +
+			"ORDER BY c.id DESC LIMIT #{offset}, #{size}")
+	List<Map<String, Object>> pageByUser(@Param("userId") Long userId,
+	                                     @Param("offset") int offset, @Param("size") int size);
+
+	@Select("SELECT COUNT(*) FROM comment c JOIN ai_message m ON m.id = c.target_id " +
+			"WHERE c.target_type = 'SHARE' AND c.user_id = #{userId} AND c.is_published = 1")
+	int countByUser(@Param("userId") Long userId);
 
 	/**
 	 * 软删除：保留行，后台仍能看到是谁说过什么（审核/追责需要）

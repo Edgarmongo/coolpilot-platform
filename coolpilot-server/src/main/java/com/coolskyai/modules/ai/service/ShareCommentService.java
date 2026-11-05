@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
+import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.modules.ai.entity.AiMessage;
 import com.coolskyai.modules.ai.entity.ShareComment;
@@ -140,6 +141,20 @@ public class ShareCommentService {
 		}
 		commentMapper.hide(commentId, message.getId());
 		return counts(message.getId());
+	}
+
+	/**
+	 * 我的留言：只列自己的，且仍在展示的
+	 *
+	 * 分享被撤销或过期后留言仍留在列表里 —— 用户需要知道「我说过这句」，
+	 * 前端据此把标题变成不可点的灰色并标注「分享已关闭」。
+	 */
+	public PageResult<Map<String, Object>> myComments(Long userId, Integer pageNum, Integer pageSize) {
+		int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
+		int size = pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 50);
+		int total = commentMapper.countByUser(userId);
+		List<Map<String, Object>> list = commentMapper.pageByUser(userId, (page - 1) * size, size);
+		return new PageResult<>((total + size - 1) / size, total, list);
 	}
 
 	/**

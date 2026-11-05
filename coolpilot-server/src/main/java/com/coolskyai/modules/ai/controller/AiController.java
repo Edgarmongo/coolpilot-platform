@@ -155,6 +155,16 @@ public class AiController {
 	}
 
 	/**
+	 * 我的留言：当前账号在分享页发表过的讨论
+	 */
+	@GetMapping("/me/share-comments")
+	public Result myShareComments(@RequestParam(defaultValue = "1") Integer pageNum,
+	                              @RequestParam(defaultValue = "10") Integer pageSize) {
+		Long userId = accountService.requireUserId();
+		return Result.ok("OK", shareCommentService.myComments(userId, pageNum, pageSize));
+	}
+
+	/**
 	 * 分享页的讨论（公开可读，不需要登录）
 	 */
 	@GetMapping("/share/answer/{token}/comments")

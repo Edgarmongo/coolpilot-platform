@@ -116,6 +116,23 @@
 				</div>
 			</template>
 
+			<!-- 我的留言（分享页讨论） -->
+			<template v-else-if="tab === 'talk'">
+				<div v-if="!talks.length" class="empty">还没有在分享页留言</div>
+				<div v-for="item in talks" :key="item.id" class="fb">
+					<div class="fb-head">
+						<NuxtLink v-if="shareOpen(item)" :to="`/share/${item.shareToken}#discuss`" class="cm-link">
+							{{ item.question || '问答分享' }}
+						</NuxtLink>
+						<span v-else class="cm-link closed">{{ item.question || '问答分享' }}</span>
+						<span class="muted">{{ formatDate(item.createTime) }}</span>
+						<span v-if="!shareOpen(item)" class="status wait">分享已关闭</span>
+					</div>
+					<p class="fb-content">{{ item.content }}</p>
+					<div v-if="item.parentCommentId && item.parentCommentId !== -1" class="muted">这是对某条留言的回复</div>
+				</div>
+			</template>
+
 			<!-- 我的评论 -->
 			<template v-else-if="tab === 'comment'">
 				<div v-if="!comments.length" class="empty">还没有发表过评论</div>
@@ -219,11 +236,12 @@ const tabList = [
 	{key: 'fav', label: '我的收藏'},
 	{key: 'msg', label: '消息通知'},
 	{key: 'comment', label: '我的评论'},
+	{key: 'talk', label: '我的留言'},
 	{key: 'feedback', label: '意见反馈'},
 	{key: 'setting', label: '账户设置'}
 ] as const
 
-type TabKey = 'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'feedback' | 'setting'
+type TabKey = 'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'talk' | 'feedback' | 'setting'
 
 const route = useRoute()
 // 通知里的链接形如 /me?tab=ent，落地时直接打开对应标签
@@ -241,6 +259,8 @@ const favorites = ref<any[]>([])
 const messages = ref<any[]>([])
 const feedbacks = ref<any[]>([])
 const comments = ref<any[]>([])
+/** 分享页的留言 */
+const talks = ref<any[]>([])
 const unread = ref(0)
 
 const feedback = reactive({content: '', contact: ''})
@@ -254,7 +274,7 @@ const savingPwd = ref(false)
 if (!isLogin.value) {
 	await navigateTo('/login?redirect=/me')
 } else {
-	const [meRes, orderRes, demandRes, projectRes, entRes, favRes, msgRes, badgeRes, fbRes, cmRes]: any[] = await Promise.all([
+	const [meRes, orderRes, demandRes, projectRes, entRes, favRes, msgRes, badgeRes, fbRes, cmRes, talkRes]: any[] = await Promise.all([
 		call('/me').catch(() => null),
 		call('/orders?pageNum=1&pageSize=50').catch(() => null),
 		call('/demands?pageNum=1&pageSize=50').catch(() => null),
@@ -264,7 +284,8 @@ if (!isLogin.value) {
 		call('/messages?pageNum=1&pageSize=50').catch(() => null),
 		call('/messages/unread-count').catch(() => null),
 		call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null),
-		call('/me/comments?pageNum=1&pageSize=50').catch(() => null)
+		call('/me/comments?pageNum=1&pageSize=50').catch(() => null),
+		call('/me/share-comments?pageNum=1&pageSize=50').catch(() => null)
 	])
 	orders.value = orderRes?.data?.list || []
 	demands.value = demandRes?.data?.list || []
@@ -275,10 +296,22 @@ if (!isLogin.value) {
 	unread.value = badgeRes?.data?.count || 0
 	feedbacks.value = fbRes?.data?.list || []
 	comments.value = cmRes?.data?.list || []
+	talks.value = talkRes?.data?.list || []
 	const me = meRes?.data || user.value || {}
 	profile.nickname = me.nickname || ''
 	profile.avatar = me.avatar || ''
 	profile.email = me.email || ''
+}
+
+/** 分享还在有效期内才能点回原页面；撤销/过期后只展示内容 */
+function shareOpen(item: any) {
+	if (!item.shareToken) {
+		return false
+	}
+	if (!item.shareExpiresAt) {
+		return true
+	}
+	return new Date(item.shareExpiresAt).getTime() > Date.now()
 }
 
 function price(value: number) {
@@ -765,5 +798,11 @@ async function changePassword() {
 
 .go {
 	white-space: nowrap;
+}
+
+.cm-link.closed {
+	color: var(--muted);
+	font-weight: 500;
+	cursor: default;
 }
 </style>
