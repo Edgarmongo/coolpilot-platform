@@ -36,6 +36,7 @@
 
 <script setup>
 import {onMounted, reactive, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {updateAccount} from '@/api/account'
 import {useUserStore} from '@/store/user'
