@@ -233,6 +233,18 @@ export const UI_EN = {
 	'验收': 'Acceptance',
 	// —— 第二批：页面正文 ——
 	// —— 第三批：状态与提示 ——
+	'正在上传图片…': 'Uploading image…',
+	'还有图片正在上传，请稍候': 'Another image is still uploading — please wait',
+	'图片超过 {n} MB，请先压缩': 'Image is over {n} MB — please compress it first',
+	'已插入 {n} 张图片': 'Inserted {n} image(s)',
+	'图片还在上传，请稍候再保存': 'Images are still uploading — save once they finish',
+	'支持 Markdown，例如：## 小标题、**加粗**、```代码块```；截图后可直接 Ctrl+V 粘贴': 'Markdown supported, e.g. ## heading, **bold**, ```code```. Paste a screenshot with Ctrl+V.',
+	'正在上传图片…': 'Uploading image…',
+	'还有图片正在上传，请稍候': 'Another image is still uploading — please wait',
+	'图片超过 {n} MB，请先压缩': 'Image is over {n} MB — please compress it first',
+	'已插入 {n} 张图片': 'Inserted {n} image(s)',
+	'图片还在上传，请稍候再保存': 'Images are still uploading — save once they finish',
+	'支持 Markdown，例如：## 小标题、**加粗**、```代码块```；截图后可直接 Ctrl+V 粘贴': 'Markdown supported, e.g. ## heading, **bold**, ```code```. Paste a screenshot with Ctrl+V.',
 	' 起': ' and up',
 	'上传图片': 'Upload image',
 	'保存修改': 'Save changes',
