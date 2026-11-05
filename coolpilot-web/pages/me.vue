@@ -2,8 +2,8 @@
 	<div>
 		<div class="head">
 			<div>
-				<h1 class="page-title">我的</h1>
-				<p class="page-desc">订单、已购内容与个人互动</p>
+				<h1 class="page-title">{{ t('me.title') }}</h1>
+				<p class="page-desc">{{ t('me.desc') }}</p>
 			</div>
 		</div>
 
@@ -18,9 +18,9 @@
 		<div class="card">
 			<!-- 订单 -->
 			<template v-if="tab === 'order'">
-				<div v-if="!orders.length" class="empty">还没有订单</div>
+				<div v-if="!orders.length" class="empty">{{ t('me.emptyOrders') }}</div>
 				<div v-for="order in orders" :key="order.id" class="item">
-					<NuxtLink :to="`/order/${order.orderNo}`" class="item-main">
+					<NuxtLink :to="localePath(`/order/${order.orderNo}`)" class="item-main">
 						<strong>{{ order.titleSummary || order.orderNo }}</strong>
 						<span class="muted">{{ formatDate(order.createTime) }}</span>
 					</NuxtLink>
@@ -34,10 +34,10 @@
 			<!-- 我的需求 -->
 			<template v-else-if="tab === 'demand'">
 				<div v-if="!demands.length" class="empty">
-					还没有提交过需求。<NuxtLink to="/service" class="link">看看技术服务 →</NuxtLink>
+					{{ t('me.emptyDemands') }}<NuxtLink :to="localePath('/service')" class="link">{{ t('me.browseServices') }}</NuxtLink>
 				</div>
 				<div v-for="item in demands" :key="item.id" class="item">
-					<NuxtLink :to="`/demand/${item.demandNo}`" class="item-main">
+					<NuxtLink :to="localePath(`/demand/${item.demandNo}`)" class="item-main">
 						<strong>{{ item.title }}</strong>
 						<span class="muted">{{ item.demandNo }} · {{ formatDate(item.createTime) }}</span>
 					</NuxtLink>
@@ -49,12 +49,12 @@
 
 			<!-- 我的项目 -->
 			<template v-else-if="tab === 'project'">
-				<div v-if="!projects.length" class="empty">还没有进行中的项目，确认报价后会自动立项</div>
+				<div v-if="!projects.length" class="empty">{{ t('me.emptyProjects') }}</div>
 				<div v-for="item in projects" :key="item.id" class="item">
-					<NuxtLink :to="`/project/${item.projectNo}`" class="item-main">
+					<NuxtLink :to="localePath(`/project/${item.projectNo}`)" class="item-main">
 						<strong>{{ item.name }}</strong>
 						<span class="muted">
-							{{ item.projectNo }} · 里程碑 {{ item.acceptedCount || 0 }}/{{ item.milestoneCount || 0 }} 已验收
+							{{ item.projectNo }} · {{ item.acceptedCount || 0 }}/{{ item.milestoneCount || 0 }} {{ t('projectPage.progress') }}
 						</span>
 					</NuxtLink>
 					<div class="item-side">
@@ -66,39 +66,39 @@
 
 			<!-- 权益 -->
 			<template v-else-if="tab === 'ent'">
-				<div v-if="!entitlements.length" class="empty">还没有已购内容</div>
+				<div v-if="!entitlements.length" class="empty">{{ t('me.emptyEnt') }}</div>
 				<div v-for="ent in entitlements" :key="ent.id" class="item">
-					<NuxtLink :to="`/knowledge/${ent.productNo}`" class="item-main">
+					<NuxtLink :to="localePath(`/knowledge/${ent.productNo}`)" class="item-main">
 						<strong>{{ ent.productTitle }}</strong>
 						<span class="muted">
-							{{ ent.expireTime ? '有效期至 ' + formatDate(ent.expireTime, 'YYYY-MM-DD') : '永久有效' }}
+							{{ ent.expireTime ? t('me.validUntil', {date: formatDate(ent.expireTime, 'YYYY-MM-DD')}) : t('me.permanent') }}
 						</span>
 					</NuxtLink>
-					<div class="item-side"><span class="status">可访问</span></div>
+					<div class="item-side"><span class="status">{{ t('me.accessible') }}</span></div>
 				</div>
 			</template>
 
 			<!-- 收藏 -->
 			<template v-else-if="tab === 'fav'">
-				<div v-if="!favorites.length" class="empty">还没有收藏，文章底部或问答回答下点「收藏」即可</div>
+				<div v-if="!favorites.length" class="empty">{{ t('me.emptyFav') }}</div>
 				<div v-for="fav in favorites" :key="fav.id" class="item">
-					<NuxtLink v-if="favLink(fav)" :to="favLink(fav)" class="item-main">
-						<strong>{{ fav.targetTitle || '内容已删除' }}</strong>
-						<span class="muted">{{ typeText(fav.targetType) }} · 收藏于 {{ formatDate(fav.createTime) }}</span>
+					<NuxtLink v-if="favLink(fav)" :to="localePath(favLink(fav))" class="item-main">
+						<strong>{{ fav.targetTitle || t('me.contentDeleted') }}</strong>
+						<span class="muted">{{ typeText(fav.targetType) }} · {{ t('me.savedAt', {date: formatDate(fav.createTime)}) }}</span>
 					</NuxtLink>
 					<div v-else class="item-main">
 						<strong>{{ fav.targetTitle }}</strong>
 						<span class="muted">{{ typeText(fav.targetType) }} · {{ formatDate(fav.createTime) }}</span>
 					</div>
 					<div class="item-side">
-						<button class="link-btn" @click="removeFavorite(fav)">取消收藏</button>
+						<button class="link-btn" @click="removeFavorite(fav)">{{ t('me.unfavorite') }}</button>
 					</div>
 				</div>
 			</template>
 
 			<!-- 消息 -->
 			<template v-else-if="tab === 'msg'">
-				<div v-if="!messages.length" class="empty">暂无消息</div>
+				<div v-if="!messages.length" class="empty">{{ t('me.emptyMsg') }}</div>
 				<div v-for="msg in messages" :key="msg.id" :class="['item', {unread: !msg.isRead}]"
 				     @click="readMessage(msg)">
 					<div class="item-main">
@@ -110,7 +110,7 @@
 					</div>
 					<div class="item-side">
 						<span class="muted">{{ formatDate(msg.createTime) }}</span>
-						<span v-if="msg.linkUrl" class="muted go">查看 ›</span>
+						<span v-if="msg.linkUrl" class="muted go">{{ t('me.view') }}</span>
 						<span v-if="!msg.isRead" class="dot"/>
 					</div>
 				</div>
@@ -118,40 +118,40 @@
 
 			<!-- 我的留言（分享页讨论） -->
 			<template v-else-if="tab === 'talk'">
-				<div v-if="!talks.length" class="empty">还没有在分享页留言</div>
+				<div v-if="!talks.length" class="empty">{{ t('me.emptyTalk') }}</div>
 				<div v-for="item in talks" :key="item.id" class="fb">
 					<div class="fb-head">
-						<NuxtLink v-if="shareOpen(item)" :to="`/share/${item.shareToken}#discuss`" class="cm-link">
-							{{ item.question || '问答分享' }}
+						<NuxtLink v-if="shareOpen(item)" :to="localePath(`/share/${item.shareToken}#discuss`)" class="cm-link">
+							{{ item.question || t('me.sharedAnswer') }}
 						</NuxtLink>
-						<span v-else class="cm-link closed">{{ item.question || '问答分享' }}</span>
+						<span v-else class="cm-link closed">{{ item.question || t('me.sharedAnswer') }}</span>
 						<span class="muted">{{ formatDate(item.createTime) }}</span>
-						<span v-if="!shareOpen(item)" class="status wait">分享已关闭</span>
+						<span v-if="!shareOpen(item)" class="status wait">{{ t('me.shareClosed') }}</span>
 					</div>
 					<p class="fb-content">{{ item.content }}</p>
-					<div v-if="item.parentCommentId && item.parentCommentId !== -1" class="muted">这是对某条留言的回复</div>
+					<div v-if="item.parentCommentId && item.parentCommentId !== -1" class="muted">{{ t('me.replyToTalk') }}</div>
 				</div>
 				<div v-if="talks.length < talkTotal" class="more-row">
 					<button class="btn ghost" :disabled="loadingTalks" @click="loadMoreTalks">
-						{{ loadingTalks ? '加载中…' : `加载更多（还有 ${talkTotal - talks.length} 条）` }}
+						{{ loadingTalks ? t('common.loading') : t('me.loadMore', {n: talkTotal - talks.length}) }}
 					</button>
 				</div>
 			</template>
 
 			<!-- 我的评论 -->
 			<template v-else-if="tab === 'comment'">
-				<div v-if="!comments.length" class="empty">还没有发表过评论</div>
+				<div v-if="!comments.length" class="empty">{{ t('me.emptyComment') }}</div>
 				<div v-for="c in comments" :key="c.id" class="fb">
 					<div class="fb-head">
-						<NuxtLink v-if="c.page === 0 && c.blogId" :to="`/blog/${c.blogId}`" class="cm-link">
-							{{ c.blogTitle || '文章已删除' }}
+						<NuxtLink v-if="c.page === 0 && c.blogId" :to="localePath(`/blog/${c.blogId}`)" class="cm-link">
+							{{ c.blogTitle || t('me.postDeleted') }}
 						</NuxtLink>
-						<span v-else class="cm-link">关于我</span>
+						<span v-else class="cm-link">{{ t('me.aboutPage') }}</span>
 						<span class="muted">{{ formatDate(c.createTime) }}</span>
-						<span v-if="!c.published" class="status wait">待审核</span>
+						<span v-if="!c.published" class="status wait">{{ t('me.pendingReview') }}</span>
 					</div>
 					<p class="fb-content">{{ c.content }}</p>
-					<div v-if="c.parentCommentId && c.parentCommentId !== -1" class="muted">这是对某条评论的回复</div>
+					<div v-if="c.parentCommentId && c.parentCommentId !== -1" class="muted">{{ t('me.replyToComment') }}</div>
 				</div>
 			</template>
 
@@ -159,27 +159,27 @@
 			<template v-else-if="tab === 'feedback'">
 				<div class="feedback-form">
 					<textarea v-model="feedback.content" rows="4" maxlength="2000"
-					          placeholder="遇到的问题、想要的功能，都可以写在这里（至少 5 个字）"/>
+					          :placeholder="t('me.feedbackPlaceholder')"/>
 					<div class="form-row">
-						<input v-model="feedback.contact" placeholder="联系方式（选填，方便回复你）"/>
+						<input v-model="feedback.contact" :placeholder="t('me.contactPlaceholder')"/>
 						<button class="btn" :disabled="submitting" @click="submitFeedback">
-							{{ submitting ? '提交中…' : '提交反馈' }}
+							{{ submitting ? t('me.submitting') : t('me.submitFeedback') }}
 						</button>
 					</div>
 				</div>
 
-				<div class="sub-title">我的反馈</div>
-				<div v-if="!feedbacks.length" class="empty">还没有提交过反馈</div>
+				<div class="sub-title">{{ t('me.myFeedback') }}</div>
+				<div v-if="!feedbacks.length" class="empty">{{ t('me.emptyFeedback') }}</div>
 				<div v-for="fb in feedbacks" :key="fb.id" class="fb">
 					<div class="fb-head">
 						<span class="muted">{{ formatDate(fb.createTime) }}</span>
 						<span :class="['status', fb.status === 'RESOLVED' ? 'ok' : 'wait']">
-							{{ fb.status === 'RESOLVED' ? '已回复' : '待处理' }}
+							{{ fb.status === 'RESOLVED' ? t('me.resolved') : t('me.pending') }}
 						</span>
 					</div>
 					<p class="fb-content">{{ fb.content }}</p>
 					<div v-if="fb.reply" class="fb-reply">
-						<strong>官方回复</strong>
+						<strong>{{ t('me.officialReply') }}</strong>
 						<p>{{ fb.reply }}</p>
 					</div>
 				</div>
@@ -187,43 +187,43 @@
 
 			<!-- 账户设置 -->
 			<template v-else>
-				<div class="sub-title">基本资料</div>
+				<div class="sub-title">{{ t('me.profile') }}</div>
 				<div class="set-row">
-					<label>昵称</label>
-					<input v-model="profile.nickname" maxlength="20" placeholder="1-20 个字符">
+					<label>{{ t('me.nickname') }}</label>
+					<input v-model="profile.nickname" maxlength="20" :placeholder="t('me.nicknamePlaceholder')">
 				</div>
 				<div class="set-row">
-					<label>邮箱</label>
-					<input v-model="profile.email" placeholder="用于接收通知，可留空">
+					<label>{{ t('me.email') }}</label>
+					<input v-model="profile.email" :placeholder="t('me.emailPlaceholder')">
 				</div>
 				<div class="set-row">
-					<label>头像</label>
-					<input v-model="profile.avatar" placeholder="/img/avatar.jpg 或图片地址">
+					<label>{{ t('me.avatar') }}</label>
+					<input v-model="profile.avatar" :placeholder="t('me.avatarPlaceholder')">
 					<input ref="avatarInput" type="file" accept="image/*" hidden @change="uploadAvatar">
 					<button class="btn ghost" :disabled="uploading" @click="$refs.avatarInput.click()">
-						{{ uploading ? '上传中…' : '上传' }}
+						{{ uploading ? t('me.uploading') : t('me.upload') }}
 					</button>
 				</div>
 				<div class="set-actions">
 					<button class="btn" :disabled="savingProfile" @click="saveProfile">
-						{{ savingProfile ? '保存中…' : '保存资料' }}
+						{{ savingProfile ? t('me.saving') : t('me.saveProfile') }}
 					</button>
 				</div>
 
-				<div class="sub-title">修改密码</div>
+				<div class="sub-title">{{ t('me.changePassword') }}</div>
 				<div class="set-row">
-					<label>原密码</label>
-					<input v-model="pwd.oldPassword" type="password" placeholder="请输入当前密码">
+					<label>{{ t('me.oldPassword') }}</label>
+					<input v-model="pwd.oldPassword" type="password" :placeholder="t('me.oldPwdPlaceholder')">
 				</div>
 				<div class="set-row">
-					<label>新密码</label>
-					<input v-model="pwd.newPassword" type="password" placeholder="6-32 位">
+					<label>{{ t('me.newPassword') }}</label>
+					<input v-model="pwd.newPassword" type="password" :placeholder="t('me.newPwdPlaceholder')">
 				</div>
 				<div class="set-actions">
 					<button class="btn" :disabled="savingPwd" @click="changePassword">
-						{{ savingPwd ? '提交中…' : '修改密码' }}
+						{{ savingPwd ? t('me.submitting') : t('me.changePassword') }}
 					</button>
-					<span class="muted">修改后需要用新密码重新登录</span>
+					<span class="muted">{{ t('me.pwdHint') }}</span>
 				</div>
 			</template>
 		</div>
@@ -232,27 +232,20 @@
 
 <script setup lang="ts">
 const {call, isLogin, user, setSession, clearSession} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
-const tabList = [
-	{key: 'order', label: '订单记录'},
-	{key: 'demand', label: '我的需求'},
-	{key: 'project', label: '我的项目'},
-	{key: 'ent', label: '我的权益'},
-	{key: 'fav', label: '我的收藏'},
-	{key: 'msg', label: '消息通知'},
-	{key: 'comment', label: '我的评论'},
-	{key: 'talk', label: '我的留言'},
-	{key: 'feedback', label: '意见反馈'},
-	{key: 'setting', label: '账户设置'}
-] as const
+const TAB_KEYS = ['order', 'demand', 'project', 'ent', 'fav', 'msg', 'comment', 'talk', 'feedback', 'setting'] as const
+type TabKey = typeof TAB_KEYS[number]
 
-type TabKey = 'order' | 'demand' | 'project' | 'ent' | 'fav' | 'msg' | 'comment' | 'talk' | 'feedback' | 'setting'
+// 标签名跟语言走；key 保持不变，?tab=ent 这类深链仍然有效
+const tabList = computed(() => TAB_KEYS.map(key => ({key, label: t(`me.tabs.${key}`)})))
 
 const route = useRoute()
 // 通知里的链接形如 /me?tab=ent，落地时直接打开对应标签
 const initialTab = (): TabKey => {
 	const key = String(route.query.tab || '')
-	return (tabList.some(item => item.key === key) ? key : 'order') as TabKey
+	return (TAB_KEYS as readonly string[]).includes(key) ? key as TabKey : 'order'
 }
 
 const tab = ref<TabKey>(initialTab())
@@ -353,29 +346,23 @@ function price(value: number) {
 }
 
 function statusText(status: string) {
-	return {
-		PENDING_PAY: '待支付', PENDING_CONFIRM: '待确认', PAID: '已支付', COMPLETED: '已完成',
-		CANCELLED: '已取消', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款'
-	}[status] || status
+	const key = `order.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function demandStatusText(status: string) {
-	return {
-		PENDING_REVIEW: '待审核', PENDING_CONTACT: '待联系', EVALUATING: '评估中', PENDING_QUOTE: '待报价',
-		PENDING_CONFIRM: '待确认报价', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收', COMPLETED: '已完成',
-		REJECTED: '未通过', CANCELLED: '已取消', DISPUTED: '有争议'
-	}[status] || status
+	const key = `demandDetail.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function projectStatusText(status: string) {
-	return {
-		NOT_STARTED: '未开始', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收',
-		COMPLETED: '已完成', ARCHIVED: '已归档'
-	}[status] || status
+	const key = `projectPage.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function typeText(type: string) {
-	return {ARTICLE: '文章', MOMENT: '动态', PRODUCT: '商品', AI_ANSWER: '问答'}[type] || type
+	const key = `me.favTypes.${type}`
+	return te(key) ? t(key) : type
 }
 
 /**
@@ -398,7 +385,8 @@ async function removeFavorite(fav: any) {
 }
 
 function msgTypeText(type: string) {
-	return {ORDER: '订单', DEMAND: '需求', PROJECT: '项目', COMMENT: '互动', SYSTEM: '系统'}[type] || '通知'
+	const key = `me.msgTypes.${type}`
+	return te(key) ? t(key) : t('me.notification')
 }
 
 async function readMessage(msg: any) {
