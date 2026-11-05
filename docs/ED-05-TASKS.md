@@ -372,3 +372,20 @@ V1.1a 完成 ──→ T-301 服务商品 ──→ T-302 需求 ──→ T-303
 | 验收 | 交易与服务两条链路实测：所有者 5 条、客户 6 条消息，链接与类型正确；伪造授权码时邮件报 Authentication failed 但接口仍 200 |
 | 配置 | `MAIL_PASSWORD`（发信）、`BLOG_VIEW` / `BLOG_CMS`（邮件链接前缀）；说明见 `docs/DEPLOY.md` 第十节 |
 | 未做 | 通知偏好开关（用户自选邮件/仅站内）、摘要式合并发送、短信/微信模板消息 |
+
+---
+
+## 十二、智能问答（V1.3 第二阶段）✅ 已完成（2026-11-05）
+
+| 项 | 内容 |
+|---|---|
+| 目标 | 在检索之上生成回答，并给出可核对的来源；本地与云端模型都能接 |
+| 表 | `ai_conversation` / `ai_message`（V9），引用以 JSON 快照存 |
+| 模型 | 只依赖 OpenAI 兼容 `/chat/completions`：Ollama / vLLM / DeepSeek / 通义 一套配置切换 |
+| 后端 | `LlmClient` 接口 + `OpenAiCompatibleLlmClient`；`RagChatService` 负责检索、拼上下文、降级、落库 |
+| 接口 | `POST /ai/chat`（公开，60s/12 次限流）、`GET /ai/conversations`、`GET/DELETE /ai/conversation/{id}`；`GET /admin/ai/llm`、`POST /admin/ai/llm/test` |
+| 前台 | `/ask` 问答页（历史会话、引用卡片、示例问题）；搜索页加「让 AI 直接回答」入口；导航加「问答」 |
+| 后台 | 知识库索引页顶部新增「问答模型」卡片：配置状态、模型名、最低相似度、连通性自测 |
+| 降级 | 未配置 / 调用失败 → `degraded=true` + 原因 + 检索片段，接口不报错 |
+| 验证 | 用本地假模型跑通：请求体正确、答案与引用返回、会话列表/详情/删除、越权访问被拒；未配置时降级返回 6 条片段 |
+| 未做 | 流式输出（当前一次性返回）、真正的指代消解（现为「本轮+上一轮」补救）、答案内引用高亮 |

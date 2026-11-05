@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.ai.service.AiSearchService;
 import com.coolskyai.modules.ai.service.KnowledgeIndexService;
+import com.coolskyai.modules.ai.service.RagChatService;
 
 /**
  * @Description: 知识库管理（平台所有者）
@@ -26,6 +27,8 @@ public class AiAdminController {
 	private KnowledgeIndexService knowledgeIndexService;
 	@Autowired
 	private AiSearchService aiSearchService;
+	@Autowired
+	private RagChatService ragChatService;
 
 	@PostMapping("/ai/reindex")
 	public Result reindex() {
@@ -35,5 +38,21 @@ public class AiAdminController {
 	@GetMapping("/ai/stats")
 	public Result stats() {
 		return Result.ok("OK", aiSearchService.stats());
+	}
+
+	/**
+	 * 当前问答模型配置（不返回密钥）
+	 */
+	@GetMapping("/ai/llm")
+	public Result llm() {
+		return Result.ok("OK", ragChatService.llmStatus());
+	}
+
+	/**
+	 * 模型连通性自测：配好 Key / 本地模型后点一下就知道通没通
+	 */
+	@PostMapping("/ai/llm/test")
+	public Result llmTest() {
+		return Result.ok("OK", ragChatService.llmTest());
 	}
 }

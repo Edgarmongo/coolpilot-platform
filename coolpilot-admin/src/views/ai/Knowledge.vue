@@ -49,6 +49,32 @@
 		</el-form>
 
 		<div class="panel">
+			<div class="llm-head">
+				<h3>问答模型</h3>
+				<el-tag v-if="llm.configured" type="success" size="small">已配置</el-tag>
+				<el-tag v-else type="warning" size="small">未配置</el-tag>
+			</div>
+			<div class="llm-row">
+				<span class="muted">模型</span>
+				<code>{{ llm.model || '—' }}</code>
+				<span class="muted">引用上限</span>
+				<code>{{ llm.topK || 6 }}</code>
+				<span class="muted">最低相似度</span>
+				<code>{{ llm.minScore ?? '—' }}</code>
+			</div>
+			<p class="muted small" v-if="!llm.configured">
+				未配置时问答只返回检索片段、不调用模型。在 .env 里设置 AI_LLM_BASE_URL 与
+				AI_LLM_MODEL（本地 Ollama 与云端 DeepSeek、通义都支持）后重启生效。
+			</p>
+			<div class="llm-actions">
+				<el-button :icon="Connection" :loading="testing" @click="testModel">测试连通</el-button>
+				<span v-if="testResult" :class="['test-result', testResult.ok ? 'ok' : 'bad']">
+					{{ testResult.ok ? `连通正常，${testResult.tookMs}ms，返回：${testResult.reply}` : testResult.message }}
+				</span>
+			</div>
+		</div>
+
+		<div class="panel">
 			<h3>检索自测</h3>
 			<div class="test-row">
 				<el-input v-model="query" placeholder="输入关键词，检查召回效果" clearable @keyup.enter="search"/>
@@ -73,10 +99,13 @@
 <script setup>
 import {onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Refresh, RefreshRight} from '@element-plus/icons-vue'
-import {getAiStats, reindexKnowledge, searchAi} from '@/api/ai'
+import {Connection, Refresh, RefreshRight} from '@element-plus/icons-vue'
+import {getAiStats, getLlmStatus, reindexKnowledge, searchAi, testLlm} from '@/api/ai'
 
 const stats = ref({})
+const llm = ref({})
+const testResult = ref(null)
+const testing = ref(false)
 const loading = ref(false)
 const rebuilding = ref(false)
 
@@ -91,8 +120,12 @@ onMounted(load)
 async function load() {
 	loading.value = true
 	try {
-		const res = await getAiStats()
+		const [res, llmRes] = await Promise.all([
+			getAiStats(),
+			getLlmStatus().catch(() => null)
+		])
 		stats.value = res.data || {}
+		llm.value = (llmRes && llmRes.data) || {}
 	} finally {
 		loading.value = false
 	}
@@ -113,6 +146,17 @@ async function rebuild() {
 		await load()
 	} finally {
 		rebuilding.value = false
+	}
+}
+
+async function testModel() {
+	testing.value = true
+	testResult.value = null
+	try {
+		const res = await testLlm()
+		testResult.value = res.data || {ok: false, message: '无返回'}
+	} finally {
+		testing.value = false
 	}
 }
 
@@ -223,5 +267,47 @@ function formatTime(value) {
 	font-size: 12px;
 	color: #606266;
 	line-height: 1.7;
+}
+
+.llm-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.llm-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	font-size: 12px;
+	margin-top: 6px;
+}
+
+.llm-row code {
+	background: #f4f7f6;
+	border-radius: 4px;
+	padding: 1px 6px;
+	color: #0f766e;
+}
+
+.llm-actions {
+	margin-top: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.test-result {
+	font-size: 12px;
+}
+
+.test-result.ok {
+	color: #15803d;
+}
+
+.test-result.bad {
+	color: #b42318;
 }
 </style>

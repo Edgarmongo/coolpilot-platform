@@ -352,6 +352,39 @@ upload.file.resources-locations=file:${upload.file.path}
 - 站内消息存相对路径（`/me?tab=ent`），邮件里由 `blog.view` / `blog.cms` 补成绝对地址
 - 前台 `/me` 支持 `?tab=` 直达，通知点进去落在对应标签
 
+### 4.13 智能问答（RAG，第二阶段）
+
+模块：`com.coolskyai.modules.ai`；表：`ai_conversation` / `ai_message`（V9）。
+
+```
+提问 → 检索 Top6（复用 AiSearchService.retrieve，含权限过滤）
+     → 拼上下文（[编号] 标题 链接 正文）→ 调模型 → 答案 + 引用
+     → 登录时落库（会话 + 两条消息 + 引用快照）
+```
+
+**模型接法：一个实现覆盖本地与云端**
+
+只依赖 OpenAI 兼容的 `/chat/completions`，靠配置切换：
+
+| 部署 | base-url | 说明 |
+|---|---|---|
+| 本地 Ollama | `http://host.docker.internal:11434/v1` | 容器访问宿主机；不用 Key |
+| 本地 vLLM / LM Studio | `http://host.docker.internal:8000/v1` | 同上 |
+| DeepSeek | `https://api.deepseek.com/v1` | 需 `AI_LLM_API_KEY` |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 需 Key |
+
+- 配置项见 `application-dev.properties` 的 `ai.llm.*`；`base-url` 或 `model` 为空即视为未启用
+- 接口：`POST /ai/chat`（公开，60 秒 12 次限流）、`GET /ai/conversations`、
+  `GET/DELETE /ai/conversation/{id}`（登录）；
+  `GET /admin/ai/llm`（状态，不返回 Key）、`POST /admin/ai/llm/test`（连通性自测）
+- **降级**：未配置或调用失败时不报错，返回 `degraded=true` + `note` + 检索片段，
+  功能仍然可用；前端在原位置提示原因
+- **不检索就不调模型**：没命中任何片段时直接回「站内没有相关内容」，
+  没有资料的生成只会编，还白花一次 token
+- **追问补救**：检索空手且在多轮会话里时，用「本轮问题 + 上一轮问题」再检索一次
+  （不是真正的指代消解，但零成本救回大部分「那退款呢」这类短追问）
+- 会话只在登录后落库，匿名可问但无历史 —— 不给匿名用户建垃圾数据
+
 ### 4.11 V1.3 知识库检索（第一阶段）
 
 模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；

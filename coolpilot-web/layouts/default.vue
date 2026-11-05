@@ -16,6 +16,7 @@
 					<NuxtLink to="/about" class="nav-item" active-class="is-active">关于</NuxtLink>
 					<NuxtLink to="/knowledge" class="nav-item" active-class="is-active">知识付费</NuxtLink>
 					<NuxtLink to="/service" class="nav-item" active-class="is-active">技术服务</NuxtLink>
+					<NuxtLink to="/ask" class="nav-item" active-class="is-active">问答</NuxtLink>
 					<NuxtLink to="/search" class="nav-item" active-class="is-active">搜索</NuxtLink>
 				</nav>
 

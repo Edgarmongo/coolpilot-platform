@@ -313,3 +313,57 @@ BLOG_CMS=https://coolskyai.com/cms
 - 日志出现 `发送模板邮件失败 ... Authentication failed` → 授权码错误或未开 SMTP 服务；
 - 出现 `Connection timed out` → 服务器出网被封 465 端口，换 587 + STARTTLS 或找云厂商开白名单；
 - 业务接口始终返回成功是**预期行为**：通知失败不回滚业务。
+
+---
+
+## 十一、智能问答（大模型）
+
+问答只依赖 **OpenAI 兼容协议**（`/chat/completions`），本地模型与云端服务用同一套配置切换。
+不配置也能用：只返回检索片段，不调用模型、不产生费用。
+
+### 选型对照
+
+| 部署 | base-url | 模型示例 | 说明 |
+|---|---|---|---|
+| 本地 Ollama | `http://host.docker.internal:11434/v1` | `qwen2.5:7b` | 不需要 Key；2C4G 建议 3B/4B 量化模型 |
+| 本地 vLLM / LM Studio | `http://host.docker.internal:8000/v1` | 自选 | 需要 GPU 才有速度优势 |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | 便宜、中文好，需 Key |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` | 需 Key |
+
+### 配置
+
+```ini
+AI_LLM_BASE_URL=http://host.docker.internal:11434/v1
+AI_LLM_API_KEY=            # 本地模型留空；云端填对应 Key
+AI_LLM_MODEL=qwen2.5:7b
+AI_LLM_TIMEOUT=60          # 秒，本地小机器可以放宽到 120
+AI_LLM_MAX_TOKENS=800
+AI_LLM_TEMPERATURE=0.3
+```
+
+改完 `docker compose -f docker-compose.prod.yml up -d api` 生效。
+
+> 本地模型跑在宿主机时，容器内要用 `host.docker.internal` 访问；
+> 仓库的 compose 已经加了 `extra_hosts: host.docker.internal:host-gateway`（Linux 也适用）。
+> 如果 Ollama 跑在另一台机器上，直接写那台机器的内网 IP。
+
+### 验证
+
+后台「智能检索 → 知识库索引」顶部有模型卡片，点**测试连通**：
+返回「连通正常 + 耗时」即通；报错信息会直接显示原因。
+
+常见错误：
+
+| 现象 | 原因 |
+|---|---|
+| `401 Unauthorized` | Key 错或没生效（改完要重建容器） |
+| `404 Not Found` | base-url 少了 `/v1`（Ollama 也要带） |
+| `Connection timed out` | 容器到宿主机不通，检查 `host.docker.internal` 或换成内网 IP |
+| 答案里没有引用编号 | 命中的片段太少，或模型没遵守提示；可以换更强的模型 |
+
+### 成本与限制
+
+- 每次提问 = 1 次模型调用，上下文最多 6 个片段（约 2k 字符）
+- `/ai/chat` 限流 60 秒 12 次，防止被当成免费 API 刷
+- 检索目前用的是本地哈希向量（字面召回），换成语义 embedding 后答案质量会明显提升；
+  换 embedding 需要重建索引（后台点一次「重建索引」）

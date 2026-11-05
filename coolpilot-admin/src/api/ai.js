@@ -17,3 +17,17 @@ export function reindexKnowledge() {
 export function searchAi(params) {
 	return rawRequest({url: 'ai/search', method: 'GET', params})
 }
+
+/**
+ * 当前问答模型配置（不返回密钥）
+ */
+export function getLlmStatus() {
+	return request({url: 'ai/llm', method: 'GET'})
+}
+
+/**
+ * 模型连通性自测
+ */
+export function testLlm() {
+	return request({url: 'ai/llm/test', method: 'POST'})
+}

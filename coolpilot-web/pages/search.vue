@@ -9,6 +9,10 @@
 		</div>
 
 		<!-- 智能检索：知识库片段召回，带来源与相关度 -->
+		<NuxtLink v-if="current" :to="`/ask?q=${encodeURIComponent(current)}`" class="ask-tip">
+			想让 AI 直接回答？用「{{ current }}」去提问 →
+		</NuxtLink>
+
 		<div v-if="searched" class="result ai">
 			<div class="ai-head">
 				<h2>智能检索</h2>
@@ -158,5 +162,16 @@ useHead({title: '搜索 - CoolSkyAI'})
 
 .result {
 	margin-top: 16px;
+}
+
+.ask-tip {
+	display: inline-block;
+	margin: -8px 0 14px;
+	font-size: 13px;
+	color: var(--teal);
+}
+
+.ask-tip:hover {
+	text-decoration: underline;
 }
 </style>

@@ -91,6 +91,16 @@ services:
       BLOG_CMS: ${BLOG_CMS:-http://localhost:8079/cms}
       # 邮件服务密码，留空则发信不可用（不影响其他功能）
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      # 大模型（OpenAI 兼容）：留空则问答只返回检索片段
+      AI_LLM_BASE_URL: ${AI_LLM_BASE_URL:-}
+      AI_LLM_API_KEY: ${AI_LLM_API_KEY:-}
+      AI_LLM_MODEL: ${AI_LLM_MODEL:-}
+      AI_LLM_TIMEOUT: ${AI_LLM_TIMEOUT:-60}
+      AI_LLM_MAX_TOKENS: ${AI_LLM_MAX_TOKENS:-800}
+      AI_LLM_TEMPERATURE: ${AI_LLM_TEMPERATURE:-0.3}
+    # 本地跑 Ollama 时容器要用 host.docker.internal 访问宿主机；Linux 下需要这条映射
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8091:8091"
     volumes:

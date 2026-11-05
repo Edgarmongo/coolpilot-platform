@@ -667,8 +667,9 @@ CREATE TABLE `milestone` (
 
 ## 十二、AI 域（V1.3 第一阶段已落库）
 
-> **实施状态（2026-11-05）**：先落 `kb_knowledge_base` / `kb_document` / `kb_chunk` 三张表（V7），
-> 向量存 MySQL 并在进程内检索，未引入独立向量库；`ai_conversation` / `ai_message` 仍未落库。
+> **实施状态（2026-11-05）**：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）
+> 与 `ai_conversation` / `ai_message`（V9）均已落库，向量存 MySQL 并在进程内检索，未引入独立向量库。
+> 会话表不存模型侧 token 统计，`citations` 保留回答当时的引用快照（标题改了不影响历史）。
 > 决策与迁移条件见 `docs/ADR-0001-VECTOR-STORE.md`。
 
 | 表 | 关键字段 | 说明 |

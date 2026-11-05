@@ -106,10 +106,10 @@ jobs:
             mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B \
             -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='coolpilot' AND table_name <> 'flyway_schema_history'")
           echo "业务表数量: $COUNT"
-          test "$COUNT" -ge 51 || { echo "期望至少 51 张业务表，实际 $COUNT"; exit 1; }
+          test "$COUNT" -ge 53 || { echo "期望至少 53 张业务表，实际 $COUNT"; exit 1; }
 
           # 关键表逐个点名：数量对得上但少了某张表的情况也要拦住
-          for T in user blog product orders payment refund entitlement demand quote project milestone delivery service_item service_event kb_document kb_chunk topic topic_article; do
+          for T in user blog product orders payment refund entitlement demand quote project milestone delivery service_item service_event kb_document kb_chunk topic topic_article ai_conversation ai_message; do
             EXISTS=$(docker run --rm --network host mysql:8.0 \
               mysql -h 127.0.0.1 -uroot -pci-root-pass -N -B \
               -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='coolpilot' AND table_name='$T'")

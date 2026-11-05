@@ -55,3 +55,19 @@
 | 接口 | `GET /ai/search?q=`（公开）、`POST /admin/ai/reindex`、`GET /admin/ai/stats` |
 | 前端 | 搜索页增加「智能检索」区，结果带来源与相关度 |
 | 不做 | 对话式问答（等 Embedding/LLM Key）、多知识库管理界面 |
+
+---
+
+## 补充：生成模型（2026-11-05）
+
+问答阶段没有绑定具体厂商，只依赖 **OpenAI 兼容协议**：
+
+- 本地：Ollama / vLLM / LM Studio，`base-url` 指向宿主机，通常无需 Key
+- 云端：DeepSeek、通义千问（兼容模式）、其它兼容实现
+
+因此「换模型」是改配置而不是改代码。`EmbeddingClient` 与 `LlmClient` 两个接口分别隔离了
+「检索用的向量模型」和「生成用的对话模型」，可以独立替换：
+检索换成语义 embedding 时只需重建索引，问答换模型只需重启。
+
+已知限制：当前 embedding 是本地哈希（字面召回），同义改写召回弱；
+接上真实 embedding 模型后，问答质量会有明显提升，这一点已在路线图中记录。

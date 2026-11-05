@@ -7,6 +7,7 @@ import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.modules.ai.entity.KbChunk;
 import com.coolskyai.modules.ai.entity.KbDocument;
 import com.coolskyai.modules.ai.mapper.KbMapper;
+import com.coolskyai.modules.ai.vo.Retrieved;
 import com.coolskyai.modules.entitlement.entity.Entitlement;
 import com.coolskyai.modules.entitlement.mapper.EntitlementMapper;
 
@@ -60,22 +61,48 @@ public class AiSearchService {
 	}
 
 	/**
-	 * 检索入口
-	 *
-	 * @param query  查询词/句子
-	 * @param userId 当前用户，未登录传 null
-	 * @param limit  返回条数上限
+	 * 检索入口（给前台搜索页用，返回可直接序列化的 Map）
 	 */
 	public Map<String, Object> search(String query, Long userId, Integer limit) {
-		String text = query == null ? "" : query.trim();
-		if (text.isEmpty()) {
-			throw new BadRequestException("请输入检索内容");
-		}
-		if (text.length() > 100) {
-			throw new BadRequestException("检索内容不要超过 100 个字符");
-		}
-		int size = limit == null || limit <= 0 ? 8 : Math.min(limit, maxLimit);
+		int size = normalizeSize(limit);
 		long start = System.currentTimeMillis();
+		List<Retrieved> retrieved = retrieve(query, userId, size);
+
+		List<Map<String, Object>> results = new ArrayList<>(retrieved.size());
+		for (Retrieved item : retrieved) {
+			Map<String, Object> row = new HashMap<>(10);
+			row.put("docId", item.getDocId());
+			row.put("sourceType", item.getSourceType());
+			row.put("title", item.getTitle());
+			row.put("url", item.getUrl());
+			row.put("snippet", item.getSnippet());
+			row.put("score", item.getScore());
+			row.put("productId", item.getProductId());
+			row.put("chunkIndex", item.getChunkIndex());
+			results.add(row);
+		}
+
+		Snapshot current = snapshot();
+		Map<String, Object> data = new LinkedHashMap<>(10);
+		data.put("query", normalizeQuery(query));
+		data.put("model", current.model());
+		data.put("dim", current.dim());
+		data.put("candidates", current.entries().size());
+		data.put("total", results.size());
+		data.put("tookMs", System.currentTimeMillis() - start);
+		data.put("results", results);
+		return data;
+	}
+
+	/**
+	 * 检索（内部用，带完整正文）
+	 *
+	 * 搜索页只要摘要，问答要拿正文拼上下文，所以两者共用这一套打分与权限过滤，
+	 * 避免「搜得到但问不出」这种两套逻辑不一致的怪现象。
+	 */
+	public List<Retrieved> retrieve(String query, Long userId, int limit) {
+		String text = normalizeQuery(query);
+		int size = limit <= 0 ? 8 : Math.min(limit, maxLimit);
 
 		Snapshot current = snapshot();
 		float[] queryVector = embeddingClient.embed(text);
@@ -110,7 +137,7 @@ public class AiSearchService {
 		List<Scored> ranked = new ArrayList<>(bestPerDocument.values());
 		ranked.sort(Comparator.comparingDouble(Scored::score).reversed());
 
-		List<Map<String, Object>> results = new ArrayList<>(size);
+		List<Retrieved> results = new ArrayList<>(size);
 		for (Scored scored : ranked) {
 			if (results.size() >= size) {
 				break;
@@ -119,27 +146,34 @@ public class AiSearchService {
 			if (document == null) {
 				continue;
 			}
-			Map<String, Object> item = new HashMap<>(10);
-			item.put("docId", document.getId());
-			item.put("sourceType", document.getSourceType());
-			item.put("title", document.getTitle());
-			item.put("url", document.getUrl());
-			item.put("snippet", snippet(scored.entry().content()));
-			item.put("score", Math.round(scored.score() * 1000) / 1000.0);
-			item.put("productId", document.getProductId());
-			item.put("chunkIndex", scored.entry().chunkIndex());
+			Retrieved item = new Retrieved();
+			item.setDocId(document.getId());
+			item.setSourceType(document.getSourceType());
+			item.setTitle(document.getTitle());
+			item.setUrl(document.getUrl());
+			item.setContent(scored.entry().content());
+			item.setSnippet(snippet(scored.entry().content()));
+			item.setScore(Math.round(scored.score() * 1000) / 1000.0);
+			item.setProductId(document.getProductId());
+			item.setChunkIndex(scored.entry().chunkIndex());
 			results.add(item);
 		}
+		return results;
+	}
 
-		Map<String, Object> data = new LinkedHashMap<>(10);
-		data.put("query", text);
-		data.put("model", current.model());
-		data.put("dim", current.dim());
-		data.put("candidates", current.entries().size());
-		data.put("total", results.size());
-		data.put("tookMs", System.currentTimeMillis() - start);
-		data.put("results", results);
-		return data;
+	private String normalizeQuery(String query) {
+		String text = query == null ? "" : query.trim();
+		if (text.isEmpty()) {
+			throw new BadRequestException("请输入检索内容");
+		}
+		if (text.length() > 100) {
+			throw new BadRequestException("检索内容不要超过 100 个字符");
+		}
+		return text;
+	}
+
+	private int normalizeSize(Integer limit) {
+		return limit == null || limit <= 0 ? 8 : Math.min(limit, maxLimit);
 	}
 
 	public Map<String, Object> stats() {
