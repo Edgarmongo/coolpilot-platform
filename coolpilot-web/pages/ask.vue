@@ -1,48 +1,48 @@
 <template>
 	<div class="ask">
 		<div class="head">
-			<h1 class="page-title">智能问答</h1>
-			<p class="page-desc">基于站内文章、商品与课时内容回答，并给出可点击的来源</p>
+			<h1 class="page-title">{{ t('ask.title') }}</h1>
+			<p class="page-desc">{{ t('ask.desc') }}</p>
 		</div>
 
 		<div class="body">
 			<!-- 历史会话：仅登录可见 -->
 			<aside v-if="isLogin" class="history">
-				<button class="new-btn" @click="newChat">+ 新对话</button>
-				<div v-if="!history.length" class="muted empty-his">还没有历史对话</div>
+				<button class="new-btn" @click="newChat">{{ t('ask.newChat') }}</button>
+				<div v-if="!history.length" class="muted empty-his">{{ t('ask.emptyHistory') }}</div>
 				<div v-for="item in history" :key="item.id"
 				     :class="['his-item', {active: item.id === conversationId}]">
 					<button class="his-main" @click="openConversation(item.id)">
-						<span class="his-title">{{ item.title || '未命名对话' }}</span>
+						<span class="his-title">{{ item.title || t('ask.untitled') }}</span>
 						<span class="muted his-time">{{ formatDate(item.updateTime, 'MM-DD HH:mm') }}</span>
 					</button>
-					<button class="his-del" title="删除" @click.stop="removeConversation(item.id)">×</button>
+					<button class="his-del" :title="t('ask.delete')" @click.stop="removeConversation(item.id)">×</button>
 				</div>
 			</aside>
 
 			<section class="chat">
 				<div ref="listRef" class="messages">
 					<div v-if="!messages.length" class="intro">
-						<p>可以直接问，例如：</p>
+						<p>{{ t('ask.intro') }}</p>
 						<button v-for="sample in samples" :key="sample" class="sample" @click="askSample(sample)">
 							{{ sample }}
 						</button>
-						<p class="muted small" v-if="!isLogin">未登录也能提问，登录后可保存对话记录</p>
+						<p class="muted small" v-if="!isLogin">{{ t('ask.guestHint') }}</p>
 					</div>
 
 					<div v-for="(msg, index) in messages" :key="index" :class="['msg', msg.role.toLowerCase()]">
 						<div class="bubble">
 							<p v-if="msg.role === 'ASSISTANT' && msg.degraded" class="degraded">
-								{{ msg.note || '当前未生成回答，先看下面的检索片段' }}
+								{{ msg.note || t('ask.degradedNote') }}
 							</p>
-							<p v-if="msg.stopped" class="stopped-note">已停止生成</p>
-							<p v-if="msg.streaming && !msg.content" class="thinking">正在检索并组织回答…</p>
+							<p v-if="msg.stopped" class="stopped-note">{{ t('ask.stopped') }}</p>
+							<p v-if="msg.streaming && !msg.content" class="thinking">{{ t('ask.thinking') }}</p>
 							<p v-else class="text" @click="onAnswerClick($event, msg)">
 								<span v-html="renderAnswer(msg.content, msg.citations, msg.uid)"/>
 								<span v-if="msg.streaming" class="caret"/>
 							</p>
 							<div v-if="msg.citations && msg.citations.length" class="citations">
-								<div class="cite-title">来源</div>
+								<div class="cite-title">{{ t('ask.sources') }}</div>
 								<a v-for="cite in msg.citations" :key="cite.index"
 								   :id="`cite-${msg.uid}-${cite.index}`"
 								   :class="['cite', {active: isHighlighted(msg.uid, cite.index)}]"
@@ -54,10 +54,10 @@
 							</div>
 							<div v-if="msg.role === 'ASSISTANT' && !msg.streaming && msg.content" class="msg-actions">
 								<button v-if="msg.id" :class="['mini', {on: msg.favorited}]" @click="toggleFavorite(msg)">
-									{{ msg.favorited ? '已收藏' : '收藏' }}
+									{{ msg.favorited ? t('ask.favorited') : t('ask.favorite') }}
 								</button>
-								<button v-if="msg.id" class="mini" @click="shareAnswer(msg)">分享</button>
-								<button class="mini" @click="copyAnswer(msg)">复制</button>
+								<button v-if="msg.id" class="mini" @click="shareAnswer(msg)">{{ t('ask.share') }}</button>
+								<button class="mini" @click="copyAnswer(msg)">{{ t('ask.copy') }}</button>
 							</div>
 						</div>
 					</div>
@@ -66,13 +66,13 @@
 
 				<div class="composer">
 					<textarea v-model="question" rows="2" maxlength="500"
-					          placeholder="问问站内的内容，Enter 发送，Shift + Enter 换行"
+					          :placeholder="t('ask.placeholder')"
 					          @keydown.enter.exact.prevent="send"/>
-					<button v-if="loading" class="btn stop" @click="stop">停止</button>
-					<button v-else class="btn send" :disabled="!question.trim()" @click="send">发送</button>
+					<button v-if="loading" class="btn stop" @click="stop">{{ t('ask.stop') }}</button>
+					<button v-else class="btn send" :disabled="!question.trim()" @click="send">{{ t('ask.send') }}</button>
 				</div>
 				<p class="muted foot">
-					回答由模型基于站内资料生成，可能有偏差；重要信息请点开来源核对。
+					{{ t('share.foot') }}
 				</p>
 			</section>
 		</div>
@@ -80,11 +80,11 @@
 		<!-- 分享弹窗 -->
 		<div v-if="shareVisible" class="mask" @click.self="shareVisible = false">
 			<div class="dialog">
-				<h3>分享这条回答</h3>
-				<p class="muted small">拿到链接的人无需登录即可查看问答与来源，对话里的其他内容不会暴露</p>
+				<h3>{{ t('ask.shareTitle') }}</h3>
+				<p class="muted small">{{ t('ask.shareDesc') }}</p>
 				<input class="share-input" :value="shareLink" readonly @focus="($event.target as HTMLInputElement).select()"/>
 				<div class="day-row">
-					<span class="day-label">有效期</span>
+					<span class="day-label">{{ t('ask.validity') }}</span>
 					<div class="days">
 						<button v-for="opt in shareDayOptions" :key="opt.value"
 						        :class="['day', {on: shareDays === opt.value}]"
@@ -94,9 +94,9 @@
 				</div>
 				<p class="muted small expiry">{{ shareExpiryText }}</p>
 				<div class="dialog-actions">
-					<button class="btn" @click="copyShareLink">复制链接</button>
-					<button class="btn ghost" @click="revokeShare">取消分享</button>
-					<button class="btn ghost" @click="shareVisible = false">关闭</button>
+					<button class="btn" @click="copyShareLink">{{ t('ask.copyLink') }}</button>
+					<button class="btn ghost" @click="revokeShare">{{ t('ask.revoke') }}</button>
+					<button class="btn ghost" @click="shareVisible = false">{{ t('ask.close') }}</button>
 				</div>
 			</div>
 		</div>
@@ -107,6 +107,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const {t, te} = useI18n()
 const {call, token, isLogin} = useApi()
 
 type Citation = {index: number, title: string, url: string, sourceType: string, snippet?: string}
@@ -138,12 +139,12 @@ const shareMessage = ref<ChatMessage | null>(null)
 const shareDays = ref(30)
 const shareExpiresAt = ref<string | null>(null)
 const shareChanging = ref(false)
-const shareDayOptions = [
-	{label: '7 天', value: 7},
-	{label: '30 天', value: 30},
-	{label: '90 天', value: 90},
-	{label: '长期有效', value: 0}
-]
+const shareDayOptions = computed(() => [
+	{label: t('ask.day7'), value: 7},
+	{label: t('ask.day30'), value: 30},
+	{label: t('ask.day90'), value: 90},
+	{label: t('ask.forever'), value: 0}
+])
 const hint = ref('')
 const listRef = ref<HTMLElement | null>(null)
 /** 当前流式请求的中止句柄，点「停止」时用它掐断连接 */
@@ -151,11 +152,8 @@ let currentAbort: AbortController | null = null
 let uidSeed = 1
 const highlighted = ref('')
 
-const samples = [
-	'站内的付费内容都讲什么？',
-	'这个站点支持哪些支付方式？',
-	'技术服务的流程是怎样的？'
-]
+// 示例问题跟语言走：英文站给中文示例没有意义
+const samples = computed(() => [t('ask.sample1'), t('ask.sample2'), t('ask.sample3')])
 
 onMounted(() => {
 	if (isLogin.value) {
@@ -199,7 +197,7 @@ async function send() {
 			try {
 				await fallbackAnswer(text, assistant)
 			} catch (err: any) {
-				assistant.content = '提问失败，请稍后再试'
+				assistant.content = t('ask.failed')
 			}
 		}
 	} finally {
@@ -266,7 +264,7 @@ async function streamAnswer(text: string, assistant: ChatMessage, signal: AbortS
 					scrollToBottom()
 				} else if (event.name === 'error') {
 					assistant.degraded = true
-					assistant.note = event.data.message || '生成中断'
+					assistant.note = event.data.message || t('ask.interrupted')
 				} else if (event.name === 'done') {
 					if (!assistant.content && event.data.answer) {
 						assistant.content = event.data.answer
@@ -396,15 +394,15 @@ async function changeShareDays(days: number) {
 	await call(`/ai/answer/${shareMessage.value.id}/share`, {method: 'DELETE'})
 	await createShare(shareMessage.value.id)
 	shareChanging.value = false
-	toast('已按新的有效期重新生成链接')
+	toast(t('ask.regenerated'))
 }
 
 /** 弹窗里的一句说明：到期时间比「已分享」有用得多 */
 const shareExpiryText = computed(() => {
 	if (!shareExpiresAt.value) {
-		return '长期有效 · 随时可以在这里取消分享'
+		return t('ask.expiryForever')
 	}
-	return `链接将于 ${formatDate(shareExpiresAt.value, 'YYYY-MM-DD')} 失效，到期后自动关闭`
+	return t('ask.expiryAt', {date: formatDate(shareExpiresAt.value, 'YYYY-MM-DD')})
 })
 
 /** 撤销分享：链接立刻失效 */
@@ -428,18 +426,18 @@ async function copyAnswer(msg: ChatMessage) {
 	const text = answerToText(question, msg.content, msg.citations)
 	try {
 		await navigator.clipboard.writeText(text)
-		toast('已复制')
+		toast(t('ask.copied'))
 	} catch (e) {
-		toast('复制失败，请手动选择文本')
+		toast(t('ask.copyFailed'))
 	}
 }
 
 async function copyShareLink() {
 	try {
 		await navigator.clipboard.writeText(shareLink.value)
-		toast('链接已复制')
+		toast(t('ask.linkCopied'))
 	} catch (e) {
-		toast('复制失败，请手动复制')
+		toast(t('ask.linkCopyFailed'))
 	}
 }
 
@@ -534,7 +532,8 @@ async function removeConversation(id: number) {
 }
 
 function sourceText(type: string) {
-	return {BLOG: '文章', PRODUCT: '商品', LESSON: '课时'}[type] || '内容'
+	const key = `search.sources.${String(type).toLowerCase()}`
+	return te(key) ? t(key) : type
 }
 
 function scrollToBottom() {
@@ -546,7 +545,7 @@ function scrollToBottom() {
 	})
 }
 
-useHead({title: '智能问答 - CoolSkyAI'})
+useHead({title: t('ask.title')})
 </script>
 
 <style scoped>
