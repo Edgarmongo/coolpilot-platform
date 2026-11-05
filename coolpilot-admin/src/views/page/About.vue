@@ -20,8 +20,16 @@
 					<el-switch v-model="form.commentEnabled"/>
 				</el-form-item>
 				<el-form-item label="正文(HTML)">
-					<el-input v-model="form.content" type="textarea" :rows="18"
+					<el-input v-model="form.content" type="textarea" :rows="12"
 					          placeholder="支持 HTML，例如 &lt;p&gt;简介&lt;/p&gt;"/>
+				</el-form-item>
+				<el-divider content-position="left">英文版（留空则英文站显示上面的中文）</el-divider>
+				<el-form-item label="英文标题">
+					<el-input v-model="form.titleEn" maxlength="50" placeholder="About CoolSkyAI"/>
+				</el-form-item>
+				<el-form-item label="英文正文">
+					<el-input v-model="form.contentEn" type="textarea" :rows="12"
+					          placeholder="Markdown / HTML，留空则回落中文正文"/>
 				</el-form-item>
 			</el-form>
 		</div>
@@ -35,7 +43,7 @@ import {getAbout, updateAbout} from '@/api/about'
 
 const loading = ref(false)
 const saving = ref(false)
-const form = reactive({title: '', musicId: '', content: '', commentEnabled: true})
+const form = reactive({title: '', titleEn: '', musicId: '', content: '', contentEn: '', commentEnabled: true})
 
 async function load() {
 	loading.value = true
@@ -43,8 +51,10 @@ async function load() {
 		const res = await getAbout()
 		const data = res.data || {}
 		form.title = data.title || ''
+		form.titleEn = data.titleEn || ''
 		form.musicId = data.musicId || ''
 		form.content = data.content || ''
+		form.contentEn = data.contentEn || ''
 		form.commentEnabled = String(data.commentEnabled) === 'true' || data.commentEnabled === true
 	} finally {
 		loading.value = false
@@ -57,8 +67,10 @@ async function save() {
 		// 后端按 nameEn -> value 逐条更新，值必须是字符串
 		await updateAbout({
 			title: form.title,
+			titleEn: form.titleEn,
 			musicId: form.musicId,
 			content: form.content,
+			contentEn: form.contentEn,
 			commentEnabled: String(form.commentEnabled)
 		})
 		ElMessage.success('已保存')

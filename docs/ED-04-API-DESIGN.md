@@ -271,6 +271,7 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/about?lang=` | 公开：关于页，`lang=en` 优先 `titleEn` / `contentEn`（about 表的两行），为空回落中文；缓存 `aboutInfoMap:{lang}` |
 | GET | `/brand?lang=` | 公开：`{brandMark, brandName, footerText, footerTagline, beian}`；`lang=en` 用 `value_en`（为空回落中文）；缓存键 `brandInfoMap:{lang}` |
 
 - `brandName` 复用已有的 `blogName`，不新增同义字段；`beian` 复用已有备案号，非空才在页脚显示并链到工信部。

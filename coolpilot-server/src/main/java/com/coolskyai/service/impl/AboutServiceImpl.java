@@ -29,22 +29,37 @@ public class AboutServiceImpl implements AboutService {
 	RedisService redisService;
 
 	@Override
-	public Map<String, String> getAboutInfo() {
-		String redisKey = RedisKeyConstants.ABOUT_INFO_MAP;
+	public Map<String, String> getAboutInfo(String lang) {
+		String locale = "en".equalsIgnoreCase(lang) ? "en" : "zh-CN";
+		String redisKey = RedisKeyConstants.ABOUT_INFO_MAP + ":" + locale;
 		Map<String, String> aboutInfoMapFromRedis = redisService.getMapByValue(redisKey);
 		if (aboutInfoMapFromRedis != null) {
 			return aboutInfoMapFromRedis;
 		}
 		List<About> abouts = aboutMapper.getList();
-		Map<String, String> aboutInfoMap = new HashMap<>(16);
+		Map<String, String> raw = new HashMap<>(16);
 		for (About about : abouts) {
-			if ("content".equals(about.getNameEn())) {
-				about.setValue(MarkdownUtils.markdownToHtmlExtensions(about.getValue()));
-			}
-			aboutInfoMap.put(about.getNameEn(), about.getValue());
+			raw.put(about.getNameEn(), about.getValue());
+		}
+		Map<String, String> aboutInfoMap = new HashMap<>(16);
+		aboutInfoMap.putAll(raw);
+		if ("en".equals(locale)) {
+			// 英文稿存在才覆盖；空串视为「没写」，回落中文原文
+			putIfPresent(aboutInfoMap, "title", raw.get("titleEn"));
+			putIfPresent(aboutInfoMap, "content", raw.get("contentEn"));
+		}
+		String content = aboutInfoMap.get("content");
+		if (content != null && !content.isEmpty()) {
+			aboutInfoMap.put("content", MarkdownUtils.markdownToHtmlExtensions(content));
 		}
 		redisService.saveMapToValue(redisKey, aboutInfoMap);
 		return aboutInfoMap;
+	}
+
+	private void putIfPresent(Map<String, String> map, String key, String value) {
+		if (value != null && !value.trim().isEmpty()) {
+			map.put(key, value);
+		}
 	}
 
 	@Override
@@ -83,6 +98,9 @@ public class AboutServiceImpl implements AboutService {
 	 * 删除关于我页面缓存
 	 */
 	private void deleteAboutRedisCache() {
-		redisService.deleteCacheByKey(RedisKeyConstants.ABOUT_INFO_MAP);
+		// 两种语言各一份缓存，改一次要同时失效
+		for (String locale : new String[]{"zh-CN", "en"}) {
+			redisService.deleteCacheByKey(RedisKeyConstants.ABOUT_INFO_MAP + ":" + locale);
+		}
 	}
 }

@@ -9,7 +9,9 @@
 const {call} = useApi()
 const {t} = useI18n()
 
-const {data} = await useAsyncData('about', () => call('/about'))
+const {locale} = useI18n()
+// 关于页标题与正文由站长配置，中英各一份，切语言要重新取
+const {data} = await useAsyncData('about', () => call(`/about?lang=${locale.value}`), {watch: [locale]})
 const about = computed(() => (data.value as any)?.data || {})
 
 const contentHtml = computed(() =>

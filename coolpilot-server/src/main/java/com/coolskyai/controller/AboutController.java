@@ -2,6 +2,7 @@ package com.coolskyai.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.VisitLogger;
 import com.coolskyai.enums.VisitBehavior;
@@ -25,7 +26,7 @@ public class AboutController {
 	 */
 	@VisitLogger(VisitBehavior.ABOUT)
 	@GetMapping("/about")
-	public Result about() {
-		return Result.ok("获取成功", aboutService.getAboutInfo());
+	public Result about(@RequestParam(required = false) String lang) {
+		return Result.ok("获取成功", aboutService.getAboutInfo(lang));
 	}
 }
