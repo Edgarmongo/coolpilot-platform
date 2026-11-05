@@ -454,8 +454,9 @@ upload.file.resources-locations=file:${upload.file.path}
 ```
 索引：文章（跳过密码文章） / 上架商品文案 / 课时正文
       → 清洗 Markdown → 350 字切块（60 字重叠）→ 批量向量化 → kb_chunk
-检索：query 向量 → 按「公开 或 已购商品」筛候选
-      → 混合打分（alpha×余弦 + (1-alpha)×字面覆盖率 + 标题加成）→ 文档级去重 → TopN
+检索：追问改写（仅会话内、像追问时）→ query 向量 → 按「公开 或 已购商品」筛候选
+      → 混合打分（alpha×余弦 + (1-alpha)×字面覆盖率 + 标题加成）→ 文档级去重
+      → 取 20 条候选 → 重排（llm / http，可关）→ TopN
 ```
 
 - 向量存 MySQL（`MEDIUMBLOB`，float32），进程内快照做余弦检索；1e4 块约 20MB、毫秒级
@@ -464,6 +465,10 @@ upload.file.resources-locations=file:${upload.file.path}
   后台 stats 的 `ignoredChunks` 提示需要重建索引
 - 混合打分解决「语义模型对型号/专有名词反而偏弱」：语义余弦 + 查询词覆盖率（正文与标题取大者），
   阈值分两层 —— 没有字面证据时向量必须 ≥ `semantic-floor`，最终分 ≥ `min-score`；详见 ADR-0002
+- **追问改写**：会话里「那退款呢」这类短句先补全成独立问题再检索，只用于检索、
+  界面仍显示原话；改写句存入 `ai_message.retrieval_query` 供后台排查；失败回退原问题
+- **重排**：第一轮取 20 条候选，再由 `llm`（对话模型列表排序）或 `http`
+  （bge-reranker 服务）重排后取 6/8 条；失败保持原顺序并熔断 60 秒；详见 ADR-0003
 - 权限在**打分前**过滤：付费课时只有持有权益才进入候选，避免越权召回
 - 本地哈希向量带「共同词」护栏：无任何共同词时跳过，防止哈希碰撞造成误召回；
   接语义模型后该护栏自动失效（`tokenHashes` 返回空）

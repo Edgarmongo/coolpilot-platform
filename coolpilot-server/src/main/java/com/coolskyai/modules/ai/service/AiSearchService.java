@@ -48,6 +48,15 @@ public class AiSearchService {
 	@Value("${ai.search.max-limit:20}")
 	private int maxLimit;
 
+	/**
+	 * 重排候选数
+	 *
+	 * 第一轮打分只负责「别漏」，重排负责「别乱」。多取几倍候选再让重排挑，
+	 * 才能纠正「关键词命中但答非所问」的排序 —— 只给最终条数的话，重排无从选择。
+	 */
+	@Value("${ai.rerank.candidates:20}")
+	private int rerankCandidates;
+
 	/** 混合检索里向量的权重；剩下的给字面分 */
 	@Value("${ai.search.hybrid-alpha:0.65}")
 	private double hybridAlpha;
@@ -76,6 +85,8 @@ public class AiSearchService {
 	private KbMapper kbMapper;
 	@Autowired
 	private EmbeddingClient embeddingClient;
+	@Autowired
+	private RerankService rerankService;
 	@Autowired
 	private EntitlementMapper entitlementMapper;
 
@@ -197,9 +208,15 @@ public class AiSearchService {
 		List<Scored> ranked = new ArrayList<>(bestPerDocument.values());
 		ranked.sort(Comparator.comparingDouble(Scored::score).reversed());
 
-		List<Retrieved> results = new ArrayList<>(size);
+		/*
+		 * 取候选：启用重排时多捞一些（默认 20），让它有得挑；
+		 * 没启用就只取需要的条数，不白算。
+		 */
+		boolean rerank = rerankService.available();
+		int candidateSize = rerank ? Math.min(Math.max(size * 3, rerankCandidates), ranked.size()) : size;
+		List<Retrieved> results = new ArrayList<>(candidateSize);
 		for (Scored scored : ranked) {
-			if (results.size() >= size) {
+			if (results.size() >= candidateSize) {
 				break;
 			}
 			KbDocument document = current.documents().get(scored.entry().docId());
@@ -218,7 +235,8 @@ public class AiSearchService {
 			item.setChunkIndex(scored.entry().chunkIndex());
 			results.add(item);
 		}
-		return results;
+		// 重排失败/未启用时原样返回：它只改顺序，不改内容
+		return rerank ? rerankService.rerank(text, results, size) : results;
 	}
 
 	/**
@@ -267,7 +285,11 @@ public class AiSearchService {
 	}
 
 	public Map<String, Object> stats() {
-		Snapshot current = snapshot;
+		/*
+		 * 用 snapshot() 而不是直接读字段：进程刚起来时快照还是 null，
+		 * 后台会显示「已加载 0 块」，看起来像索引丢了 —— 其实只是没人搜过。
+		 */
+		Snapshot current = snapshot();
 		Map<String, Object> stats = new LinkedHashMap<>(10);
 		stats.put("documents", kbMapper.countDocuments());
 		stats.put("chunks", kbMapper.countChunks());
@@ -275,6 +297,7 @@ public class AiSearchService {
 		stats.put("model", embeddingClient.model());
 		stats.put("dim", embeddingClient.dim());
 		stats.put("provider", embeddingClient.provider());
+		stats.put("rerank", rerankService.provider());
 		stats.put("hybridAlpha", hybridAlpha);
 		stats.put("ignoredChunks", current == null ? 0 : current.ignored());
 		stats.put("minScore", minScore);

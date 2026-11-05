@@ -59,6 +59,10 @@
 						</el-tag>
 					</div>
 					<div class="msg-content">{{ msg.content }}</div>
+					<!-- 追问被改写时，把实际检索句摊开：不显示的话，排查召回问题只能靠猜 -->
+					<div v-if="msg.retrievalQuery" class="msg-extra">
+						检索用：{{ msg.retrievalQuery }}
+					</div>
 				</div>
 
 				<div v-if="!detail.messages.length" class="muted">这段会话没有消息</div>
@@ -159,5 +163,16 @@ onMounted(load)
 	background: #fafafa;
 	border-radius: 6px;
 	padding: 8px 10px;
+}
+
+.msg-extra {
+	margin-top: 6px;
+	padding: 4px 8px;
+	border-left: 2px solid var(--el-color-warning);
+	background: #fffbeb;
+	color: #92400e;
+	font-size: 12px;
+	border-radius: 0 4px 4px 0;
+	word-break: break-all;
 }
 </style>

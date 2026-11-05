@@ -79,6 +79,8 @@ public class RagChatService {
 	@Autowired
 	private AiSearchService aiSearchService;
 	@Autowired
+	private QueryRewriter queryRewriter;
+	@Autowired
 	private LlmClient llmClient;
 	@Autowired
 	private AiConversationMapper conversationMapper;
@@ -102,7 +104,13 @@ public class RagChatService {
 		long start = System.currentTimeMillis();
 		AiConversation conversation = resolveConversation(userId, dto.getConversationId(), question);
 
-		List<Retrieved> retrieved = retrieve(question, userId, conversation);
+		/*
+		 * 追问先改写成独立问题再检索：「那退款呢」这种句子，
+		 * 字面与向量都测不出它指向前一轮的「商品退款流程」。
+		 * 改写只用于检索，回答与界面仍然展示用户原话。
+		 */
+		QueryRewriter.Result rewrite = queryRewriter.rewrite(question, conversation);
+		List<Retrieved> retrieved = retrieve(rewrite.query(), userId, conversation);
 		List<Map<String, Object>> citations = toCitations(retrieved);
 
 		String answer;
@@ -130,7 +138,7 @@ public class RagChatService {
 
 		Long answerMessageId = null;
 		if (conversation != null) {
-			answerMessageId = saveMessages(conversation, question, answer, note, citations, model);
+			answerMessageId = saveMessages(conversation, question, rewrite, answer, note, citations, model);
 		}
 
 		Map<String, Object> data = new LinkedHashMap<>(12);
@@ -142,6 +150,8 @@ public class RagChatService {
 		data.put("model", model);
 		data.put("degraded", degraded);
 		data.put("note", note);
+		data.put("retrievalQuery", rewrite.query());
+		data.put("rewritten", rewrite.rewritten());
 		data.put("tookMs", System.currentTimeMillis() - start);
 		return data;
 	}
@@ -168,13 +178,16 @@ public class RagChatService {
 		}
 
 		AiConversation conversation = resolveConversation(userId, dto.getConversationId(), question);
-		List<Retrieved> retrieved = retrieve(question, userId, conversation);
+		QueryRewriter.Result rewrite = queryRewriter.rewrite(question, conversation);
+		List<Retrieved> retrieved = retrieve(rewrite.query(), userId, conversation);
 		List<Map<String, Object>> citations = toCitations(retrieved);
 
 		Map<String, Object> meta = new LinkedHashMap<>(8);
 		meta.put("conversationId", conversation == null ? null : conversation.getId());
 		meta.put("citations", citations);
 		meta.put("model", llmClient.model());
+		meta.put("rewritten", rewrite.rewritten());
+		meta.put("retrievalQuery", rewrite.query());
 		meta.put("degraded", !retrieved.isEmpty() && !llmClient.available());
 		meta.put("note", retrieved.isEmpty() ? "" :
 				(llmClient.available() ? "" : "当前未配置大模型，先展示检索到的片段"));
@@ -189,12 +202,12 @@ public class RagChatService {
 		emitter.onError(e -> cancelled.set(true));
 		emitter.onTimeout(() -> cancelled.set(true));
 
-		taskExecutor.execute(() -> runStream(emitter, conversation, question, retrieved, citations, cancelled));
+		taskExecutor.execute(() -> runStream(emitter, conversation, question, rewrite, retrieved, citations, cancelled));
 	}
 
 	private void runStream(SseEmitter emitter, AiConversation conversation, String question,
-	                       List<Retrieved> retrieved, List<Map<String, Object>> citations,
-	                       AtomicBoolean cancelled) {
+	                       QueryRewriter.Result rewrite, List<Retrieved> retrieved,
+	                       List<Map<String, Object>> citations, AtomicBoolean cancelled) {
 		long start = System.currentTimeMillis();
 		StringBuilder answer = new StringBuilder();
 		String note = "";
@@ -241,7 +254,7 @@ public class RagChatService {
 		Long answerMessageId = null;
 		if (conversation != null) {
 			// 断连时也保存：用户下次打开历史能看到已经生成的部分
-			answerMessageId = saveMessages(conversation, question, finalAnswer, note, citations, model);
+			answerMessageId = saveMessages(conversation, question, rewrite, finalAnswer, note, citations, model);
 		}
 
 		if (cancelled.get()) {
@@ -631,12 +644,14 @@ public class RagChatService {
 		return created;
 	}
 
-	private Long saveMessages(AiConversation conversation, String question, String answer,
-	                          String note, List<Map<String, Object>> citations, String model) {
+	private Long saveMessages(AiConversation conversation, String question, QueryRewriter.Result rewrite,
+	                          String answer, String note, List<Map<String, Object>> citations, String model) {
 		AiMessage userMessage = new AiMessage();
 		userMessage.setConversationId(conversation.getId());
 		userMessage.setRole("USER");
 		userMessage.setContent(question);
+		// 改写后的检索句留档：排查「为什么召回了这些」时，原话往往看不出线索
+		userMessage.setRetrievalQuery(rewrite != null && rewrite.rewritten() ? rewrite.query() : null);
 		userMessage.setCitations(null);
 		userMessage.setModel("");
 		conversationMapper.insertMessage(userMessage);

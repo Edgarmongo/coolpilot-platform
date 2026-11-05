@@ -63,6 +63,8 @@ public class AiAdminService {
 			row.put("role", message.getRole());
 			row.put("content", message.getContent());
 			row.put("model", message.getModel());
+			// 追问改写后的检索句：为空说明是按原话检索的
+			row.put("retrievalQuery", message.getRetrievalQuery());
 			row.put("citationCount", citationCount(message.getCitations()));
 			row.put("createTime", message.getCreateTime());
 			rows.add(row);

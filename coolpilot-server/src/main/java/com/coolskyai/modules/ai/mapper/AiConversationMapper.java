@@ -49,8 +49,8 @@ public interface AiConversationMapper {
 	@Delete("DELETE FROM ai_message WHERE conversation_id = #{conversationId}")
 	int deleteMessages(@Param("conversationId") Long conversationId);
 
-	@Insert("INSERT INTO ai_message (conversation_id, role, content, citations, model, create_time) " +
-			"VALUES (#{conversationId}, #{role}, #{content}, #{citations}, #{model}, NOW())")
+	@Insert("INSERT INTO ai_message (conversation_id, role, content, retrieval_query, citations, model, create_time) " +
+			"VALUES (#{conversationId}, #{role}, #{content}, #{retrievalQuery}, #{citations}, #{model}, NOW())")
 	@Options(useGeneratedKeys = true, keyProperty = "id")
 	int insertMessage(AiMessage message);
 

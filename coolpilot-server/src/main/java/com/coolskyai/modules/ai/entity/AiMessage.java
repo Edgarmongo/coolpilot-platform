@@ -22,6 +22,8 @@ public class AiMessage {
 	/** USER / ASSISTANT */
 	private String role;
 	private String content;
+	/** 本轮实际用于检索的查询（追问改写后）；为空表示按原话检索 */
+	private String retrievalQuery;
 	/** 引用快照 JSON */
 	private String citations;
 	private String model;

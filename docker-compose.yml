@@ -103,6 +103,14 @@ services:
       AI_SEARCH_SEMANTIC_FLOOR: ${AI_SEARCH_SEMANTIC_FLOOR:-0.5}
       AI_SEARCH_MIN_SCORE: ${AI_SEARCH_MIN_SCORE:-0.25}
       AI_CHAT_MIN_SCORE: ${AI_CHAT_MIN_SCORE:-0.25}
+      # 追问改写（把「那退款呢」补成独立问题再检索）
+      AI_CHAT_REWRITE: ${AI_CHAT_REWRITE:-true}
+      # 重排：none / llm（对话模型）/ http（bge-reranker 服务）
+      AI_RERANK_PROVIDER: ${AI_RERANK_PROVIDER:-none}
+      AI_RERANK_BASE_URL: ${AI_RERANK_BASE_URL:-}
+      AI_RERANK_API_KEY: ${AI_RERANK_API_KEY:-}
+      AI_RERANK_MODEL: ${AI_RERANK_MODEL:-bge-reranker-v2-m3}
+      AI_RERANK_CANDIDATES: ${AI_RERANK_CANDIDATES:-20}
       AI_LLM_BASE_URL: ${AI_LLM_BASE_URL:-}
       AI_LLM_API_KEY: ${AI_LLM_API_KEY:-}
       AI_LLM_MODEL: ${AI_LLM_MODEL:-}

@@ -379,6 +379,27 @@ AI_EMBEDDING_BATCH=16        # 重建索引时每批条数
 AI_SEARCH_HYBRID_ALPHA=0.65
 ```
 
+### 追问改写与重排（可选）
+
+```ini
+# 会话里的「那退款呢」先补全成独立问题再检索；失败自动回退到原话
+AI_CHAT_REWRITE=true
+
+# 重排：none / llm / http
+#   llm  —— 用同一个对话模型做列表排序，不需要额外部署（本项目当前用这个）
+#   http —— 接 bge-reranker 服务（Infinity / TEI / Jina / Cohere）
+AI_RERANK_PROVIDER=llm
+AI_RERANK_BASE_URL=            # provider=http 时填，例 http://host.docker.internal:8080
+AI_RERANK_API_KEY=
+AI_RERANK_MODEL=bge-reranker-v2-m3
+AI_RERANK_CANDIDATES=20        # 第一轮多取多少候选交给重排挑
+```
+
+用 `http` 时服务需暴露 `POST /rerank`，请求 `{"model","query","documents","top_n"}`，
+响应 `{"results":[{"index","relevance_score"}]}`（TEI 的 `score` 与顶层数组也兼容）。
+启动日志出现「重排已启用：provider=http」即为接上；连续失败会熔断 60 秒，不会拖慢每个请求。
+取舍与实测对比见 `docs/ADR-0003-QUERY-REWRITE-RERANK.md`。
+
 **换 provider 或 dim 后必须重建索引**（后台「知识库索引 → 重建」，或 `POST /admin/ai/reindex`），
 否则旧向量维度对不上会被跳过，检索结果为空 —— 后台 stats 里的 `ignoredChunks` 就是提示。
 这一节的取舍与阈值说明见 `docs/ADR-0002-HYBRID-RETRIEVAL.md`。
