@@ -1,30 +1,30 @@
 <template>
 	<div v-if="topic">
-		<NuxtLink to="/topic" class="back">← 全部专题</NuxtLink>
+		<NuxtLink :to="localePath('/topic')" class="back">{{ t('topicDetail.back') }}</NuxtLink>
 
 		<div class="head card">
 			<h1 class="page-title">{{ topic.title }}</h1>
-			<p class="page-desc">{{ topic.description || '按顺序阅读，更容易形成完整认知' }}</p>
+			<p class="page-desc">{{ topic.description || t('topicDetail.desc') }}</p>
 			<div class="meta">
-				<span>{{ articles.length }} 篇</span>
-				<span>· 更新于 {{ formatDate(topic.updateTime) }}</span>
+				<span>{{ t('topicDetail.count', {n: articles.length}) }}</span>
+				<span>{{ t('topicDetail.updated', {date: formatDate(topic.updateTime)}) }}</span>
 			</div>
 		</div>
 
-		<div v-if="!articles.length" class="card empty">这个专题还没有文章</div>
+		<div v-if="!articles.length" class="card empty">{{ t('topicDetail.empty') }}</div>
 
 		<ol v-else class="list">
 			<li v-for="(post, index) in articles" :key="post.id" class="item">
-				<NuxtLink :to="`/blog/${post.slug || post.id}`" class="item-link">
+				<NuxtLink :to="localePath(`/blog/${post.slug || post.id}`)" class="item-link">
 					<span class="idx">{{ index + 1 }}</span>
 					<div class="item-body">
 						<h2 class="item-title">{{ post.title }}</h2>
 						<p v-if="!post.privacy && post.description" class="item-desc">{{ post.description }}</p>
 						<div class="item-meta">
 							<span>{{ formatDate(post.createTime, 'YYYY-MM-DD') }}</span>
-							<span v-if="post.readTime">· {{ post.readTime }} 分钟</span>
-							<span v-if="post.views">· {{ post.views }} 次阅读</span>
-							<span v-if="post.privacy" class="tag lock">需要密码</span>
+							<span v-if="post.readTime">· {{ t('topicDetail.minutes', {n: post.readTime}) }}</span>
+							<span v-if="post.views">· {{ t('topicDetail.reads', {n: post.views}) }}</span>
+							<span v-if="post.privacy" class="tag lock">{{ t('topicDetail.locked') }}</span>
 						</div>
 					</div>
 				</NuxtLink>
@@ -33,14 +33,16 @@
 	</div>
 
 	<div v-else class="card empty">
-		<p>专题不存在或未发布</p>
-		<NuxtLink to="/topic" class="btn">看看其他专题</NuxtLink>
+		<p>{{ t('topicDetail.notFound') }}</p>
+		<NuxtLink :to="localePath('/topic')" class="btn">{{ t('topicDetail.browseOthers') }}</NuxtLink>
 	</div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const {call} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 const slug = computed(() => String(route.params.slug))
 
 const {data} = await useAsyncData(`topic-${slug.value}`, () => call(`/topic/${slug.value}`))
@@ -55,7 +57,7 @@ const articles = computed<any[]>(() => {
 })
 
 useHead(() => ({
-	title: topic.value ? `${topic.value.title} - 专题 - CoolSkyAI` : '专题 - CoolSkyAI',
+	title: topic.value ? `${topic.value.title} - ${t('topicDetail.head')}` : t('topicDetail.head'),
 	meta: topic.value && topic.value.description
 		? [{name: 'description', content: topic.value.description}]
 		: []

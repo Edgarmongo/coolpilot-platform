@@ -1,8 +1,8 @@
 <template>
 	<div>
-		<h1 class="page-title">分类：{{ name }}</h1>
-		<p class="page-desc">共 {{ total }} 篇</p>
-		<PostList :posts="posts" :page-num="pageNum" :total-page="totalPage" empty-text="该分类下暂无文章"
+		<h1 class="page-title">{{ t('categoryPage.title', {name}) }}</h1>
+		<p class="page-desc">{{ t('categoryPage.count', {n: total}) }}</p>
+		<PostList :posts="posts" :page-num="pageNum" :total-page="totalPage" :empty-text="t('categoryPage.empty')"
 		          @change="go"/>
 	</div>
 </template>
@@ -10,6 +10,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const {call} = useApi()
+const {t} = useI18n()
 const name = computed(() => decodeURIComponent(String(route.params.name)))
 const pageNum = ref(1)
 
@@ -27,5 +28,5 @@ async function go(page: number) {
 	window.scrollTo({top: 0, behavior: 'smooth'})
 }
 
-useHead({title: `分类 ${name.value} - CoolSkyAI`})
+useHead({title: t('categoryPage.title', {name: name.value})})
 </script>

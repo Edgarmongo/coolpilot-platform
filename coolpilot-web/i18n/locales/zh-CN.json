@@ -163,5 +163,28 @@
     "submitting": "提交中…",
     "submitBtn": "提交评论",
     "replyTo": "回复"
+  },
+  "topicDetail": {
+    "back": "← 全部专题",
+    "desc": "按顺序阅读，更容易形成完整认知",
+    "count": "{n} 篇",
+    "updated": "· 更新于 {date}",
+    "empty": "这个专题还没有文章",
+    "minutes": "{n} 分钟",
+    "reads": "{n} 次阅读",
+    "locked": "需要密码",
+    "notFound": "专题不存在或未发布",
+    "browseOthers": "看看其他专题",
+    "head": "专题"
+  },
+  "categoryPage": {
+    "title": "分类：{name}",
+    "count": "共 {n} 篇",
+    "empty": "该分类下暂无文章"
+  },
+  "tagPage": {
+    "title": "标签：{name}",
+    "count": "共 {n} 篇",
+    "empty": "该标签下暂无文章"
   }
 }

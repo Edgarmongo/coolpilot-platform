@@ -163,5 +163,28 @@
     "submitting": "Submitting…",
     "submitBtn": "Post comment",
     "replyTo": "Reply to"
+  },
+  "topicDetail": {
+    "back": "← All topics",
+    "desc": "Read in order — it is easier to build a complete picture",
+    "count": "{n} articles",
+    "updated": "· updated {date}",
+    "empty": "No articles in this topic yet",
+    "minutes": "{n} min",
+    "reads": "{n} views",
+    "locked": "Password required",
+    "notFound": "This topic does not exist or is not published",
+    "browseOthers": "Browse other topics",
+    "head": "Topic"
+  },
+  "categoryPage": {
+    "title": "Category: {name}",
+    "count": "{n} articles",
+    "empty": "No articles in this category"
+  },
+  "tagPage": {
+    "title": "Tag: {name}",
+    "count": "{n} articles",
+    "empty": "No articles with this tag"
   }
 }

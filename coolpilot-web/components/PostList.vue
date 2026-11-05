@@ -1,7 +1,7 @@
 <template>
 	<div class="card">
 		<div v-if="!posts.length" class="empty">{{ emptyText }}</div>
-		<NuxtLink v-for="post in posts" :key="post.id" :to="`/blog/${post.slug || post.id}`" class="post-item">
+		<NuxtLink v-for="post in posts" :key="post.id" :to="localePath(`/blog/${post.slug || post.id}`)" class="post-item">
 			<h3 class="post-title">{{ post.title }}</h3>
 			<p v-if="post.description" class="desc" v-html="post.description"></p>
 			<div class="post-meta">
@@ -12,14 +12,16 @@
 		</NuxtLink>
 
 		<div class="pager" v-if="totalPage > 1">
-			<button :disabled="pageNum <= 1" @click="$emit('change', pageNum - 1)">上一页</button>
+			<button :disabled="pageNum <= 1" @click="$emit('change', pageNum - 1)">{{ t('common.prev') }}</button>
 			<span>{{ pageNum }} / {{ totalPage }}</span>
-			<button :disabled="pageNum >= totalPage" @click="$emit('change', pageNum + 1)">下一页</button>
+			<button :disabled="pageNum >= totalPage" @click="$emit('change', pageNum + 1)">{{ t('common.next') }}</button>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
+const {t} = useI18n()
+const localePath = useLocalePath()
 defineProps<{
 	posts: any[]
 	pageNum: number
