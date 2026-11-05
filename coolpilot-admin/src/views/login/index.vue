@@ -5,24 +5,24 @@
 				<span class="login-mark">CP</span>
 				<div>
 					<h1>CoolSkyAI</h1>
-					<p>技术平台管理后台</p>
+					<p>{{ t('login.subtitle') }}</p>
 				</div>
 			</div>
 
 			<el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="submit">
 				<el-form-item prop="username">
-					<el-input v-model="form.username" placeholder="用户名" :prefix-icon="User" clearable/>
+					<el-input v-model="form.username" :placeholder="t('login.username')" :prefix-icon="User" clearable/>
 				</el-form-item>
 				<el-form-item prop="password">
-					<el-input v-model="form.password" type="password" placeholder="密码" :prefix-icon="Lock"
+					<el-input v-model="form.password" type="password" :placeholder="t('login.password')" :prefix-icon="Lock"
 					          show-password/>
 				</el-form-item>
 				<el-button type="primary" size="large" class="login-submit" :loading="loading" @click="submit">
-					登 录
+					{{ t('login.submit') }}
 				</el-button>
 			</el-form>
 
-			<p class="login-tip">仅限站点所有者登录，访客请前往前台</p>
+			<p class="login-tip">{{ t('login.tip') }}</p>
 		</div>
 	</div>
 </template>
@@ -33,17 +33,19 @@ import {useRoute, useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {Lock, User} from '@element-plus/icons-vue'
 import {useUserStore} from '@/store/user'
+import {useI18n} from 'vue-i18n'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const {t} = useI18n()
 
 const formRef = ref()
 const loading = ref(false)
 const form = reactive({username: '', password: ''})
 const rules = {
-	username: [{required: true, message: '请输入用户名', trigger: 'blur'}],
-	password: [{required: true, message: '请输入密码', trigger: 'blur'}]
+	username: [{required: true, message: t('login.requiredUser'), trigger: 'blur'}],
+	password: [{required: true, message: t('login.requiredPwd'), trigger: 'blur'}]
 }
 
 async function submit() {
@@ -51,7 +53,7 @@ async function submit() {
 	loading.value = true
 	try {
 		await userStore.login({username: form.username, password: form.password})
-		ElMessage.success('登录成功')
+		ElMessage.success(t('login.success'))
 		router.replace(route.query.redirect || '/dashboard')
 	} catch (e) {
 		// 错误提示已由请求拦截器统一处理

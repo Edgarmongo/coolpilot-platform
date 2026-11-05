@@ -11,11 +11,11 @@
 					<el-sub-menu v-if="item.children" :index="item.path">
 						<template #title>
 							<el-icon><component :is="item.icon"/></el-icon>
-							<span>{{ item.title }}</span>
+							<span>{{ t(item.title) }}</span>
 						</template>
 						<el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">
 							<el-icon><component :is="child.icon"/></el-icon>
-							<span>{{ child.title }}</span>
+							<span>{{ t(child.title) }}</span>
 						</el-menu-item>
 					</el-sub-menu>
 					<el-menu-item v-else :index="item.path">
@@ -34,20 +34,26 @@
 						<Fold v-else/>
 					</el-icon>
 					<el-breadcrumb separator="/">
-						<el-breadcrumb-item v-for="item in breadcrumbs" :key="item">{{ item }}</el-breadcrumb-item>
+						<el-breadcrumb-item v-for="item in breadcrumbs" :key="item">{{ t(item) }}</el-breadcrumb-item>
 					</el-breadcrumb>
 				</div>
 				<div class="layout-header-right">
+					<div class="layout-langs">
+						<button v-for="item in LOCALES" :key="item.code" class="layout-lang"
+						        :class="{active: locale === item.code}" @click="switchLang(item.code)">
+							{{ item.short }}
+						</button>
+					</div>
 					<el-dropdown @command="onCommand">
 						<span class="layout-user">
 							<el-avatar :size="26" :src="user && user.avatar">{{ (username || 'A').slice(0, 1) }}</el-avatar>
-							<span class="layout-user-name">{{ username || '未登录' }}</span>
+							<span class="layout-user-name">{{ username || t('layout.notLoggedIn') }}</span>
 							<el-icon><ArrowDown/></el-icon>
 						</span>
 						<template #dropdown>
 							<el-dropdown-menu>
-								<el-dropdown-item command="view" :disabled="!user">前台首页</el-dropdown-item>
-								<el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+								<el-dropdown-item command="view" :disabled="!user">{{ t('layout.viewSite') }}</el-dropdown-item>
+								<el-dropdown-item command="logout" divided>{{ t('layout.logout') }}</el-dropdown-item>
 							</el-dropdown-menu>
 						</template>
 					</el-dropdown>
@@ -66,6 +72,8 @@
 <script setup>
 import {computed, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
+import {useI18n} from 'vue-i18n'
+import {LOCALES, setLocale} from '@/i18n'
 import {ArrowDown, Expand, Fold} from '@element-plus/icons-vue'
 import {routes} from '@/router'
 import {useUserStore} from '@/store/user'
@@ -73,6 +81,11 @@ import {logout as logoutApi} from '@/api/account'
 
 const route = useRoute()
 const router = useRouter()
+const {t, locale} = useI18n()
+
+function switchLang(code) {
+	setLocale(code)
+}
 const userStore = useUserStore()
 
 const collapsed = ref(false)
@@ -218,6 +231,32 @@ function onCommand(command) {
 .layout-header-right {
 	display: flex;
 	align-items: center;
+	gap: 12px;
+}
+
+.layout-langs {
+	display: flex;
+	gap: 2px;
+}
+
+.layout-lang {
+	padding: 3px 7px;
+	border: none;
+	background: none;
+	border-radius: 6px;
+	font-size: 12.5px;
+	color: #909399;
+	cursor: pointer;
+}
+
+.layout-lang:hover {
+	color: #4ec9b0;
+}
+
+.layout-lang.active {
+	color: #2f9e87;
+	font-weight: 600;
+	background: #eaf7f4;
 }
 
 .layout-user {
