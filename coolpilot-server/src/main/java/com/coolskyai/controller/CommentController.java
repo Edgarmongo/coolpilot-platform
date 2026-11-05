@@ -1,5 +1,6 @@
 package com.coolskyai.controller;
 
+import io.jsonwebtoken.Claims;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.JwtPurpose;
 import com.coolskyai.entity.User;
 import com.coolskyai.mapper.CommentMapper;
 import com.coolskyai.model.dto.Comment;
@@ -74,21 +76,21 @@ public class CommentController {
 				//文章受密码保护，需要验证Token
 				if (JwtUtils.judgeTokenIsExist(jwt)) {
 					try {
-						String subject = JwtUtils.getTokenBody(jwt).getSubject();
-						if (JwtConstants.isOwnerSubject(subject)) {
+						Claims claims = JwtUtils.getTokenBody(jwt);
+						String subject = claims.getSubject();
+						if (JwtConstants.isOwnerSubject(subject) && JwtPurpose.isLogin(claims)) {
 							//博主身份Token
 							String username = JwtConstants.ownerName(subject);
 							User admin = (User) userService.loadUserByUsername(username);
 							if (admin == null) {
 								return Result.create(403, "博主身份Token已失效，请重新登录！");
 							}
-						} else {
-							//经密码验证后的Token
-							Long tokenBlogId = Long.parseLong(subject);
-							//博客id不匹配，验证不通过，可能博客id改变或客户端传递了其它密码保护文章的Token
-							if (!tokenBlogId.equals(blogId)) {
-								return Result.create(403, "Token不匹配，请重新验证密码！");
-							}
+						} else if (JwtConstants.isUserSubject(subject)) {
+							//登录用户没有文章密码，和访客一样需要先验证密码
+							return Result.create(403, "此文章受密码保护，请验证密码！");
+						} else if (!JwtPurpose.isBlogAccess(claims, blogId)) {
+							//用途与文章ID都要对上（R-12）
+							return Result.create(403, "Token不匹配，请重新验证密码！");
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -163,15 +165,16 @@ public class CommentController {
 				//文章受密码保护
 				//验证Token合法性
 				if (JwtUtils.judgeTokenIsExist(jwt)) {
-					String subject;
+					Claims claims;
 					try {
-						subject = JwtUtils.getTokenBody(jwt).getSubject();
+						claims = JwtUtils.getTokenBody(jwt);
 					} catch (Exception e) {
 						e.printStackTrace();
 						return Result.create(403, "Token已失效，请重新验证密码！");
 					}
+					String subject = claims.getSubject();
 					//博主评论，不受密码保护限制，根据博主信息设置评论属性
-					if (JwtConstants.isOwnerSubject(subject)) {
+					if (JwtConstants.isOwnerSubject(subject) && JwtPurpose.isLogin(claims)) {
 						//Token验证通过，获取Token中用户名
 						String username = JwtConstants.ownerName(subject);
 						User admin = (User) userService.loadUserByUsername(username);
@@ -191,10 +194,8 @@ public class CommentController {
 						if (StringUtils.isEmpty(comment.getNickname(), comment.getEmail()) || comment.getNickname().length() > 15) {
 							return Result.error("参数有误");
 						}
-						//对于受密码保护的文章，则Token是必须的
-						Long tokenBlogId = Long.parseLong(subject);
-						//博客id不匹配，验证不通过，可能博客id改变或客户端传递了其它密码保护文章的Token
-						if (!tokenBlogId.equals(comment.getBlogId())) {
+						//文章凭证：用途必须是 blog，且必须是这一篇（R-12）
+						if (!JwtPurpose.isBlogAccess(claims, comment.getBlogId())) {
 							return Result.create(403, "Token不匹配，请重新验证密码！");
 						}
 						commentUtils.setVisitorComment(comment, request);

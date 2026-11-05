@@ -112,6 +112,11 @@ async function fetchBlog() {
 		locked.value = false
 		message.value = ''
 	} else if (res && res.code === 403) {
+		/*
+		 * 403 说明这张凭证已经不作数了（过期、换了文章、或 R-12 之前的老格式）。
+		 * 清掉它，否则每次进页面都白带一个无效 token，解锁时也容易让人以为是密码错。
+		 */
+		pwdToken.value = null
 		blog.value = null
 		locked.value = true
 		message.value = res.msg || '该文章受密码保护'

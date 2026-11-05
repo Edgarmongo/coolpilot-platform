@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.jsonwebtoken.Claims;
 import com.coolskyai.annotation.VisitLogger;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.JwtPurpose;
 import com.coolskyai.entity.Blog;
 import com.coolskyai.entity.User;
 import com.coolskyai.enums.VisitBehavior;
@@ -82,25 +84,26 @@ public class BlogController {
 		if (!"".equals(blog.getPassword())) {
 			if (JwtUtils.judgeTokenIsExist(jwt)) {
 				try {
-					String subject = JwtUtils.getTokenBody(jwt).getSubject();
+					Claims claims = JwtUtils.getTokenBody(jwt);
+					String subject = claims.getSubject();
 					if (JwtConstants.isUserSubject(subject)) {
 						//前台用户 token 不含文章密码信息，不能当作密码凭证使用
 						return Result.create(403, "此文章受密码保护，请验证密码！");
 					}
-					if (JwtConstants.isOwnerSubject(subject)) {
+					if (JwtConstants.isOwnerSubject(subject) && JwtPurpose.isLogin(claims)) {
 						//所有者身份Token，不受文章密码限制
 						String username = JwtConstants.ownerName(subject);
 						User admin = (User) userService.loadUserByUsername(username);
 						if (admin == null) {
 							return Result.create(403, "博主身份Token已失效，请重新登录！");
 						}
-					} else {
-						//经密码验证后的Token
-						Long tokenBlogId = Long.parseLong(subject);
-						//博客id不匹配，验证不通过，可能博客id改变或客户端传递了其它密码保护文章的Token
-						if (!tokenBlogId.equals(id)) {
-							return Result.create(403, "Token不匹配，请重新验证密码！");
-						}
+					} else if (!JwtPurpose.isBlogAccess(claims, id)) {
+						/*
+						 * 用途与文章ID必须同时对上。
+						 * 历史凭证（没有 purpose、subject 是裸文章ID）在这里失效，
+						 * 用户重新输一次密码即可 —— 用一次麻烦换掉「靠 subject 形态猜用途」。
+						 */
+						return Result.create(403, "Token不匹配，请重新验证密码！");
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -126,8 +129,8 @@ public class BlogController {
 	public Result checkBlogPassword(@RequestBody BlogPassword blogPassword) {
 		String password = blogService.getBlogPassword(blogPassword.getBlogId());
 		if (password.equals(blogPassword.getPassword())) {
-			//生成有效时间一个月的Token
-			String jwt = JwtUtils.generateToken(blogPassword.getBlogId().toString(), 1000 * 3600 * 24 * 30L);
+			//生成有效时间一个月的文章访问凭证（purpose=blog，只对这一篇有效）
+			String jwt = JwtUtils.generateBlogToken(blogPassword.getBlogId(), 1000 * 3600 * 24 * 30L);
 			return Result.ok("密码正确", jwt);
 		} else {
 			return Result.create(403, "密码错误");

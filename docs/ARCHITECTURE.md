@@ -206,15 +206,18 @@ coolpilot-platform/
 > 漏归类不再被静默放行，而是返回 403 —— 这是 R-03 的收口方式，宁可上线前发现缺配置，也不要把数据裸露出去。
 > 同理，未知路径现在返回 403 而不是 404，属于有意的「不暴露接口是否存在」。
 >
-> `JwtFilter` 会对**所有路径**解析 token：命中 `owner:` / `user:` 前缀（兼容历史 `admin:` / `visitor:`）才写入 `SecurityContext`，
-> 同时把 `authorities` 里的历史角色值归一化为 `ROLE_owner` / `ROLE_user`，升级当刻不会把在线用户踢下线；
-> 非后台路径遇到非法 token 按匿名放行（避免误判密码文章 token），后台路径仍立即返回 403。
+> `JwtFilter` 会对**所有路径**解析 token：`purpose` 必须是登录态、且 subject 命中 `owner:` / `user:` 前缀（兼容历史 `admin:` / `visitor:`）
+> 才写入 `SecurityContext`，同时把 `authorities` 里的历史角色值归一化为 `ROLE_owner` / `ROLE_user`，升级当刻不会把在线用户踢下线；
+> 非后台路径遇到非法 token 按匿名放行，后台路径仍立即返回 403。
 
 - 无状态，不建 Session，token 通过 `Authorization` 头传递
 - token 前缀区分身份：`owner:用户名` / `user:用户ID`（`JwtConstants`），历史前缀 `admin:` / `visitor:` 仍可解析
 - 未登录 → `{"code":403,"msg":"请登录"}`；已登录但越权 → `{"code":403,"msg":"无权限访问"}`
 - token 带 `tv`（身份版本号）：改密码、`POST /me/logout` 会递增 Redis 里的版本，旧 token 立即失效（R-11）；
   Redis 不可用时按 0 处理（fail-open），避免整站被踢下线
+- token 带 `purpose` 声明（R-12）：`login` 为登录态，`blog` 为密码文章的访问凭证
+  （`subject=blog:{id}` + `bid` 声明，只对这一篇有效）。历史登录 token 没有该声明仍按 `login` 处理；
+  历史文章凭证（subject 为裸文章ID）**不再接受**，重新输一次密码即可 —— 用一次麻烦换掉「靠 subject 形态猜用途」
 - **注意**：曾允许 `visitor` 只读 `/admin/**`（演示账号用途），开放访客自助注册后已收紧，否则构成越权漏洞
 
 ### 4.5 Redis 缓存键（11 个）

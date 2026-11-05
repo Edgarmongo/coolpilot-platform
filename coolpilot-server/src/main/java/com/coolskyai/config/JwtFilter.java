@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.GenericFilterBean;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.constant.JwtPurpose;
 import com.coolskyai.constant.Role;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.service.TokenVersionService;
@@ -64,8 +65,14 @@ public class JwtFilter extends GenericFilterBean {
 			try {
 				Claims claims = JwtUtils.getTokenBody(jwt);
 				String subject = claims.getSubject();
-				// 只有带业务前缀的 token 才代表登录身份；密码文章 token 的 subject 是文章ID，不参与身份识别
-				if (JwtConstants.isAuthSubject(subject)) {
+				/*
+				 * 两道判断：
+				 *   purpose —— 必须是登录态（没有 purpose 的历史 token 也按登录处理，兼容旧会话）
+				 *   subject —— 必须带 owner:/user: 前缀
+				 * 密码文章的凭证 purpose=blog、subject=blog:{id}，两道都过不去，
+				 * 于是不会出现「拿文章密码当登录态」的情况。
+				 */
+				if (JwtPurpose.isLogin(claims) && JwtConstants.isAuthSubject(subject)) {
 					long version = JwtUtils.tokenVersion(claims);
 					if (version != tokenVersionService.current(subject)) {
 						// 已吊销（改过密码 / 主动登出）：后台路径直接拒绝，前台按匿名处理

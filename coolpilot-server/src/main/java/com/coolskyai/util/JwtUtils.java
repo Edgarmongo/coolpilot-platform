@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+import com.coolskyai.constant.JwtPurpose;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -76,12 +77,14 @@ public class JwtUtils {
 	/**
 	 * 生成不带权限、只带版本的 token（/login 的平台所有者前台身份）
 	 *
-	 * 注意不能重载成 generateToken(String, long)：会和「自定义过期时间」的
-	 * generateToken(String, long) 签名冲突（参数都是 String + long）。
+	 * 这里刻意保留两个参数的重载写法差异：generateToken(String) 与
+	 * generateToken(String, Collection) 是「要不要带角色」的区别，
+	 * 都带 purpose=login，避免出现「某些登录 token 没有用途声明」的漏网之鱼。
 	 */
 	public static String generateTokenWithVersion(String subject, long version) {
 		return Jwts.builder()
 				.subject(subject)
+				.claim("purpose", JwtPurpose.LOGIN)
 				.claim("tv", version)
 				.expiration(new Date(System.currentTimeMillis() + expireTime))
 				.signWith(signingKey)
@@ -115,6 +118,7 @@ public class JwtUtils {
 		}
 		return Jwts.builder()
 				.subject(subject)
+				.claim("purpose", JwtPurpose.LOGIN)
 				.claim("authorities", sb.toString())
 				.claim("tv", version)
 				.expiration(new Date(System.currentTimeMillis() + expireTime))
@@ -131,15 +135,19 @@ public class JwtUtils {
 	}
 
 	/**
-	 * 生成自定义过期时间token
+	 * 生成密码保护文章的访问凭证（R-12）
 	 *
-	 * @param subject
-	 * @param expireTime
-	 * @return
+	 * subject 用 blog:{id} 而不是裸 id：用途声明是第一道，前缀是第二道 ——
+	 * 哪怕将来有人漏看 purpose，也不会把它当成登录身份（没有 owner:/user: 前缀）。
+	 *
+	 * @param blogId     文章ID
+	 * @param expireTime 有效期（毫秒）
 	 */
-	public static String generateToken(String subject, long expireTime) {
+	public static String generateBlogToken(Long blogId, long expireTime) {
 		return Jwts.builder()
-				.subject(subject)
+				.subject(JwtPurpose.BLOG_SUBJECT_PREFIX + blogId)
+				.claim("purpose", JwtPurpose.BLOG)
+				.claim("bid", blogId)
 				.expiration(new Date(System.currentTimeMillis() + expireTime))
 				.signWith(signingKey)
 				.compact();
