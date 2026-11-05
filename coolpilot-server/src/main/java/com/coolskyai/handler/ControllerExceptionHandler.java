@@ -16,6 +16,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.exception.NotFoundException;
 import com.coolskyai.exception.PersistenceException;
+import com.coolskyai.exception.ShareExpiredException;
 import com.coolskyai.model.vo.Result;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -67,6 +68,15 @@ public class ControllerExceptionHandler {
 	public Result badRequestExceptionHandler(HttpServletRequest request, BadRequestException e) {
 		logger.warn("Request URL : {}, BadRequest : {}", request.getRequestURL(), e.getMessage());
 		return Result.create(400, e.getMessage());
+	}
+
+	/**
+	 * 分享链接过期：410 让前端能给出「请作者重新分享」而不是「内容不存在」
+	 */
+	@ExceptionHandler(ShareExpiredException.class)
+	public Result shareExpiredExceptionHandler(HttpServletRequest request, ShareExpiredException e) {
+		logger.info("Request URL : {}, ShareExpired : {}", request.getRequestURL(), e.getMessage());
+		return Result.create(410, e.getMessage());
 	}
 
 	/**

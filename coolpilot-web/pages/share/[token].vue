@@ -6,8 +6,8 @@
 		</div>
 
 		<div v-if="!answer" class="empty card">
-			<p>分享内容不存在或已失效</p>
-			<p class="muted">作者可能取消了分享，或这段对话已被删除。</p>
+			<p>{{ errorMessage }}</p>
+			<p class="muted">{{ errorHint }}</p>
 			<NuxtLink to="/ask" class="btn">去站内问答</NuxtLink>
 		</div>
 
@@ -37,6 +37,14 @@
 						<span class="tag">{{ sourceText(cite.sourceType) }}</span>
 					</a>
 				</div>
+
+				<div class="share-bar">
+					<button :class="['like', {on: liked}]" :disabled="liking" @click="toggleLike">
+						<span class="heart">{{ liked ? '♥' : '♡' }}</span>{{ likes }}
+					</button>
+					<span class="stat">阅读 {{ views }}</span>
+					<span class="stat">{{ expiryText }}</span>
+				</div>
 			</article>
 
 			<p class="muted foot">
@@ -50,20 +58,92 @@
 const route = useRoute()
 const token = computed(() => String(route.params.token))
 
-const {data} = await useAsyncData(`share-${token.value}`, () =>
-	$fetch<any>(`/api/share/answer/${token.value}`).catch(() => null))
+/*
+ * 分享可能已经过期（410）或作者撤销了（400），两者对访问者的意义不同：
+ * 前者还能请作者重新分享，后者基本没救，所以把后端消息透出来。
+ */
+const {data} = await useAsyncData(`share-${token.value}`, async () => {
+	try {
+		return await $fetch<any>(`/api/share/answer/${token.value}`)
+	} catch (error: any) {
+		return error?.data || null
+	}
+})
 
 const payload = computed<any>(() => {
 	const res = data.value
 	return res && res.code === 200 ? res.data : null
 })
+const expired = computed(() => data.value?.code === 410)
 const question = computed(() => payload.value?.question || '')
 const answer = computed(() => payload.value?.answer || '')
 const citations = computed<any[]>(() => payload.value?.citations || [])
 const model = computed(() => payload.value?.model || '')
 const createTime = computed(() => payload.value?.createTime || '')
+const expiresAt = computed(() => payload.value?.expiresAt || null)
+
+const errorMessage = computed(() => {
+	if (payload.value) {
+		return ''
+	}
+	return expired.value ? '这个分享链接已经过期' : '分享内容不存在或已失效'
+})
+const errorHint = computed(() => expired.value
+	? '作者设置了有效期，到期后链接自动关闭；可以让作者重新分享一次。'
+	: '作者可能取消了分享，或这段对话已被删除。')
 
 const highlighted = ref<number | null>(null)
+const views = ref(Number(payload.value?.views || 0))
+const likes = ref(Number(payload.value?.likes || 0))
+const liked = ref(false)
+const liking = ref(false)
+
+const expiryText = computed(() => {
+	if (!expiresAt.value) {
+		return '长期有效'
+	}
+	const date = new Date(expiresAt.value)
+	const days = Math.ceil((date.getTime() - Date.now()) / 86400000)
+	return days > 0 ? `${days} 天后过期` : '即将过期'
+})
+
+/*
+ * 阅读与点赞都由浏览器上报：SSR 请求的源 IP 是 Nuxt 服务器，
+ * 所有人都一样，按它去重会把整站访问压成一条。
+ */
+onMounted(async () => {
+	try {
+		const res: any = await $fetch(`/api/share/answer/${token.value}/view`, {method: 'POST'})
+		if (res && res.code === 200 && res.data) {
+			views.value = Number(res.data.views || 0)
+			likes.value = Number(res.data.likes || 0)
+			liked.value = !!res.data.liked
+		}
+	} catch (e) {
+		// 统计失败不影响阅读
+	}
+})
+
+async function toggleLike() {
+	if (liking.value) {
+		return
+	}
+	liking.value = true
+	const next = !liked.value
+	try {
+		const res: any = await $fetch(`/api/share/answer/${token.value}/like`, {
+			method: next ? 'POST' : 'DELETE'
+		})
+		if (res && res.code === 200 && res.data) {
+			liked.value = !!res.data.liked
+			likes.value = Number(res.data.likes || 0)
+		}
+	} catch (e) {
+		// 失败就保持原样，不弹窗打断阅读
+	} finally {
+		liking.value = false
+	}
+}
 
 /** 正文里的 [n]：滚到对应来源并高亮，不跳走 */
 function onCitationClick(event: MouseEvent) {
@@ -92,7 +172,13 @@ function sourceText(type: string) {
 
 useHead(() => ({
 	title: question.value ? `${question.value} - 问答分享 - CoolSkyAI` : '问答分享 - CoolSkyAI',
-	meta: answer.value ? [{name: 'description', content: answer.value.slice(0, 120)}] : []
+	meta: [
+		...(answer.value ? [{name: 'description', content: answer.value.slice(0, 120)}] : []),
+		{property: 'og:type', content: 'article'},
+		{property: 'og:title', content: question.value || 'CoolSkyAI 问答分享'},
+		{property: 'og:description', content: answer.value.slice(0, 120) || '来自 CoolSkyAI 的站内问答'},
+		{name: 'robots', content: expired.value ? 'noindex' : 'index'}
+	]
 }))
 </script>
 
@@ -213,6 +299,56 @@ useHead(() => ({
 	background: #fff7ed;
 	box-shadow: 0 0 0 2px #fed7aa;
 	border-radius: 6px;
+}
+
+.share-bar {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px dashed var(--line);
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.like {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	border: 1px solid var(--line);
+	background: #fff;
+	color: var(--muted);
+	border-radius: 999px;
+	padding: 4px 12px;
+	font-size: 12.5px;
+	cursor: pointer;
+	transition: all .15s;
+}
+
+.like:hover {
+	border-color: #fca5a5;
+	color: #e11d48;
+}
+
+.like.on {
+	border-color: #fca5a5;
+	background: #fff1f2;
+	color: #e11d48;
+}
+
+.like:disabled {
+	cursor: default;
+	opacity: .7;
+}
+
+.heart {
+	font-size: 14px;
+	line-height: 1;
+}
+
+.stat {
+	white-space: nowrap;
 }
 
 .empty {

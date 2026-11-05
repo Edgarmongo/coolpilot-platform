@@ -27,5 +27,11 @@ public class AiMessage {
 	private String model;
 	/** 分享令牌，为空表示未分享 */
 	private String shareToken;
+	/** 分享到期时间，为空表示长期有效 */
+	private Date shareExpiresAt;
+	/** 分享页阅读数 */
+	private Integer shareViews;
+	/** 分享页点赞数 */
+	private Integer shareLikes;
 	private Date createTime;
 }

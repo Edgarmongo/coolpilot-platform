@@ -83,6 +83,16 @@
 				<h3>分享这条回答</h3>
 				<p class="muted small">拿到链接的人无需登录即可查看问答与来源，对话里的其他内容不会暴露</p>
 				<input class="share-input" :value="shareLink" readonly @focus="($event.target as HTMLInputElement).select()"/>
+				<div class="day-row">
+					<span class="day-label">有效期</span>
+					<div class="days">
+						<button v-for="opt in shareDayOptions" :key="opt.value"
+						        :class="['day', {on: shareDays === opt.value}]"
+						        :disabled="shareChanging"
+						        @click="changeShareDays(opt.value)">{{ opt.label }}</button>
+					</div>
+				</div>
+				<p class="muted small expiry">{{ shareExpiryText }}</p>
 				<div class="dialog-actions">
 					<button class="btn" @click="copyShareLink">复制链接</button>
 					<button class="btn ghost" @click="revokeShare">取消分享</button>
@@ -124,6 +134,16 @@ const history = ref<any[]>([])
 const shareVisible = ref(false)
 const shareLink = ref('')
 const shareMessage = ref<ChatMessage | null>(null)
+/** 分享有效期：默认 30 天，0 表示长期有效 */
+const shareDays = ref(30)
+const shareExpiresAt = ref<string | null>(null)
+const shareChanging = ref(false)
+const shareDayOptions = [
+	{label: '7 天', value: 7},
+	{label: '30 天', value: 30},
+	{label: '90 天', value: 90},
+	{label: '长期有效', value: 0}
+]
 const hint = ref('')
 const listRef = ref<HTMLElement | null>(null)
 /** 当前流式请求的中止句柄，点「停止」时用它掐断连接 */
@@ -339,14 +359,53 @@ async function shareAnswer(msg: ChatMessage) {
 	if (!msg.id) {
 		return
 	}
-	const res: any = await call(`/ai/answer/${msg.id}/share`, {method: 'POST'})
+	shareMessage.value = msg
+	shareVisible.value = true
+	await createShare(msg.id)
+}
+
+/** 按当前选择的有效期生成（或复用）链接 */
+async function createShare(messageId: number) {
+	const res: any = await call(`/ai/answer/${messageId}/share`, {
+		method: 'POST',
+		body: {days: shareDays.value}
+	})
 	if (res && res.code === 200 && res.data) {
-		shareMessage.value = msg
-		msg.shareToken = res.data.token
+		if (shareMessage.value) {
+			shareMessage.value.shareToken = res.data.token
+		}
 		shareLink.value = `${location.origin}${res.data.path}`
-		shareVisible.value = true
+		shareExpiresAt.value = res.data.expiresAt || null
 	}
 }
+
+/**
+ * 改有效期要重新生成链接：
+ * 后端对「未过期的分享」是复用的，不会因为再调一次就改到期时间。
+ */
+async function changeShareDays(days: number) {
+	if (days === shareDays.value || !shareMessage.value?.id) {
+		shareDays.value = days
+		return
+	}
+	shareDays.value = days
+	if (!shareLink.value) {
+		return
+	}
+	shareChanging.value = true
+	await call(`/ai/answer/${shareMessage.value.id}/share`, {method: 'DELETE'})
+	await createShare(shareMessage.value.id)
+	shareChanging.value = false
+	toast('已按新的有效期重新生成链接')
+}
+
+/** 弹窗里的一句说明：到期时间比「已分享」有用得多 */
+const shareExpiryText = computed(() => {
+	if (!shareExpiresAt.value) {
+		return '长期有效 · 随时可以在这里取消分享'
+	}
+	return `链接将于 ${formatDate(shareExpiresAt.value, 'YYYY-MM-DD')} 失效，到期后自动关闭`
+})
 
 /** 撤销分享：链接立刻失效 */
 async function revokeShare() {
@@ -356,6 +415,8 @@ async function revokeShare() {
 	const res: any = await call(`/ai/answer/${shareMessage.value.id}/share`, {method: 'DELETE'})
 	if (res && res.code === 200) {
 		shareMessage.value.shareToken = undefined
+		shareExpiresAt.value = null
+		shareLink.value = ''
 		shareVisible.value = false
 	}
 }
@@ -876,6 +937,58 @@ useHead({title: '智能问答 - CoolSkyAI'})
 	font-size: 13px;
 	color: var(--ink);
 	background: #f9fbfa;
+}
+
+.day-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.day-label {
+	flex: none;
+}
+
+.days {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.day {
+	border: 1px solid var(--line);
+	background: #fff;
+	color: var(--muted);
+	border-radius: 999px;
+	padding: 3px 11px;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all .15s;
+}
+
+.day:hover:not(:disabled) {
+	border-color: var(--teal);
+	color: var(--teal);
+}
+
+.day.on {
+	border-color: var(--teal);
+	background: #eef7f5;
+	color: var(--teal);
+	font-weight: 600;
+}
+
+.day:disabled {
+	opacity: .6;
+	cursor: default;
+}
+
+.expiry {
+	margin: 8px 0 0 !important;
+	font-size: 12px;
 }
 
 .dialog-actions {

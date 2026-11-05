@@ -92,7 +92,8 @@ public final class SecurityPaths {
 			// 知识库检索与问答：公开内容可匿名用，付费块在服务层按权益过滤
 			"/ai/search", "/ai/chat", "/ai/chat/stream",
 			// 分享出去的答案：本身就是公开快照，不需要登录
-			"/share/answer/*",
+			// 阅读与点赞同样匿名，去重靠 IP（ShareGuard），这里不放行的话按钮点了会 403
+			"/share/answer/*", "/share/answer/*/view", "/share/answer/*/like",
 			// 问题反馈：允许未登录提交
 			"/feedback",
 			// Telegram webhook：路径里带 bot token，本身就是凭证

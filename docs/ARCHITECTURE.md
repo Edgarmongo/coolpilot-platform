@@ -431,9 +431,11 @@ upload.file.resources-locations=file:${upload.file.path}
 |---|---|
 | 收藏 | 复用通用 `favorite` 表，`target_type=AI_ANSWER`、`target_id=ai_message.id`；**必须校验回答归属**（否则填别人 messageId 就能把内容收进自己列表） |
 | 收藏列表 | 收藏页联表取答案开头，`target_ref` 带回会话 id，点击跳 `/ask?conversation=` |
-| 分享 | `POST /ai/answer/{id}/share` 生成 12 位 token 存 `ai_message.share_token`；重复点返回同一个链接 |
-| 公开页 | `/share/{token}` → `GET /share/answer/{token}`（无鉴权），只回问题、答案、引用、模型与时间，不含任何用户信息 |
-| 撤销 | `DELETE /ai/answer/{id}/share` 清空 token，链接立即失效；删除对话时随消息一起消失 |
+| 分享 | `POST /ai/answer/{id}/share`（可带 `days`）生成 12 位 token 存 `ai_message.share_token`；**未过期就复用同一条链接**，过期后才换新 token |
+| 有效期 | 默认 30 天、最长 365 天，`days=0` 为长期有效；到期后接口返回 `code=410`，前端提示「让作者重新分享」而不是「内容不存在」 |
+| 公开页 | `/share/{token}` → `GET /share/answer/{token}`（无鉴权），只回问题、答案、引用、模型、时间与统计，不含任何用户信息 |
+| 阅读/点赞 | `POST /share/answer/{token}/view` 与 `POST`/`DELETE /share/answer/{token}/like`，按 IP 去重（Redis，30 分钟 / 30 天），计数落在 `share_views` / `share_likes` |
+| 撤销 | `DELETE /ai/answer/{id}/share` 清空 token 与到期时间，链接立即失效；删除对话时随消息一起消失 |
 | 复制 | 前端把「问题 + 答案 + 来源列表」拼成纯文本写入剪贴板 |
 
 ### 4.11 V1.3 知识库检索（第一阶段）

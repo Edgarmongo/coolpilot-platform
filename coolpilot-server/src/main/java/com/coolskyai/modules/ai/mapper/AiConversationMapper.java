@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Update;
 import com.coolskyai.modules.ai.entity.AiConversation;
 import com.coolskyai.modules.ai.entity.AiMessage;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -83,8 +84,36 @@ public interface AiConversationMapper {
 			"WHERE m.id = #{id} AND m.role = 'ASSISTANT' AND c.user_id = #{userId}")
 	AiMessage findAnswerOwned(@Param("id") Long id, @Param("userId") Long userId);
 
-	@Update("UPDATE ai_message SET share_token = #{token} WHERE id = #{id}")
-	int updateShareToken(@Param("id") Long id, @Param("token") String token);
+	/**
+	 * 写分享令牌
+	 *
+	 * 重新分享等于换一条新链接：过期时间与两个计数一起重置，
+	 * 否则新链接会继承上一条的阅读/点赞数，看起来像是「被看过」。
+	 */
+	@Update("UPDATE ai_message SET share_token = #{token}, share_expires_at = #{expiresAt}, " +
+			"share_views = 0, share_likes = 0 WHERE id = #{id}")
+	int updateShareToken(@Param("id") Long id, @Param("token") String token, @Param("expiresAt") Date expiresAt);
+
+	/**
+	 * 撤销分享：令牌与到期时间一起清掉（计数留着，重新分享时会归零）
+	 */
+	@Update("UPDATE ai_message SET share_token = NULL, share_expires_at = NULL WHERE id = #{id}")
+	int clearShareToken(@Param("id") Long id);
+
+	@Update("UPDATE ai_message SET share_views = share_views + 1 WHERE id = #{id}")
+	int increaseShareViews(@Param("id") Long id);
+
+	/**
+	 * 点赞计数带上下界：并发或重复调用也不该出现负数
+	 */
+	@Update("UPDATE ai_message SET share_likes = share_likes + 1 WHERE id = #{id} AND share_likes < 100000000")
+	int increaseShareLikes(@Param("id") Long id);
+
+	@Update("UPDATE ai_message SET share_likes = share_likes - 1 WHERE id = #{id} AND share_likes > 0")
+	int decreaseShareLikes(@Param("id") Long id);
+
+	@Select("SELECT share_views, share_likes FROM ai_message WHERE id = #{id}")
+	AiMessage findShareStats(@Param("id") Long id);
 
 	@Select("SELECT * FROM ai_message WHERE share_token = #{token} AND role = 'ASSISTANT'")
 	AiMessage findByShareToken(@Param("token") String token);

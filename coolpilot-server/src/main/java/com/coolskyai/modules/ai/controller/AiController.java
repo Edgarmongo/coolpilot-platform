@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.model.vo.Result;
@@ -17,8 +18,8 @@ import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.modules.ai.dto.ChatDTO;
 import com.coolskyai.modules.ai.service.AiSearchService;
 import com.coolskyai.modules.ai.service.RagChatService;
+import com.coolskyai.util.ClientIpResolver;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -40,6 +41,8 @@ public class AiController {
 	private RagChatService ragChatService;
 	@Autowired
 	private AccountService accountService;
+	@Autowired
+	private ClientIpResolver clientIpResolver;
 
 	@GetMapping("/ai/search")
 	public Result search(@RequestParam String q,
@@ -96,15 +99,22 @@ public class AiController {
 
 	/**
 	 * 分享一条回答：返回 12 位 token，前端拼成 /share/{token}
+	 *
+	 * 可选参数 days：有效天数，不传默认 30 天，0 表示长期有效（最长 365 天）。
 	 */
 	@PostMapping("/ai/answer/{id}/share")
-	public Result share(@PathVariable Long id) {
+	public Result share(@PathVariable Long id,
+	                    @RequestBody(required = false) Map<String, Object> body) {
 		Long userId = accountService.requireUserId();
-		String token = ragChatService.shareAnswer(id, userId);
-		Map<String, Object> data = new HashMap<>(2);
-		data.put("token", token);
-		data.put("path", "/share/" + token);
-		return Result.ok("OK", data);
+		Integer days = null;
+		if (body != null && body.get("days") != null) {
+			try {
+				days = Integer.parseInt(String.valueOf(body.get("days")).trim());
+			} catch (NumberFormatException e) {
+				throw new com.coolskyai.exception.BadRequestException("有效期格式有误");
+			}
+		}
+		return Result.ok("OK", ragChatService.shareAnswer(id, userId, days));
 	}
 
 	/**
@@ -123,6 +133,27 @@ public class AiController {
 	@GetMapping("/share/answer/{token}")
 	public Result sharedAnswer(@PathVariable String token) {
 		return Result.ok("OK", ragChatService.sharedAnswer(token));
+	}
+
+	/**
+	 * 阅读上报：由浏览器在页面加载后调用，拿得到真实访客 IP
+	 */
+	@PostMapping("/share/answer/{token}/view")
+	public Result viewShare(@PathVariable String token, HttpServletRequest request) {
+		return Result.ok("OK", ragChatService.viewShare(token, clientIpResolver.resolve(request)));
+	}
+
+	/**
+	 * 点赞 / 取消点赞：同一 IP 只算一次，第二次点即撤销
+	 */
+	@PostMapping("/share/answer/{token}/like")
+	public Result likeShare(@PathVariable String token, HttpServletRequest request) {
+		return Result.ok("OK", ragChatService.likeShare(token, clientIpResolver.resolve(request), true));
+	}
+
+	@DeleteMapping("/share/answer/{token}/like")
+	public Result unlikeShare(@PathVariable String token, HttpServletRequest request) {
+		return Result.ok("OK", ragChatService.likeShare(token, clientIpResolver.resolve(request), false));
 	}
 
 	@DeleteMapping("/ai/conversation/{id}")

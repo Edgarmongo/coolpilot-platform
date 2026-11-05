@@ -678,7 +678,7 @@ CREATE TABLE `milestone` (
 | `kb_document` | id, kb_id, source_type, source_id, product_id, status | 文档来源（文章/商品文件/课时），`product_id` 为权限归属 |
 | `kb_chunk` | id, doc_id, kb_id, chunk_index, content, vector_id, **product_id, is_public** | 分块；冗余权限字段供检索过滤 |
 | `ai_conversation` | id, user_id, title | 会话 |
-| `ai_message` | id, conversation_id, role, content, citations | 消息，`citations` 存引用原文位置 |
+| `ai_message` | id, conversation_id, role, content, citations, **share_token, share_expires_at, share_views, share_likes** | 消息，`citations` 存引用原文位置；后四列为 V10/V11 的分享令牌、到期时间与统计 |
 
 **权限隔离的实现**（对应 PRD 修正建议 5）
 

@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.coolskyai.exception.BadRequestException;
+import com.coolskyai.exception.ShareExpiredException;
 import com.coolskyai.model.vo.PageResult;
 import com.coolskyai.modules.ai.dto.ChatDTO;
 import com.coolskyai.modules.ai.entity.AiConversation;
@@ -20,6 +21,7 @@ import com.coolskyai.util.JacksonUtils;
 import tools.jackson.core.type.TypeReference;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
@@ -54,6 +56,9 @@ public class RagChatService {
 	private static final int MAX_TITLE = 40;
 	/** 检索侧只接受 100 字以内，长问题截断后再检索 */
 	private static final int MAX_RETRIEVE_QUERY = 100;
+	/** 分享默认有效期（天）与上限 */
+	private static final int DEFAULT_SHARE_DAYS = 30;
+	private static final int MAX_SHARE_DAYS = 365;
 
 	private static final java.security.SecureRandom random = new java.security.SecureRandom();
 
@@ -79,6 +84,8 @@ public class RagChatService {
 	private AiConversationMapper conversationMapper;
 	@Autowired
 	private TaskExecutor taskExecutor;
+	@Autowired
+	private ShareGuard shareGuard;
 
 	/**
 	 * 提问
@@ -402,21 +409,37 @@ public class RagChatService {
 	}
 
 	/**
-	 * 分享某条回答：第一次点生成 token，之后重复点返回同一个链接
+	 * 分享某条回答
+	 *
+	 * 链接是有寿命的：默认 30 天，最长 365 天，也可以选「长期有效」。
+	 * 没有有效期时，分享出去的链接等于永久公开，用户迟早会忘 ——
+	 * 到期自动失效比指望用户回来点「取消分享」现实得多。
+	 *
+	 * 未过期就复用原链接（重复点分享不会换链接，也不会重置计数）；
+	 * 已过期则重新生成一个，计数归零。
+	 *
+	 * @param days 有效天数，null 用默认值；小于等于 0 表示长期有效
 	 */
-	public String shareAnswer(Long messageId, Long userId) {
+	public Map<String, Object> shareAnswer(Long messageId, Long userId, Integer days) {
 		AiMessage message = conversationMapper.findAnswerOwned(messageId, userId);
 		if (message == null) {
 			throw new BadRequestException("回答不存在");
 		}
-		if (message.getShareToken() != null && !message.getShareToken().isEmpty()) {
-			return message.getShareToken();
+		Integer validDays = normalizeShareDays(days);
+		String existing = message.getShareToken();
+		boolean alive = existing != null && !existing.isEmpty()
+				&& (message.getShareExpiresAt() == null || message.getShareExpiresAt().after(new Date()));
+		if (alive) {
+			return shareInfo(existing, message.getShareExpiresAt(),
+					message.getShareViews(), message.getShareLikes());
 		}
+		Date expiresAt = validDays == null ? null
+				: new Date(System.currentTimeMillis() + validDays * 24L * 3600 * 1000);
 		for (int i = 0; i < 5; i++) {
 			String token = randomToken();
 			try {
-				conversationMapper.updateShareToken(messageId, token);
-				return token;
+				conversationMapper.updateShareToken(messageId, token, expiresAt);
+				return shareInfo(token, expiresAt, 0, 0);
 			} catch (Exception e) {
 				// 撞上唯一索引（概率极低）就换一个
 				log.debug("分享 token 冲突，重试：{}", e.getMessage());
@@ -433,13 +456,60 @@ public class RagChatService {
 		if (message == null) {
 			throw new BadRequestException("回答不存在");
 		}
-		conversationMapper.updateShareToken(messageId, null);
+		conversationMapper.clearShareToken(messageId);
 	}
 
 	/**
 	 * 公开读取分享的答案（不含任何用户信息）
 	 */
 	public Map<String, Object> sharedAnswer(String token) {
+		AiMessage message = requireShare(token);
+		Map<String, Object> data = new LinkedHashMap<>(16);
+		data.put("question", conversationMapper.findQuestionBefore(message.getConversationId(), message.getId()));
+		data.put("answer", message.getContent());
+		data.put("citations", parseCitations(message.getCitations()));
+		data.put("model", message.getModel());
+		data.put("createTime", message.getCreateTime());
+		data.put("expiresAt", message.getShareExpiresAt());
+		data.put("views", nullToZero(message.getShareViews()));
+		data.put("likes", nullToZero(message.getShareLikes()));
+		return data;
+	}
+
+	/**
+	 * 记一次阅读
+	 *
+	 * 放在独立的 POST 里而不是 GET 详情里：详情要能被 SSR 和爬虫安全地取，
+	 * 而且 SSR 请求的源 IP 是 Nuxt 服务器，所有人共用一个，
+	 * 按 IP 去重会把整站访问压成一条记录。由浏览器上报才拿得到真实访客 IP。
+	 */
+	public Map<String, Object> viewShare(String token, String ip) {
+		AiMessage message = requireShare(token);
+		if (shareGuard.markView(token.trim(), ip)) {
+			conversationMapper.increaseShareViews(message.getId());
+		}
+		return shareStats(message.getId(), token.trim(), ip);
+	}
+
+	/**
+	 * 点赞 / 取消点赞（同一 IP 只算一次，状态存在 Redis）
+	 */
+	public Map<String, Object> likeShare(String token, String ip, boolean liked) {
+		AiMessage message = requireShare(token);
+		if (liked) {
+			if (shareGuard.like(token.trim(), ip)) {
+				conversationMapper.increaseShareLikes(message.getId());
+			}
+		} else if (shareGuard.unlike(token.trim(), ip)) {
+			conversationMapper.decreaseShareLikes(message.getId());
+		}
+		return shareStats(message.getId(), token.trim(), ip);
+	}
+
+	/**
+	 * 取分享内容并校验有效期
+	 */
+	private AiMessage requireShare(String token) {
 		if (token == null || token.trim().isEmpty() || token.length() > 32) {
 			throw new BadRequestException("分享链接无效");
 		}
@@ -447,13 +517,49 @@ public class RagChatService {
 		if (message == null) {
 			throw new BadRequestException("分享内容不存在或已失效");
 		}
-		Map<String, Object> data = new LinkedHashMap<>(8);
-		data.put("question", conversationMapper.findQuestionBefore(message.getConversationId(), message.getId()));
-		data.put("answer", message.getContent());
-		data.put("citations", parseCitations(message.getCitations()));
-		data.put("model", message.getModel());
-		data.put("createTime", message.getCreateTime());
+		if (message.getShareExpiresAt() != null && !message.getShareExpiresAt().after(new Date())) {
+			throw new ShareExpiredException("该分享链接已过期，请让作者重新分享");
+		}
+		return message;
+	}
+
+	/**
+	 * 重新读一次计数，避免返回自增前的旧值
+	 */
+	private Map<String, Object> shareStats(Long messageId, String token, String ip) {
+		AiMessage stats = conversationMapper.findShareStats(messageId);
+		Map<String, Object> data = new LinkedHashMap<>(4);
+		data.put("views", stats == null ? 0 : nullToZero(stats.getShareViews()));
+		data.put("likes", stats == null ? 0 : nullToZero(stats.getShareLikes()));
+		data.put("liked", shareGuard.isLiked(token, ip));
 		return data;
+	}
+
+	private Map<String, Object> shareInfo(String token, Date expiresAt, Integer views, Integer likes) {
+		Map<String, Object> data = new LinkedHashMap<>(4);
+		data.put("token", token);
+		data.put("path", "/share/" + token);
+		data.put("expiresAt", expiresAt);
+		data.put("views", nullToZero(views));
+		data.put("likes", nullToZero(likes));
+		return data;
+	}
+
+	/**
+	 * 有效期归一化：默认 30 天，1~365 天之间取原值，<=0 视为长期有效
+	 */
+	private Integer normalizeShareDays(Integer days) {
+		if (days == null) {
+			return DEFAULT_SHARE_DAYS;
+		}
+		if (days <= 0) {
+			return null;
+		}
+		return Math.min(days, MAX_SHARE_DAYS);
+	}
+
+	private int nullToZero(Integer value) {
+		return value == null ? 0 : value;
 	}
 
 	/**
