@@ -114,6 +114,20 @@ export const routes = [
 		]
 	},
 	{
+		path: '/user',
+		component: Layout,
+		redirect: '/user/list',
+		meta: {title: '用户管理', icon: 'UserFilled'},
+		children: [
+			{
+				path: 'list',
+				name: 'UserManage',
+				component: () => import('@/views/user/UserList.vue'),
+				meta: {title: '用户列表', icon: 'User'}
+			}
+		]
+	},
+	{
 		path: '/system',
 		component: Layout,
 		redirect: '/system/account',
@@ -185,6 +199,12 @@ export const routes = [
 				name: 'KnowledgeIndex',
 				component: () => import('@/views/ai/Knowledge.vue'),
 				meta: {title: '知识库索引', icon: 'Cpu'}
+			},
+			{
+				path: 'chat-logs',
+				name: 'ChatLogs',
+				component: () => import('@/views/ai/ChatLogs.vue'),
+				meta: {title: '问答记录', icon: 'ChatLineSquare'}
 			}
 		]
 	},

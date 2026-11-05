@@ -12,6 +12,7 @@ import com.coolskyai.modules.ai.entity.AiMessage;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: AI 问答会话持久层
@@ -74,6 +75,23 @@ public interface AiConversationMapper {
 	 */
 	@Select("SELECT user_id FROM ai_conversation WHERE id = #{id}")
 	Long findOwnerId(@Param("id") Long id);
+
+	// ---------------- 后台：问答记录 ----------------
+
+	/**
+	 * 全部会话（后台）：带用户名，便于判断是谁问的
+	 */
+	@Select("SELECT c.id, c.user_id AS userId, COALESCE(NULLIF(u.nickname, ''), u.username) AS userName, " +
+			"c.title, c.message_count AS messageCount, c.create_time AS createTime, c.update_time AS updateTime " +
+			"FROM ai_conversation c LEFT JOIN user u ON u.id = c.user_id " +
+			"WHERE (#{keyword} IS NULL OR #{keyword} = '' OR c.title LIKE CONCAT('%', #{keyword}, '%')) " +
+			"ORDER BY c.update_time DESC LIMIT #{offset}, #{size}")
+	List<Map<String, Object>> pageAll(@Param("keyword") String keyword,
+	                                  @Param("offset") int offset, @Param("size") int size);
+
+	@Select("SELECT COUNT(*) FROM ai_conversation c " +
+			"WHERE (#{keyword} IS NULL OR #{keyword} = '' OR c.title LIKE CONCAT('%', #{keyword}, '%'))")
+	int countAll(@Param("keyword") String keyword);
 
 	@Select("SELECT COUNT(*) FROM ai_message WHERE conversation_id = #{conversationId}")
 	int countMessages(@Param("conversationId") Long conversationId);

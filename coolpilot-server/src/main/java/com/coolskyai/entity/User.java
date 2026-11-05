@@ -35,6 +35,10 @@ public class User implements UserDetails {
 	private Date createTime;
 	private Date updateTime;
 	private String role;
+	/** 0 正常，1 已禁用（只有前台注册用户可被禁用） */
+	private Integer status;
+	/** 最后一次登录时间 */
+	private Date lastLoginTime;
 
 	@JsonIgnore
 	@Override

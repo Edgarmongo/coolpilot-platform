@@ -47,7 +47,7 @@ ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT 
 | `category` | 新增 `description`、`icon`、`sort` | 前台分类卡与排序 |
 | `comment` | 新增 `user_id`（可空） | 关联注册用户，支持"我的评论" |
 | `moment` | 新增 `moment_type`、`user_id` | 区分技术观点/项目进度/日常 |
-| `user` | 新增 `status`、`bio`、`last_login_time`；`role` 值改为 `ROLE_owner` / `ROLE_user` | 账户状态与个人主页 |
+| `user` | 新增 `status`、`last_login_time`（V13；`bio` 未做）；`role` 值改为 `ROLE_owner` / `ROLE_user` | 账户启停与活跃度 |
 | `friend` | 新增 `sort` | 友链排序 |
 | `blog_tag` | 不变 | — |
 

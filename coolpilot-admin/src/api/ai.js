@@ -31,3 +31,17 @@ export function getLlmStatus() {
 export function testLlm() {
 	return request({url: 'ai/llm/test', method: 'POST'})
 }
+
+/**
+ * 问答会话列表（后台排查：用户问了什么、有没有命中）
+ */
+export function getChatLogs(params) {
+	return request({url: 'ai/conversations', method: 'GET', params})
+}
+
+/**
+ * 会话详情：问题与回答成对，附引用条数
+ */
+export function getChatLog(id) {
+	return request({url: `ai/conversation/${id}`, method: 'GET'})
+}

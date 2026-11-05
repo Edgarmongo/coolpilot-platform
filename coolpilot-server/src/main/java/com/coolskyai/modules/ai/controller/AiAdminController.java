@@ -2,12 +2,15 @@ package com.coolskyai.modules.ai.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.ai.service.AiSearchService;
 import com.coolskyai.modules.ai.service.KnowledgeIndexService;
+import com.coolskyai.modules.ai.service.AiAdminService;
 import com.coolskyai.modules.ai.service.RagChatService;
 
 /**
@@ -22,6 +25,9 @@ import com.coolskyai.modules.ai.service.RagChatService;
 @RestController
 @RequestMapping("/admin")
 public class AiAdminController {
+
+	@Autowired
+	private AiAdminService aiAdminService;
 
 	@Autowired
 	private KnowledgeIndexService knowledgeIndexService;
@@ -43,6 +49,24 @@ public class AiAdminController {
 	/**
 	 * 当前问答模型配置（不返回密钥）
 	 */
+	/**
+	 * 问答会话列表（后台排查用）
+	 */
+	@GetMapping("/ai/conversations")
+	public Result conversations(@RequestParam(required = false) String keyword,
+	                            @RequestParam(defaultValue = "1") Integer pageNum,
+	                            @RequestParam(defaultValue = "10") Integer pageSize) {
+		return Result.ok("请求成功", aiAdminService.conversations(keyword, pageNum, pageSize));
+	}
+
+	/**
+	 * 会话详情：问题与回答成对，附引用条数
+	 */
+	@GetMapping("/ai/conversation/{id}")
+	public Result conversationDetail(@PathVariable Long id) {
+		return Result.ok("请求成功", aiAdminService.detail(id));
+	}
+
 	@GetMapping("/ai/llm")
 	public Result llm() {
 		return Result.ok("OK", ragChatService.llmStatus());

@@ -195,6 +195,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		if (!Role.isUser(user.getRole())) {
 			throw new BadRequestException("该账号是平台所有者账号，请前往后台登录");
 		}
+		// 被后台禁用的账号：密码对也不放行
+		if (user.getStatus() != null && user.getStatus() == 1) {
+			throw new BadRequestException("账号已被禁用，如有疑问请联系站长");
+		}
+		userMapper.touchLastLogin(user.getId());
 		user.setPassword(null);
 		return user;
 	}
