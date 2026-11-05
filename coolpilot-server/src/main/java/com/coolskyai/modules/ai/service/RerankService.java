@@ -3,6 +3,7 @@ package com.coolskyai.modules.ai.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.coolskyai.modules.ai.vo.Retrieved;
@@ -58,30 +59,15 @@ public class RerankService {
 	@Value("${ai.rerank.enabled:true}")
 	private boolean enabled;
 
-	/**
-	 * 截断后至少保留几条
-	 *
-	 * 2 是刻意选的：一条太少，模型只要误判一次就变成「没有资料」；
-	 * 三条以上又会让噪音重新回来。要更严就配 1，要更松就配 3。
-	 */
-	@Value("${ai.rerank.min-keep:2}")
-	private int minKeep;
-
-	/**
-	 * 「重排说都不相关」时的兜底门槛
-	 *
-	 * 模型偶尔会过严：明明第一轮打分很高，它也判成无关。这时宁可留最低限度几条，
-	 * 也不要让用户看到「没有找到」——但第一轮分数本身就很低时，就尊重模型的判断。
-	 * 0.5 取自混合打分的经验值：语义命中通常能过 0.45~0.5，泛化词重叠则在 0.3 附近。
-	 */
-	@Value("${ai.rerank.empty-keep-score:0.5}")
-	private double emptyKeepScore;
+	/** 严格度策略：min-keep 的取值由它推导（显式配置可覆盖） */
+	@Autowired
+	private RerankPolicy policy;
 
 	/** 重排结果缓存时间（秒），0 表示不缓存 */
 	@Value("${ai.rerank.cache-seconds:900}")
 	private long cacheSeconds;
 
-	@org.springframework.beans.factory.annotation.Autowired
+	@Autowired
 	private AiCache aiCache;
 
 	public RerankService(ObjectProvider<Reranker> rerankerProvider) {
@@ -140,11 +126,11 @@ public class RerankService {
 				 * 而「明明有资料却答没有」比「多给两条低分资料」更伤人。
 				 */
 				Double top = candidates.get(0).getScore();
-				ranked = top != null && top >= emptyKeepScore
-						? keepAtLeast(List.of(), candidates, minKeep)
+				ranked = top != null && top >= policy.emptyKeepScore()
+						? keepAtLeast(List.of(), candidates, policy.minKeep())
 						: List.of();
 			} else {
-				ranked = keepAtLeast(toRanked(order, candidates), candidates, minKeep);
+				ranked = keepAtLeast(toRanked(order, candidates), candidates, policy.minKeep());
 			}
 			log.debug("重排完成 provider={} {} -> {} 条，耗时 {}ms",
 					reranker.provider(), candidates.size(), ranked.size(), System.currentTimeMillis() - start);

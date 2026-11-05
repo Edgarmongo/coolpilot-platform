@@ -37,10 +37,13 @@ public class LlmReranker implements Reranker {
 
 	private static final Logger log = LoggerFactory.getLogger(LlmReranker.class);
 
-	private static final String SYSTEM_PROMPT = """
+	/** 判定口径随严格度变化，其余部分固定 */
+	private static final String PROMPT_HEAD = """
 			你是检索结果排序器。给定一个问题与若干候选片段，按与问题的相关性从高到低排序。
-			只输出与问题直接相关的候选编号，无关的不要输出；如果全都不相关，输出 []。
-			格式：JSON 数组，元素是候选编号（整数），例如 [3,1,2]。不输出解释、不输出其它文字。
+			""";
+	private static final String PROMPT_TAIL = """
+			只输出候选编号组成的 JSON 数组（如 [3,1,2]），无关的不要输出；全都不相关输出 []。
+			不输出解释、不输出其它文字。
 			""";
 
 	/** 每个候选送进去的正文长度：够判断「讲的是不是这件事」就够了 */
@@ -49,6 +52,8 @@ public class LlmReranker implements Reranker {
 
 	@Autowired
 	private LlmClient llmClient;
+	@Autowired
+	private RerankPolicy policy;
 
 	@Override
 	public String provider() {
@@ -60,13 +65,20 @@ public class LlmReranker implements Reranker {
 		if (documents.size() <= 1) {
 			return indexes(documents.size(), topN);
 		}
-		String answer = llmClient.chat(SYSTEM_PROMPT, buildPrompt(query, documents));
+		String answer = llmClient.chat(systemPrompt(), buildPrompt(query, documents));
 		List<Integer> ordered = parse(answer, documents.size());
 		if (ordered == null) {
 			// 解析不出来才当失败：让调用方回退原顺序，而不是把候选全丢掉
 			throw new IllegalStateException("重排结果无法解析：" + brief(answer));
 		}
 		return ordered.size() > topN ? new ArrayList<>(ordered.subList(0, topN)) : ordered;
+	}
+
+	/**
+	 * 严格度只改「判定口径」这一句，排序与输出格式保持不变
+	 */
+	private String systemPrompt() {
+		return PROMPT_HEAD + policy.instruction() + "\n" + PROMPT_TAIL;
 	}
 
 	private String buildPrompt(String query, List<String> documents) {

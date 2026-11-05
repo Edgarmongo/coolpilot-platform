@@ -71,14 +71,15 @@ public interface AiConversationMapper {
 	String lastUserQuestion(@Param("conversationId") Long conversationId);
 
 	/**
-	 * 上一轮回答正文
+	 * 最近 N 轮回答正文，按时间倒序
 	 *
-	 * 追问里的「它」有时只出现在回答里（「站内有哪些方案？」→ 回答列了三篇，
-	 * 「第一篇讲什么」）。只看提问补不出这类指代。
+	 * 追问里的「它」「第一篇」有时只出现在回答里（「站内有哪些方案？」→ 回答列了三篇）。
+	 * 而且序号指代常常指向**上一条**回答：本轮在问「第一篇」，那份列表在上一轮的回答里，
+	 * 所以这里取多轮而不是只取最后一轮。
 	 */
 	@Select("SELECT content FROM ai_message WHERE conversation_id = #{conversationId} " +
-			"AND role = 'ASSISTANT' ORDER BY id DESC LIMIT 1")
-	String lastAnswer(@Param("conversationId") Long conversationId);
+			"AND role = 'ASSISTANT' ORDER BY id DESC LIMIT #{limit}")
+	List<String> recentAnswers(@Param("conversationId") Long conversationId, @Param("limit") int limit);
 
 	/**
 	 * 最近 N 轮「已还原成独立问题」的提问，按时间倒序

@@ -3,6 +3,7 @@ package com.coolskyai.modules.ai.service;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
@@ -65,16 +66,9 @@ public class HttpReranker implements Reranker {
 	@Value("${ai.rerank.score-mode:auto}")
 	private String scoreMode;
 
-	/**
-	 * 相对下限：低于「首位分数 × 该系数」的候选丢弃
-	 *
-	 * 这是替代「拍脑袋定绝对阈值」的做法 —— 交叉编码器的分数量纲各不相同，
-	 * 但「与最高分的比例」是同一套语义。0 表示关闭。
-	 * 例：首位 0.9、系数 0.5 → 低于 0.45 的丢掉；全是 0.8~0.9 时会全部保留，
-	 * 因为它们同样相关，没有可切的空档。
-	 */
-	@Value("${ai.rerank.relative-floor:0.5}")
-	private double relativeFloor;
+	/** 严格度策略：相对下限由它推导（显式配置可覆盖），0 表示关闭 */
+	@Autowired
+	private RerankPolicy policy;
 
 	/**
 	 * 绝对下限（0~1 空间）：低于它的候选直接丢弃，0 表示不启用
@@ -177,6 +171,7 @@ public class HttpReranker implements Reranker {
 		scored.sort(Comparator.comparingDouble((double[] row) -> row[1]).reversed());
 
 		double top = scored.get(0)[1];
+		double relativeFloor = policy.relativeFloor();
 		double floor = Math.max(minScore, relativeFloor > 0 ? top * relativeFloor : 0);
 		List<Integer> ordered = new ArrayList<>(scored.size());
 		for (double[] row : scored) {

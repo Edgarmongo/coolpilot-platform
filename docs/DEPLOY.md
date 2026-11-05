@@ -385,8 +385,10 @@ AI_SEARCH_HYBRID_ALPHA=0.65
 # 会话里的「那退款呢」先补全成独立问题再检索；失败自动回退到原话
 AI_CHAT_REWRITE=true
 AI_CHAT_REWRITE_HISTORY=3      # 带进 prompt 的历史轮数（用改写后的句子）
-AI_CHAT_REWRITE_ANSWER=180     # 上一轮回答进 prompt 的节选长度（「第一篇讲什么」这类指代靠它）
-AI_CHAT_REWRITE_CACHE=3600     # 改写结果缓存秒数
+AI_CHAT_REWRITE_ANSWER_ROUNDS=2 # 带进 prompt 的回答轮数（序号指代常指向更早那条）
+AI_CHAT_REWRITE_ANSWER=300      # 单条回答节选长度（≈列表前三条）
+AI_CHAT_REWRITE_ANSWER_BUDGET=600  # 回答节选总预算，超出按轮数均分
+AI_CHAT_REWRITE_CACHE=3600      # 改写结果缓存秒数（键含模型名）
 
 # 重排：none / llm / http
 #   llm  —— 用同一个对话模型做列表排序，不需要额外部署（本项目当前用这个）
@@ -396,15 +398,22 @@ AI_RERANK_BASE_URL=            # provider=http 时填，例 http://host.docker.i
 AI_RERANK_API_KEY=
 AI_RERANK_MODEL=bge-reranker-v2-m3
 AI_RERANK_CANDIDATES=20        # 第一轮多取多少候选交给重排挑
-AI_RERANK_MIN_KEEP=2           # 截断下限：至少保留几条
+# 严格度：一次决定截断下限 / 相对下限 / 兜底分数线
+#   strict（1 / 0.7 / 0.6）只留能直接回答的，宁可空着
+#   balanced（2 / 0.5 / 0.5）默认
+#   loose（3 / 0.35 / 0.35）宁多勿漏
+AI_RERANK_STRICTNESS=balanced
+AI_RERANK_MIN_KEEP=            # 留空=按严格度推导，填数字覆盖
 AI_RERANK_SCORE_MODE=auto      # 仅 http：auto / logit / probability，logits 自动过 sigmoid
-AI_RERANK_RELATIVE_FLOOR=0.5   # 仅 http：低于「首位分数×该系数」的丢弃，0=关闭
+AI_RERANK_RELATIVE_FLOOR=      # 留空=按严格度推导；0=关闭，填数覆盖
 AI_RERANK_MIN_SCORE=0          # 仅 http：绝对下限（归一化后 0~1），0=不启用
 AI_RERANK_CACHE=900            # 重排结果缓存秒数
 ```
 
-`AI_RERANK_RELATIVE_FLOOR` 就是「不用标定」的答案：交叉编码器的分数量纲各不相同，
-但「与最高分的比例」语义一致。只有在需要业务硬卡一条线时才动 `AI_RERANK_MIN_SCORE`。
+`AI_RERANK_STRICTNESS` 就是「不用标定」的答案：交叉编码器的分数量纲各不相同，
+但「与最高分的比例」语义一致，相对下限天然跨模型；再把它和截断下限、兜底分数线
+绑成三档语义，部署方只需回答一个问题 —— 你更怕漏还是更怕噪音。
+真要业务硬卡某条线时才动 `AI_RERANK_MIN_SCORE`。
 
 重排可以选择「只保留相关项」，因此结果条数可能少于上限：模型判断无关的会被丢掉，
 但至少保留 `AI_RERANK_MIN_KEEP` 条；全都不相关且首位原始分低于 0.5 时返回 0 条，

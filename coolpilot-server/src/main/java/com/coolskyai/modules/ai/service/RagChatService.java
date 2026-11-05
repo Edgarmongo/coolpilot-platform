@@ -127,7 +127,7 @@ public class RagChatService {
 			note = "当前未配置大模型，先展示检索到的片段";
 		} else {
 			try {
-				answer = llmClient.chat(SYSTEM_PROMPT, buildUserPrompt(question, retrieved));
+				answer = llmClient.chat(SYSTEM_PROMPT, buildUserPrompt(question, rewrite.query(), retrieved));
 			} catch (LlmException e) {
 				degraded = true;
 				answer = null;
@@ -225,7 +225,7 @@ public class RagChatService {
 				degraded = true;
 				note = "当前未配置大模型，先展示检索到的片段";
 			} else {
-				llmClient.stream(SYSTEM_PROMPT, buildUserPrompt(question, retrieved), delta -> {
+				llmClient.stream(SYSTEM_PROMPT, buildUserPrompt(question, rewrite.query(), retrieved), delta -> {
 					if (cancelled.get()) {
 						// 抛出去中断上游读取（Consumer 不允许受检异常，用非受检的自定义异常）
 						throw new StreamCancelledException("客户端已断开");
@@ -671,8 +671,12 @@ public class RagChatService {
 
 	/**
 	 * 拼上下文：编号 + 标题 + 链接 + 正文，编号与引用列表一一对应
+	 *
+	 * 追问被改写时，把「理解为」也写进 prompt：
+	 * 光给原话「那第二篇呢」，模型只能靠猜它在指什么；
+	 * 改写句是已经消歧过的问题，答案才不会指错对象。
 	 */
-	private String buildUserPrompt(String question, List<Retrieved> retrieved) {
+	private String buildUserPrompt(String question, String resolved, List<Retrieved> retrieved) {
 		StringBuilder sb = new StringBuilder(2048);
 		sb.append("资料：\n");
 		for (int i = 0; i < retrieved.size(); i++) {
@@ -684,6 +688,9 @@ public class RagChatService {
 			sb.append('\n').append(trimContent(item.getContent())).append("\n\n");
 		}
 		sb.append("问题：").append(question).append('\n');
+		if (resolved != null && !resolved.isBlank() && !resolved.equals(question)) {
+			sb.append("（理解为：").append(resolved).append("）\n");
+		}
 		sb.append("请依据上面的资料回答，并在句末标注引用编号。");
 		return sb.toString();
 	}
