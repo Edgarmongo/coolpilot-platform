@@ -33,12 +33,42 @@ public interface ShareCommentMapper {
 	int insert(ShareComment comment);
 
 	/**
-	 * 公开读取：只取展示需要的列，邮箱和 IP 不出库
+	 * 顶楼分页：新的在前
+	 *
+	 * 讨论区按「最新的先看到」排，配合「查看更多」翻更早的 ——
+	 * 发完留言立刻能在第一屏看到，比藏在第 5 页合理。
 	 */
 	@Select("SELECT id, target_id, user_id, nickname, avatar, content, create_time, parent_comment_id, is_admin_comment AS adminComment " +
 			"FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} AND is_published = 1 " +
-			"ORDER BY id ASC LIMIT #{limit}")
-	List<ShareComment> listPublished(@Param("targetId") Long targetId, @Param("limit") int limit);
+			"AND parent_comment_id = -1 ORDER BY id DESC LIMIT #{offset}, #{size}")
+	List<ShareComment> pageRoots(@Param("targetId") Long targetId,
+	                             @Param("offset") int offset, @Param("size") int size);
+
+	/**
+	 * 这一页顶楼下的所有回复（按时间正序，读起来是对话）
+	 */
+	@Select("<script>" +
+			"SELECT id, target_id, user_id, nickname, avatar, content, create_time, parent_comment_id, is_admin_comment AS adminComment " +
+			"FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} AND is_published = 1 " +
+			"AND parent_comment_id IN " +
+			"<foreach collection='parentIds' item='pid' open='(' separator=',' close=')'>#{pid}</foreach>" +
+			" ORDER BY id ASC" +
+			"</script>")
+	List<ShareComment> listReplies(@Param("targetId") Long targetId, @Param("parentIds") List<Long> parentIds);
+
+	/**
+	 * 顶楼总数：决定有没有「下一页」
+	 */
+	@Select("SELECT COUNT(*) FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} " +
+			"AND is_published = 1 AND parent_comment_id = -1")
+	int countRoots(@Param("targetId") Long targetId);
+
+	/**
+	 * 回复总数：只用于展示「共 N 条留言」
+	 */
+	@Select("SELECT COUNT(*) FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} " +
+			"AND is_published = 1 AND parent_comment_id <> -1")
+	int countReplies(@Param("targetId") Long targetId);
 
 	/**
 	 * 取一条仍在展示的评论（校验父评论归属、校验删除权限都用它）

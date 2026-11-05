@@ -158,8 +158,10 @@ public class AiController {
 	 * 分享页的讨论（公开可读，不需要登录）
 	 */
 	@GetMapping("/share/answer/{token}/comments")
-	public Result shareComments(@PathVariable String token) {
-		return Result.ok("OK", shareCommentService.list(token));
+	public Result shareComments(@PathVariable String token,
+	                            @RequestParam(defaultValue = "1") Integer pageNum,
+	                            @RequestParam(defaultValue = "20") Integer pageSize) {
+		return Result.ok("OK", shareCommentService.list(token, pageNum, pageSize));
 	}
 
 	/**

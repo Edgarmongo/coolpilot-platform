@@ -40,8 +40,9 @@ public class ShareCommentService {
 
 	/** 评论长度上限：比文章评论（250）宽一点，讨论问题时经常要贴一段现象 */
 	private static final int MAX_CONTENT = 500;
-	/** 一页最多取这么多条，防止热门分享把响应撑爆 */
-	private static final int MAX_LIST = 200;
+	/** 每页顶楼数：默认 20，允许客户端调到 50，再大就失去分页的意义 */
+	private static final int DEFAULT_PAGE_SIZE = 20;
+	private static final int MAX_PAGE_SIZE = 50;
 	/** 顶级评论的父ID */
 	private static final long ROOT = -1L;
 
@@ -58,10 +59,16 @@ public class ShareCommentService {
 
 	/**
 	 * 公开读取评论（未登录也能看，但不含邮箱/IP）
+	 *
+	 * 分页只切「顶楼」，一页的顶楼连带它们的全部回复一起返回 ——
+	 * 按条数切会把一段对话劈成两半，读起来莫名其妙。
+	 *
+	 * @param pageNum  从 1 开始
+	 * @param pageSize 每页顶楼数，默认 20，上限 50
 	 */
-	public Map<String, Object> list(String token) {
+	public Map<String, Object> list(String token, Integer pageNum, Integer pageSize) {
 		AiMessage message = ragChatService.requireShare(token);
-		return buildList(message.getId());
+		return buildPage(message.getId(), pageNum, pageSize);
 	}
 
 	/**
@@ -109,7 +116,7 @@ public class ShareCommentService {
 		commentMapper.insert(comment);
 
 		notifyParticipants(message, user, text, token, origin);
-		return buildList(message.getId());
+		return counts(message.getId());
 	}
 
 	/**
@@ -132,7 +139,7 @@ public class ShareCommentService {
 			throw new BadRequestException("只能删除自己的评论");
 		}
 		commentMapper.hide(commentId, message.getId());
-		return buildList(message.getId());
+		return counts(message.getId());
 	}
 
 	/**
@@ -163,25 +170,57 @@ public class ShareCommentService {
 		}
 	}
 
-	private Map<String, Object> buildList(Long messageId) {
-		List<ShareComment> rows = commentMapper.listPublished(messageId, MAX_LIST);
-		List<Map<String, Object>> list = new ArrayList<>(rows.size());
-		for (ShareComment row : rows) {
-			Map<String, Object> item = new LinkedHashMap<>(8);
-			item.put("id", row.getId());
-			item.put("userId", row.getUserId());
-			item.put("nickname", row.getNickname());
-			item.put("avatar", row.getAvatar());
-			item.put("content", row.getContent());
-			item.put("createTime", row.getCreateTime());
-			item.put("parentId", row.getParentCommentId() == null ? ROOT : row.getParentCommentId());
-			item.put("admin", Boolean.TRUE.equals(row.getAdminComment()));
-			list.add(item);
+	private Map<String, Object> buildPage(Long messageId, Integer pageNum, Integer pageSize) {
+		int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
+		int size = pageSize == null || pageSize < 1 ? DEFAULT_PAGE_SIZE : Math.min(pageSize, MAX_PAGE_SIZE);
+
+		int totalTop = commentMapper.countRoots(messageId);
+		List<ShareComment> roots = commentMapper.pageRoots(messageId, (page - 1) * size, size);
+		List<ShareComment> all = new ArrayList<>(roots);
+		if (!roots.isEmpty()) {
+			List<Long> ids = new ArrayList<>(roots.size());
+			for (ShareComment root : roots) {
+				ids.add(root.getId());
+			}
+			all.addAll(commentMapper.listReplies(messageId, ids));
 		}
-		Map<String, Object> data = new LinkedHashMap<>(4);
-		data.put("total", list.size());
+
+		List<Map<String, Object>> list = new ArrayList<>(all.size());
+		for (ShareComment row : all) {
+			list.add(toItem(row));
+		}
+		Map<String, Object> data = new LinkedHashMap<>(8);
+		data.put("pageNum", page);
+		data.put("pageSize", size);
+		data.put("totalTop", totalTop);
+		data.put("totalReplies", commentMapper.countReplies(messageId));
+		data.put("hasMore", (long) page * size < totalTop);
 		data.put("comments", list);
 		return data;
+	}
+
+	/**
+	 * 写操作后只需要新的计数：列表由前端按已加载页数重新取，
+	 * 免得「第 3 页发完言只回来第 1 页」把用户已经翻到的内容吞掉
+	 */
+	private Map<String, Object> counts(Long messageId) {
+		Map<String, Object> data = new LinkedHashMap<>(4);
+		data.put("totalTop", commentMapper.countRoots(messageId));
+		data.put("totalReplies", commentMapper.countReplies(messageId));
+		return data;
+	}
+
+	private Map<String, Object> toItem(ShareComment row) {
+		Map<String, Object> item = new LinkedHashMap<>(8);
+		item.put("id", row.getId());
+		item.put("userId", row.getUserId());
+		item.put("nickname", row.getNickname());
+		item.put("avatar", row.getAvatar());
+		item.put("content", row.getContent());
+		item.put("createTime", row.getCreateTime());
+		item.put("parentId", row.getParentCommentId() == null ? ROOT : row.getParentCommentId());
+		item.put("admin", Boolean.TRUE.equals(row.getAdminComment()));
+		return item;
 	}
 
 	private String nicknameOf(User user) {

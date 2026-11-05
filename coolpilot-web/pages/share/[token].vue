@@ -47,10 +47,10 @@
 				</div>
 			</article>
 
-			<section class="talk card">
+			<section ref="talkRef" class="talk card">
 				<div class="talk-head">
 					<span class="talk-title">讨论</span>
-					<span class="muted small">{{ comments.length ? `${comments.length} 条留言` : '还没有留言' }}</span>
+					<span class="muted small">{{ totalCount ? `${totalCount} 条留言` : '还没有留言' }}</span>
 				</div>
 
 				<ul v-if="topComments.length" class="talk-list">
@@ -89,6 +89,12 @@
 				<p v-else-if="!comments.length" class="muted empty-talk">
 					还没有人说话。看完有疑问或补充，留言让作者知道。
 				</p>
+
+				<div v-if="hasMore" class="more-row">
+					<button class="more" :disabled="loadingMore" @click="loadMore">
+						{{ loadingMore ? '加载中…' : `查看更多留言（还有 ${totalTop - topComments.length} 条）` }}
+					</button>
+				</div>
 
 				<div v-if="isLogin" class="talk-form">
 					<div v-if="replyTo" class="replying">
@@ -213,23 +219,94 @@ async function toggleLike() {
 
 /* ---------------- 讨论 ---------------- */
 
-const {data: commentData} = await useAsyncData(`share-comments-${token.value}`, async () => {
+/** 分页只切顶楼：一页顶楼 + 它们的全部回复 */
+const PAGE_SIZE = 20
+
+const {data: commentPage} = await useAsyncData(`share-comments-${token.value}`, async () => {
 	try {
-		return await call<any>(`/share/answer/${token.value}/comments`)
+		return await call<any>(`/share/answer/${token.value}/comments?pageNum=1&pageSize=${PAGE_SIZE}`)
 	} catch (error) {
 		return null
 	}
 })
 
-const comments = computed<any[]>(() => {
-	const res = commentData.value
-	return res && res.code === 200 ? (res.data?.comments || []) : []
-})
-/** 只有两层：顶楼 + 直接回复 */
+const comments = ref<any[]>([])
+const totalTop = ref(0)
+const totalReplies = ref(0)
+const hasMore = ref(false)
+const loadedPage = ref(1)
+const loadingMore = ref(false)
+const talkRef = ref<HTMLElement | null>(null)
+
+/** 展示用总数：顶楼 + 回复 */
+const totalCount = computed(() => totalTop.value + totalReplies.value)
+
 const topComments = computed(() => comments.value.filter(item => !item.parentId || item.parentId === -1))
 
 function repliesOf(id: number) {
 	return comments.value.filter(item => item.parentId === id)
+}
+
+function applyPage(data: any, replace: boolean) {
+	if (!data) {
+		return
+	}
+	const rows = data.comments || []
+	comments.value = replace ? rows : comments.value.concat(rows)
+	totalTop.value = Number(data.totalTop || 0)
+	totalReplies.value = Number(data.totalReplies || 0)
+	hasMore.value = !!data.hasMore
+	loadedPage.value = Number(data.pageNum || 1)
+}
+
+// 首屏直接用服务端取到的第一页，避免加载中闪一下
+if (commentPage.value && commentPage.value.code === 200) {
+	applyPage(commentPage.value.data, true)
+}
+
+async function fetchPage(page: number) {
+	const res: any = await call(`/share/answer/${token.value}/comments?pageNum=${page}&pageSize=${PAGE_SIZE}`)
+	return res && res.code === 200 ? res.data : null
+}
+
+async function loadMore() {
+	if (loadingMore.value || !hasMore.value) {
+		return
+	}
+	loadingMore.value = true
+	try {
+		const data = await fetchPage(loadedPage.value + 1)
+		if (data) {
+			applyPage(data, false)
+		}
+	} finally {
+		loadingMore.value = false
+	}
+}
+
+/**
+ * 发言/删除后按已加载的页数重新取一遍：
+ * 只重新取第 1 页会把用户已经翻到的旧留言吞掉
+ */
+async function reloadLoaded() {
+	const pages = loadedPage.value
+	const merged: any[] = []
+	let meta: any = null
+	for (let page = 1; page <= pages; page++) {
+		const data = await fetchPage(page)
+		if (!data) {
+			break
+		}
+		merged.push(...(data.comments || []))
+		meta = data
+	}
+	if (!meta) {
+		return
+	}
+	comments.value = merged
+	totalTop.value = Number(meta.totalTop || 0)
+	totalReplies.value = Number(meta.totalReplies || 0)
+	hasMore.value = !!meta.hasMore
 }
 
 const draft = ref('')
@@ -264,10 +341,15 @@ async function submitComment() {
 			body: {content: text, parentId: replyTo.value?.id ?? -1}
 		})
 		if (res && res.code === 200) {
-			commentData.value = res
+			const wasReply = !!replyTo.value
 			draft.value = ''
 			replyTo.value = null
 			notice.value = ''
+			await reloadLoaded()
+			// 新留言排在顶楼最前面，滚过去让作者看到自己刚发的那条
+			if (!wasReply) {
+				talkRef.value?.scrollIntoView({behavior: 'smooth', block: 'start'})
+			}
 		} else {
 			notice.value = res?.msg || '留言失败，请稍后再试'
 		}
@@ -284,8 +366,8 @@ async function removeComment(item: any) {
 	}
 	const res: any = await call(`/share/answer/${token.value}/comments/${item.id}`, {method: 'DELETE'})
 	if (res && res.code === 200) {
-		commentData.value = res
 		notice.value = ''
+		await reloadLoaded()
 	} else {
 		notice.value = res?.msg || '删除失败，请稍后再试'
 	}
@@ -694,5 +776,31 @@ useHead(() => ({
 	margin: 8px 0 0;
 	font-size: 12.5px;
 	color: #b91c1c;
+}
+
+.more-row {
+	display: flex;
+	justify-content: center;
+	margin-top: 12px;
+}
+
+.more {
+	border: 1px dashed var(--line);
+	background: #fff;
+	color: var(--muted);
+	border-radius: 999px;
+	padding: 5px 16px;
+	font-size: 12.5px;
+	cursor: pointer;
+}
+
+.more:hover:not(:disabled) {
+	border-color: var(--teal);
+	color: var(--teal);
+}
+
+.more:disabled {
+	cursor: default;
+	opacity: .7;
 }
 </style>

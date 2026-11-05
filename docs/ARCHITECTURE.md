@@ -437,6 +437,7 @@ upload.file.resources-locations=file:${upload.file.path}
 | 阅读/点赞 | `POST /share/answer/{token}/view` 与 `POST`/`DELETE /share/answer/{token}/like`，按 IP 去重（Redis，30 分钟 / 30 天），计数落在 `share_views` / `share_likes` |
 | 撤销 | `DELETE /ai/answer/{id}/share` 清空 token 与到期时间，链接立即失效；删除对话时随消息一起消失 |
 | 讨论 | 复用 `comment` 表（`target_type='SHARE'`、`target_id=ai_message.id`、`page=3`）；**只允许登录后发言**，作者与被回复者会收到站内消息 |
+| 分页 | 只切顶楼：每页 20 条（上限 50），新的在前，一页顶楼连带它们的全部回复一起返回；「查看更多」翻更早的，避免把一段对话劈成两半 |
 | 删除留言 | 作者或平台所有者可删，软删除（`is_published=0`），后台仍可回看 |
 | 复制 | 前端把「问题 + 答案 + 来源列表」拼成纯文本写入剪贴板 |
 
