@@ -8,18 +8,24 @@ import org.springframework.stereotype.Service;
 import com.coolskyai.modules.ai.entity.AiConversation;
 import com.coolskyai.modules.ai.mapper.AiConversationMapper;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @Description: 追问改写（把「那退款呢」补成独立问题）
  *
  * 为什么需要它：检索是「拿一句话去比对」，而追问天然缺主语。
- * 「那退款呢」里的「那」指向上一轮的「商品退款流程」，字面检索看不到这层关系，
+ * 「那退款呢」里的「那」指向上一轮的话题，字面检索看不到这层关系，
  * 于是要么召回不到，要么靠「本轮 + 上一轮」硬拼 —— 拼出来的句子语义是糊的，
  * 向量也测不准。
  *
- * 做法：让模型只做一件事 —— 补全，不做回答。三条护栏保证它不会跑偏：
- *   1. 明显的独立问题不调用模型（省一次 1 秒的往返，见 {@link #suspected}）
- *   2. 输出做清洗与长度限制，异常/空/超长一律回退到原问题
- *   3. 改写结果只用于检索，回答与界面仍展示用户原话
+ * 做法：让模型只做一件事 —— 补全，不做回答。护栏有四层：
+ *   1. 明显的独立问题不调用模型（省一次往返，见 {@link #suspected}）
+ *   2. 上下文给最近 N 轮**已还原**的问题（不是原话）：上一轮若也是追问，
+ *      拿它的原话当锚点等于在模糊上再猜一次
+ *   3. 输出做清洗与长度限制，异常/空/超长一律回退到原问题
+ *   4. 结果进 Redis：同一句话 + 同一段历史只花一次钱
  *
  * 失败不影响问答：改不出来就按原问题检索，最差退化成改造前的行为。
  *
@@ -35,14 +41,29 @@ public class QueryRewriter {
 			你是检索查询改写器，唯一任务是把「追问」补全成不依赖上下文也能看懂的独立问题。
 			规则：
 			1. 只输出改写后的问题本身，不要解释、不要回答问题、不要加引号或「改写：」之类的前缀。
-			2. 用上一轮问题补全代词与省略成分（它、这个、那个、还有呢）。
-			3. 专有名词、型号、版本号原样保留，不要换成同义词。
-			4. 本轮问题本身已经独立时，原样输出。
-			5. 不超过 40 个字，不要换行。
+			2. 「那 X 呢」有两种意思，必须分清：
+			   - X 是新对象（「那 RAG 手册呢」）→ 换话题，改写成围绕 X 的问题，不要把上一轮的对象塞进去；
+			   - X 是上一轮对象的某个方面（「那成本呢」「那分块呢」）→ 补成「上一轮对象 + X」。
+			3. 代词（它、这个、那个）指向最近一次明确提到的对象。
+			4. 不要引入对话里没出现过的新话题，也不要把两个不相干的对象拼在一起。
+			5. 专有名词、型号、版本号原样保留；本轮已独立时原样输出；不超过 40 字，不换行。
+			示例：
+			最近提问：1. Spring Boot 4 工程脚手架包含什么？
+			本轮追问：那 RAG 手册呢
+			RAG 手册包含什么？
+			最近提问：1. Spring Boot 4 工程脚手架包含什么？ 2. RAG 手册包含什么？
+			本轮追问：那分块呢
+			RAG 手册的分块怎么讲？
+			最近提问：1. 站内有哪些 RAG 检索调优的实践记录？
+			本轮追问：它的评估指标有哪些
+			RAG 检索调优的评估指标有哪些
 			""";
 
 	/** 追问的信号词：出现任意一个，就值得让模型补全一次 */
 	private static final String[] MARKERS = {"这", "那", "它", "其", "该", "上面", "刚才", "前面", "还有", "呢", "同样"};
+
+	/** 缓存里表示「上一次也判断为不需要改写」，避免同一个问题反复调模型 */
+	private static final String CACHE_NONE = "__NONE__";
 
 	@Value("${ai.chat.rewrite-enabled:true}")
 	private boolean enabled;
@@ -51,6 +72,23 @@ public class QueryRewriter {
 	@Value("${ai.chat.rewrite-min-length:12}")
 	private int minLength;
 
+	/**
+	 * 带进 prompt 的历史轮数
+	 *
+	 * 3 轮是折中：再少会出现「跨一轮就断」的指代，再多则 prompt 变长、
+	 * 模型也容易把更早的话题误当成当前的。历史只是补全的线索，不是主角。
+	 */
+	@Value("${ai.chat.rewrite-history:3}")
+	private int historyRounds;
+
+	/** 单条历史问题截断长度：长问题进 prompt 只会淹没本轮追问 */
+	@Value("${ai.chat.rewrite-history-length:60}")
+	private int historyLength;
+
+	/** 改写结果缓存时间（秒） */
+	@Value("${ai.chat.rewrite-cache-seconds:3600}")
+	private long cacheSeconds;
+
 	/** 改写结果超过这个长度基本是模型跑偏了，直接丢弃 */
 	private static final int MAX_REWRITE = 100;
 
@@ -58,13 +96,15 @@ public class QueryRewriter {
 	private LlmClient llmClient;
 	@Autowired
 	private AiConversationMapper conversationMapper;
+	@Autowired
+	private AiCache aiCache;
 
 	/**
 	 * 改写结果
 	 *
-	 * @param query    实际用于检索的查询（失败时就是原问题）
+	 * @param query     实际用于检索的查询（失败时就是原问题）
 	 * @param rewritten 是否真的改写过，便于后台排查
-	 * @param tookMs   改写耗时，0 表示没有调用模型
+	 * @param tookMs    耗时，缓存命中时接近 0
 	 */
 	public record Result(String query, boolean rewritten, long tookMs) {
 	}
@@ -77,30 +117,82 @@ public class QueryRewriter {
 	 */
 	public Result rewrite(String question, AiConversation conversation) {
 		if (!enabled || conversation == null || !llmClient.available()) {
-			return new Result(question, false, 0);
+			return unchanged(question, 0);
 		}
 		if (!suspected(question)) {
-			return new Result(question, false, 0);
+			return unchanged(question, 0);
 		}
-		String previous = conversationMapper.lastUserQuestion(conversation.getId());
-		if (previous == null || previous.isBlank()) {
-			return new Result(question, false, 0);
+		List<String> history = history(conversation.getId());
+		if (history.isEmpty()) {
+			return unchanged(question, 0);
 		}
 
 		long start = System.currentTimeMillis();
-		try {
-			String raw = llmClient.chat(SYSTEM_PROMPT,
-					"上一轮问题：" + previous + "\n本轮追问：" + question);
-			String cleaned = cleanup(raw);
-			if (cleaned == null) {
-				return new Result(question, false, System.currentTimeMillis() - start);
+		String cached = aiCache.get("rw", String.join("\n", history), question);
+		if (cached != null) {
+			if (CACHE_NONE.equals(cached)) {
+				return unchanged(question, System.currentTimeMillis() - start);
 			}
+			return new Result(cached, !cached.equals(question), System.currentTimeMillis() - start);
+		}
+
+		try {
+			String cleaned = cleanup(llmClient.chat(SYSTEM_PROMPT, buildPrompt(history, question)));
+			if (cleaned == null) {
+				// 记下「不需要改写」，同一个问题不再白花一次调用
+				aiCache.put("rw", CACHE_NONE, cacheSeconds, String.join("\n", history), question);
+				return unchanged(question, System.currentTimeMillis() - start);
+			}
+			aiCache.put("rw", cleaned, cacheSeconds, String.join("\n", history), question);
 			return new Result(cleaned, !cleaned.equals(question), System.currentTimeMillis() - start);
 		} catch (Exception e) {
-			// 改写是锦上添花：失败就按原问题检索，让问答继续走下去
+			// 改写是锦上添花：失败就按原问题检索，让问答继续走下去（也不缓存，下次还能再试）
 			log.warn("追问改写失败，按原问题检索：{}", e.getMessage());
-			return new Result(question, false, System.currentTimeMillis() - start);
+			return unchanged(question, System.currentTimeMillis() - start);
 		}
+	}
+
+	/**
+	 * 取最近 N 轮已还原的问题，按时间正序（老 -> 新）
+	 *
+	 * 顺便做两件事：去掉空串、单条截断 —— 历史是线索，不是正文。
+	 */
+	private List<String> history(Long conversationId) {
+		List<String> rows;
+		try {
+			rows = conversationMapper.recentResolvedQueries(conversationId, Math.max(1, historyRounds));
+		} catch (Exception e) {
+			log.warn("读取会话历史失败，跳过改写：{}", e.getMessage());
+			return List.of();
+		}
+		if (rows == null || rows.isEmpty()) {
+			return List.of();
+		}
+		List<String> ordered = new ArrayList<>(rows);
+		Collections.reverse(ordered);
+		List<String> kept = new ArrayList<>(ordered.size());
+		for (String row : ordered) {
+			if (row == null || row.isBlank()) {
+				continue;
+			}
+			String text = row.trim();
+			kept.add(text.length() <= historyLength ? text : text.substring(0, historyLength) + "…");
+		}
+		return kept;
+	}
+
+	private String buildPrompt(List<String> history, String question) {
+		StringBuilder sb = new StringBuilder(256);
+		if (history.size() == 1) {
+			sb.append("上一轮问题：").append(history.get(0)).append('\n');
+		} else {
+			sb.append("最近提问（从早到晚）：\n");
+			for (int i = 0; i < history.size(); i++) {
+				sb.append(i + 1).append(". ").append(history.get(i)).append('\n');
+			}
+		}
+		sb.append("本轮追问：").append(question);
+		return sb.toString();
 	}
 
 	/**
@@ -154,5 +246,9 @@ public class QueryRewriter {
 			return null;
 		}
 		return text;
+	}
+
+	private Result unchanged(String question, long tookMs) {
+		return new Result(question, false, tookMs);
 	}
 }

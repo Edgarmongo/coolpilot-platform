@@ -25,8 +25,8 @@ import java.util.Set;
  *      重排看的是「这段讲的是不是这件事」。
  *   2. 输出解析失败就抛异常，由 {@link RerankService} 回退到原顺序 ——
  *      排序错乱比不排序危害更大。
- *   3. 模型漏掉的编号补在末尾：宁可让某条排到最后，也不要让它凭空消失，
- *      否则「明明检索到了却答不出来」这类问题会非常难查。
+ *   3. 模型没有列出的编号视为「不相关」：这是截断的依据，
+ *      但数量下限由 RerankService 兜住，不会把上下文削成空。
  *
  * @Author: CoolSkyAI
  * @Date: 2026-11-06
@@ -39,8 +39,8 @@ public class LlmReranker implements Reranker {
 
 	private static final String SYSTEM_PROMPT = """
 			你是检索结果排序器。给定一个问题与若干候选片段，按与问题的相关性从高到低排序。
-			只输出 JSON 数组，元素是候选编号（整数），例如 [3,1,2]。
-			不要输出解释、不要输出任何其它文字、不要遗漏编号。
+			只输出与问题直接相关的候选编号，无关的不要输出；如果全都不相关，输出 []。
+			格式：JSON 数组，元素是候选编号（整数），例如 [3,1,2]。不输出解释、不输出其它文字。
 			""";
 
 	/** 每个候选送进去的正文长度：够判断「讲的是不是这件事」就够了 */
@@ -62,7 +62,8 @@ public class LlmReranker implements Reranker {
 		}
 		String answer = llmClient.chat(SYSTEM_PROMPT, buildPrompt(query, documents));
 		List<Integer> ordered = parse(answer, documents.size());
-		if (ordered.isEmpty()) {
+		if (ordered == null) {
+			// 解析不出来才当失败：让调用方回退原顺序，而不是把候选全丢掉
 			throw new IllegalStateException("重排结果无法解析：" + brief(answer));
 		}
 		return ordered.size() > topN ? new ArrayList<>(ordered.subList(0, topN)) : ordered;
@@ -81,25 +82,32 @@ public class LlmReranker implements Reranker {
 
 	/**
 	 * 解析编号数组：容忍 ```json 包裹、中文字符、多余空格
+	 * 注意**不补全**被模型省略的编号：省略在这里等于「与问题无关」，补回来就等于让截断失效。
+	 *
+	 * @return null 表示解析失败（调用方回退原顺序）；空列表表示模型判断「都不相关」（调用方据此截断）
 	 */
 	@SuppressWarnings("unchecked")
 	private List<Integer> parse(String answer, int size) {
 		if (answer == null || answer.isBlank()) {
-			return List.of();
+			return null;
 		}
 		int start = answer.indexOf('[');
 		int end = answer.lastIndexOf(']');
 		if (start < 0 || end <= start) {
-			return List.of();
+			return null;
 		}
 		List<Integer> parsed;
 		try {
 			parsed = (List<Integer>) JacksonUtils.readValue(answer.substring(start, end + 1), List.class);
 		} catch (Exception e) {
 			log.debug("重排输出不是合法 JSON：{}", brief(answer));
-			return List.of();
+			return null;
 		}
-		if (parsed == null || parsed.isEmpty()) {
+		if (parsed == null) {
+			return null;
+		}
+		// 空数组是**有效结论**（都不相关），不是解析失败 —— 调用方要据此截断
+		if (parsed.isEmpty()) {
 			return List.of();
 		}
 		Set<Integer> ordered = new LinkedHashSet<>();
@@ -111,10 +119,6 @@ public class LlmReranker implements Reranker {
 			if (index >= 0 && index < size) {
 				ordered.add(index);
 			}
-		}
-		// 漏掉的排在最后，不丢内容
-		for (int i = 0; i < size; i++) {
-			ordered.add(i);
 		}
 		return new ArrayList<>(ordered);
 	}

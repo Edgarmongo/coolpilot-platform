@@ -71,6 +71,17 @@ public interface AiConversationMapper {
 	String lastUserQuestion(@Param("conversationId") Long conversationId);
 
 	/**
+	 * 最近 N 轮「已还原成独立问题」的提问，按时间倒序
+	 *
+	 * 取 retrieval_query 而不是 content：上一轮如果也是追问，它的原话同样指代不清，
+	 * 拿它当上下文等于让模型在模糊的基础上再猜一次；改写后的句子才是能自洽的锚点。
+	 */
+	@Select("SELECT COALESCE(NULLIF(retrieval_query, ''), content) FROM ai_message " +
+			"WHERE conversation_id = #{conversationId} AND role = 'USER' " +
+			"ORDER BY id DESC LIMIT #{limit}")
+	List<String> recentResolvedQueries(@Param("conversationId") Long conversationId, @Param("limit") int limit);
+
+	/**
 	 * 会话归属人：分享页收到评论时通知他
 	 */
 	@Select("SELECT user_id FROM ai_conversation WHERE id = #{id}")

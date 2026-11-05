@@ -6,9 +6,12 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.coolskyai.modules.ai.vo.Retrieved;
+import com.coolskyai.util.JacksonUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -17,10 +20,16 @@ import java.util.concurrent.atomic.AtomicLong;
  * 调用方只关心「把候选按相关性再排一遍，取前 N 个」，不必知道背后是
  * 专用 rerank 服务还是对话模型。
  *
- * 三条保护，都是为了让重排「可有可无」而不是「一坏就全坏」：
+ * 四层保护，都是为了让重排「可有可无」而不是「一坏就全坏」：
  *   1. 没配 provider（或配置不完整）时直接跳过，一次也不调用
  *   2. 调用失败返回原顺序：排序差一点总比整个搜索/问答报错强
  *   3. 连续失败后熔断 60 秒：配置写错时不会让每个请求都白等一次超时
+ *   4. **最少保留 N 条**：重排允许「只留相关的」来截断噪音，
+ *      但如果模型判断过严、或候选本身就只有一两条相关，上下文被削空会让
+ *      问答直接变成「站内没有资料」—— 那比多给两条低分资料更糟。
+ *
+ * 缓存：同一问题 + 同一批候选的排序结果短时复用（默认 15 分钟）。
+ * 键里带上候选指纹，索引重建或内容更新后自然失效，不依赖主动清理。
  *
  * @Author: CoolSkyAI
  * @Date: 2026-11-06
@@ -32,6 +41,14 @@ public class RerankService {
 
 	/** 熔断窗口：连续失败后这段时间内直接跳过重排 */
 	private static final long BREAK_MS = 60_000L;
+	/**
+	 * 重排策略版本
+	 *
+	 * 缓存键要带上它：提示词或截断规则一改，同一批候选的旧排序结果就不再适用。
+	 * 改提示词 / 截断逻辑时手动 +1，比「等 15 分钟自然过期」可靠。
+	 */
+	private static final String STRATEGY_VERSION = "2";
+
 	/** 送进重排的正文长度：Title 之后最多这么多字 */
 	private static final int DOC_LIMIT = 240;
 
@@ -40,6 +57,32 @@ public class RerankService {
 
 	@Value("${ai.rerank.enabled:true}")
 	private boolean enabled;
+
+	/**
+	 * 截断后至少保留几条
+	 *
+	 * 2 是刻意选的：一条太少，模型只要误判一次就变成「没有资料」；
+	 * 三条以上又会让噪音重新回来。要更严就配 1，要更松就配 3。
+	 */
+	@Value("${ai.rerank.min-keep:2}")
+	private int minKeep;
+
+	/**
+	 * 「重排说都不相关」时的兜底门槛
+	 *
+	 * 模型偶尔会过严：明明第一轮打分很高，它也判成无关。这时宁可留最低限度几条，
+	 * 也不要让用户看到「没有找到」——但第一轮分数本身就很低时，就尊重模型的判断。
+	 * 0.5 取自混合打分的经验值：语义命中通常能过 0.45~0.5，泛化词重叠则在 0.3 附近。
+	 */
+	@Value("${ai.rerank.empty-keep-score:0.5}")
+	private double emptyKeepScore;
+
+	/** 重排结果缓存时间（秒），0 表示不缓存 */
+	@Value("${ai.rerank.cache-seconds:900}")
+	private long cacheSeconds;
+
+	@org.springframework.beans.factory.annotation.Autowired
+	private AiCache aiCache;
 
 	public RerankService(ObjectProvider<Reranker> rerankerProvider) {
 		this.rerankerProvider = rerankerProvider;
@@ -62,7 +105,7 @@ public class RerankService {
 	 *
 	 * @param query      检索问题
 	 * @param candidates 第一轮打分结果（已按分数降序）
-	 * @param topN       最终要几条
+	 * @param topN       最终最多几条
 	 * @return 新顺序的列表；未启用或失败时返回原顺序的前 topN 条
 	 */
 	public List<Retrieved> rerank(String query, List<Retrieved> candidates, int topN) {
@@ -79,17 +122,30 @@ public class RerankService {
 			for (Retrieved item : candidates) {
 				documents.add(toDocument(item));
 			}
-			List<Integer> order = reranker.rerank(query, documents, topN);
-			if (order == null || order.isEmpty()) {
+			List<Integer> order = cachedOrder(reranker.provider(), query, candidates);
+			if (order == null) {
+				order = reranker.rerank(query, documents, topN);
+				remember(reranker.provider(), query, candidates, order);
+			}
+			if (order == null) {
+				// 实现没有给结论（理论不会发生）：宁可原样返回，也不能把候选丢掉
 				return trim(candidates, topN);
 			}
-			List<Retrieved> ranked = new ArrayList<>(order.size());
-			for (Integer index : order) {
-				if (index != null && index >= 0 && index < candidates.size()) {
-					ranked.add(candidates.get(index));
-				}
-			}
 			brokenUntil.set(0);
+			List<Retrieved> ranked;
+			if (order.isEmpty()) {
+				/*
+				 * 模型说「都不相关」：这是有效结论，不是失败。
+				 * 但第一轮分数很高时保留最低限度几条 —— 模型偶尔会过于严格，
+				 * 而「明明有资料却答没有」比「多给两条低分资料」更伤人。
+				 */
+				Double top = candidates.get(0).getScore();
+				ranked = top != null && top >= emptyKeepScore
+						? keepAtLeast(List.of(), candidates, minKeep)
+						: List.of();
+			} else {
+				ranked = keepAtLeast(toRanked(order, candidates), candidates, minKeep);
+			}
 			log.debug("重排完成 provider={} {} -> {} 条，耗时 {}ms",
 					reranker.provider(), candidates.size(), ranked.size(), System.currentTimeMillis() - start);
 			return trim(ranked, topN);
@@ -97,6 +153,92 @@ public class RerankService {
 			brokenUntil.set(System.currentTimeMillis() + BREAK_MS);
 			log.warn("重排失败，保持原顺序（{} 秒内不再尝试）：{}", BREAK_MS / 1000, e.getMessage());
 			return trim(candidates, topN);
+		}
+	}
+
+	private List<Retrieved> toRanked(List<Integer> order, List<Retrieved> candidates) {
+		List<Retrieved> ranked = new ArrayList<>(order.size());
+		for (Integer index : order) {
+			if (index != null && index >= 0 && index < candidates.size()) {
+				ranked.add(candidates.get(index));
+			}
+		}
+		return ranked;
+	}
+
+	/**
+	 * 重排结果不足 minKeep 时，用原顺序里没被选中的条目按序补齐
+	 *
+	 * 注意补的是「原分数靠前但模型没选」的那些 —— 它们最可能是被误杀的相关项。
+	 */
+	private List<Retrieved> keepAtLeast(List<Retrieved> ranked, List<Retrieved> candidates, int atLeast) {
+		if (ranked.size() >= Math.max(atLeast, 1)) {
+			return ranked;
+		}
+		Set<Long> seen = new LinkedHashSet<>();
+		for (Retrieved item : ranked) {
+			seen.add(key(item));
+		}
+		List<Retrieved> filled = new ArrayList<>(ranked);
+		for (Retrieved item : candidates) {
+			if (filled.size() >= Math.max(atLeast, 1)) {
+				break;
+			}
+			if (seen.add(key(item))) {
+				filled.add(item);
+			}
+		}
+		return filled;
+	}
+
+	/**
+	 * 候选身份：docId + chunkIndex 足以区分（同一文档的不同块是不同的候选）
+	 */
+	private long key(Retrieved item) {
+		long doc = item.getDocId() == null ? 0 : item.getDocId();
+		int chunk = item.getChunkIndex() == null ? 0 : item.getChunkIndex();
+		return doc * 100_000L + chunk;
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<Integer> cachedOrder(String provider, String query, List<Retrieved> candidates) {
+		if (cacheSeconds <= 0) {
+			return null;
+		}
+		String cached = aiCache.get("rk", fingerprint(provider, query, candidates));
+		if (cached == null) {
+			return null;
+		}
+		try {
+			return (List<Integer>) JacksonUtils.readValue(cached, List.class);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/**
+	 * 缓存键：实现 + 问题 + 候选指纹
+	 *
+	 * 候选指纹用 docId:chunkIndex 的顺序串，顺序变了就是不同的候选集
+	 * （换 embedding 模型、重建索引都会导致顺序变化，自然不会误命中旧结果）。
+	 */
+	private String fingerprint(String provider, String query, List<Retrieved> candidates) {
+		StringBuilder sb = new StringBuilder(64);
+		for (Retrieved item : candidates) {
+			sb.append(item.getDocId()).append(':').append(item.getChunkIndex()).append(',');
+		}
+		return STRATEGY_VERSION + "|" + provider + "|" + query + "|" + sb;
+	}
+
+	private void remember(String provider, String query, List<Retrieved> candidates, List<Integer> order) {
+		if (cacheSeconds <= 0 || order == null) {
+			return;
+		}
+		try {
+			aiCache.put("rk", JacksonUtils.writeValueAsString(order), cacheSeconds,
+					fingerprint(provider, query, candidates));
+		} catch (Exception e) {
+			log.debug("重排结果缓存失败（忽略）：{}", e.getMessage());
 		}
 	}
 

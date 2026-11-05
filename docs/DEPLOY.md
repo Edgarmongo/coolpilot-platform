@@ -384,6 +384,8 @@ AI_SEARCH_HYBRID_ALPHA=0.65
 ```ini
 # 会话里的「那退款呢」先补全成独立问题再检索；失败自动回退到原话
 AI_CHAT_REWRITE=true
+AI_CHAT_REWRITE_HISTORY=3      # 带进 prompt 的历史轮数（用改写后的句子）
+AI_CHAT_REWRITE_CACHE=3600     # 改写结果缓存秒数
 
 # 重排：none / llm / http
 #   llm  —— 用同一个对话模型做列表排序，不需要额外部署（本项目当前用这个）
@@ -393,7 +395,14 @@ AI_RERANK_BASE_URL=            # provider=http 时填，例 http://host.docker.i
 AI_RERANK_API_KEY=
 AI_RERANK_MODEL=bge-reranker-v2-m3
 AI_RERANK_CANDIDATES=20        # 第一轮多取多少候选交给重排挑
+AI_RERANK_MIN_KEEP=2           # 截断下限：至少保留几条
+AI_RERANK_MIN_SCORE=0          # 仅 http：相关性下限，0=不截断（量纲因模型而异）
+AI_RERANK_CACHE=900            # 重排结果缓存秒数
 ```
+
+重排可以选择「只保留相关项」，因此结果条数可能少于上限：模型判断无关的会被丢掉，
+但至少保留 `AI_RERANK_MIN_KEEP` 条；全都不相关且首位原始分低于 0.5 时返回 0 条，
+问答会直接回「站内没有找到」而不是拿无关片段硬答。
 
 用 `http` 时服务需暴露 `POST /rerank`，请求 `{"model","query","documents","top_n"}`，
 响应 `{"results":[{"index","relevance_score"}]}`（TEI 的 `score` 与顶层数组也兼容）。

@@ -54,6 +54,16 @@ public class HttpReranker implements Reranker {
 	@Value("${ai.rerank.timeout-seconds:10}")
 	private int timeoutSeconds;
 
+	/**
+	 * 相关性下限：低于它的候选直接丢弃
+	 *
+	 * 只有专用 rerank 服务给的是「同一问题内的可比分数」，才敢定绝对阈值。
+	 * 默认 0 = 不截断 —— bge-reranker 的原生 logits 范围因模型而异，
+	 * 随手填一个数就误杀，比不截断更难排查。
+	 */
+	@Value("${ai.rerank.min-score:0}")
+	private double minScore;
+
 	private RestClient restClient;
 
 	@PostConstruct
@@ -89,7 +99,8 @@ public class HttpReranker implements Reranker {
 		body.put("documents", documents);
 		// TEI 认 texts，其它家认 documents；两个都带上，多余字段会被忽略
 		body.put("texts", documents);
-		body.put("top_n", topN);
+		// 先要全量分数，截断由我们自己按 min-score 判断（服务端 top_n 会按它自己的口径截）
+		body.put("top_n", documents.size());
 
 		String response;
 		try {
@@ -137,11 +148,16 @@ public class HttpReranker implements Reranker {
 			throw new IllegalStateException("重排响应里没有可用的分数");
 		}
 		scored.sort(Comparator.comparingInt((int[] row) -> row[1]).reversed());
+		int floor = (int) Math.round(minScore * 100000);
 		List<Integer> ordered = new ArrayList<>(scored.size());
 		for (int[] row : scored) {
-			if (row[0] >= 0 && row[0] < size && !ordered.contains(row[0])) {
-				ordered.add(row[0]);
+			if (row[0] < 0 || row[0] >= size || ordered.contains(row[0])) {
+				continue;
 			}
+			if (minScore > 0 && row[1] < floor) {
+				continue;
+			}
+			ordered.add(row[0]);
 		}
 		return ordered.size() > topN ? new ArrayList<>(ordered.subList(0, topN)) : ordered;
 	}
