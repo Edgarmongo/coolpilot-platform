@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description: 知识库问答（RAG）
@@ -165,11 +166,21 @@ public class RagChatService {
 				(llmClient.available() ? "" : "当前未配置大模型，先展示检索到的片段"));
 		send(emitter, "meta", meta);
 
-		taskExecutor.execute(() -> runStream(emitter, conversation, question, retrieved, citations));
+		/*
+		 * 客户端关页面 / 点「停止」时，容器会回调 onError 或 onTimeout。
+		 * 用它标记取消，生成线程看到标记就中断读取上游 ——
+		 * 不这么做的话，用户已经走了，模型还在自顾自地烧 token。
+		 */
+		AtomicBoolean cancelled = new AtomicBoolean(false);
+		emitter.onError(e -> cancelled.set(true));
+		emitter.onTimeout(() -> cancelled.set(true));
+
+		taskExecutor.execute(() -> runStream(emitter, conversation, question, retrieved, citations, cancelled));
 	}
 
 	private void runStream(SseEmitter emitter, AiConversation conversation, String question,
-	                       List<Retrieved> retrieved, List<Map<String, Object>> citations) {
+	                       List<Retrieved> retrieved, List<Map<String, Object>> citations,
+	                       AtomicBoolean cancelled) {
 		long start = System.currentTimeMillis();
 		StringBuilder answer = new StringBuilder();
 		String note = "";
@@ -188,25 +199,40 @@ public class RagChatService {
 				note = "当前未配置大模型，先展示检索到的片段";
 			} else {
 				llmClient.stream(SYSTEM_PROMPT, buildUserPrompt(question, retrieved), delta -> {
+					if (cancelled.get()) {
+						// 抛出去中断上游读取（Consumer 不允许受检异常，用非受检的自定义异常）
+						throw new StreamCancelledException("客户端已断开");
+					}
 					answer.append(delta);
 					send(emitter, "delta", Map.of("text", delta));
 				});
 			}
+		} catch (StreamCancelledException e) {
+			// 用户主动停止或关闭页面：已生成的部分仍然落库，方便下次接着看
+			cancelled.set(true);
+			log.debug("客户端断开，停止生成 question={} 已生成 {} 字", shortQuestion(question), answer.length());
 		} catch (LlmException e) {
 			degraded = true;
 			note = e.getMessage();
 			// 已生成的半截答案照样保留：比清空重来更接近用户预期
-			send(emitter, "error", Map.of("message", note,
+			sendQuietly(emitter, "error", Map.of("message", note,
 					"partial", answer.length() > 0));
 			log.warn("流式问答中断 question={}: {}", shortQuestion(question), e.getMessage());
 		} catch (Exception e) {
-			// 客户端断开时 send 会抛 IOException，这里静默结束，不当成业务错误
-			log.debug("流式输出中止: {}", e.getMessage());
+			// 兜底：任何没预料到的异常都不该吞掉已经生成的内容
+			log.warn("流式输出异常 question={}: {}", shortQuestion(question), e.getMessage());
 		}
 
 		String finalAnswer = answer.length() > 0 ? answer.toString() : null;
 		if (conversation != null) {
+			// 断连时也保存：用户下次打开历史能看到已经生成的部分
 			saveMessages(conversation, question, finalAnswer, note, citations, model);
+		}
+
+		if (cancelled.get()) {
+			// 连接已断，发什么都没人收；落库后直接结束
+			completeQuietly(emitter);
+			return;
 		}
 
 		Map<String, Object> done = new LinkedHashMap<>(8);
@@ -216,16 +242,20 @@ public class RagChatService {
 		done.put("note", note);
 		done.put("tookMs", System.currentTimeMillis() - start);
 		try {
-			send(emitter, "done", done);
+			sendQuietly(emitter, "done", done);
 		} catch (Exception e) {
 			// 客户端已断开：答案已经落库，这里静默结束即可
 			log.debug("推送 done 失败（客户端可能已断开）: {}", e.getMessage());
 		} finally {
-			try {
-				emitter.complete();
-			} catch (Exception ignored) {
-				// complete 在已超时/已断开时会抛，忽略
-			}
+			completeQuietly(emitter);
+		}
+	}
+
+	private void completeQuietly(SseEmitter emitter) {
+		try {
+			emitter.complete();
+		} catch (Exception ignored) {
+			// complete 在已超时 / 已断开时会抛，忽略即可
 		}
 	}
 
@@ -236,7 +266,23 @@ public class RagChatService {
 		try {
 			emitter.send(SseEmitter.event().name(event).data(data, MediaType.APPLICATION_JSON));
 		} catch (Exception e) {
-			throw new IllegalStateException("SSE 发送失败", e);
+			/*
+			 * 客户端断开后这里必失败（ResponseBodyEmitter has already completed）。
+			 * 抛专用异常而不是 IllegalStateException：
+			 * 前者会被识别为「用户不看了」，后者会被当成故障记日志、甚至包成模型错误。
+			 */
+			throw new StreamCancelledException("客户端已断开", e);
+		}
+	}
+
+	/**
+	 * 发事件但忽略失败：用于已经准备收尾的场景（错误提示、done）
+	 */
+	private void sendQuietly(SseEmitter emitter, String event, Object data) {
+		try {
+			send(emitter, event, data);
+		} catch (Exception ignored) {
+			// 连接已断，发不出去是预期行为
 		}
 	}
 

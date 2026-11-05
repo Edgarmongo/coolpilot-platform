@@ -11,6 +11,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.exception.NotFoundException;
@@ -132,6 +133,18 @@ public class ControllerExceptionHandler {
 	public Result noResourceFoundHandler(HttpServletRequest request, NoResourceFoundException e) {
 		logger.warn("Request URL : {}, 资源不存在 : {}", request.getRequestURL(), e.getResourcePath());
 		return Result.create(404, "资源不存在");
+	}
+
+	/**
+	 * 客户端在响应写完之前断开（典型场景：SSE 流式输出时用户关闭页面）
+	 *
+	 * 这不是服务端错误，也不该再往一个已经断掉的 text/event-stream 响应里写 JSON
+	 * （会再抛 HttpMessageNotWritableException，刷出第二段无意义的堆栈）。
+	 * 返回 null 表示不写响应体，只留一行 DEBUG。
+	 */
+	@ExceptionHandler(AsyncRequestNotUsableException.class)
+	public void asyncRequestNotUsableHandler(HttpServletRequest request, AsyncRequestNotUsableException e) {
+		logger.debug("Request URL : {}, 客户端已断开 : {}", request.getRequestURL(), e.getMessage());
 	}
 
 	/**

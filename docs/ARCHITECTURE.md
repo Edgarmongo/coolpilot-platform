@@ -403,6 +403,25 @@ upload.file.resources-locations=file:${upload.file.path}
 - 前端用 `fetch` + `ReadableStream` 手工解析 SSE（`EventSource` 只支持 GET，发不了请求体）；
   流式通道不可用时自动退回一次性接口 `/ai/chat`
 
+**停止生成（前后端一起断）**
+
+1. 前端 `AbortController.abort()` 掐断 fetch，气泡保留已收到的文字并标注「已停止生成」，不触发降级重试
+2. 后端在 `emitter.onError / onTimeout` 上打取消标记；delta 回调看到标记就抛
+   `StreamCancelledException`，从 `readStream` 里跳出并关闭上游连接 —— 用户走了就不再烧 token
+3. `StreamCancelledException` 与 `LlmException` 严格分开：前者是「用户不看了」，不打 WARN、不算降级；
+   `LlmException` 才是模型故障，要告诉用户原因
+4. **无论怎么结束都落库**：断连时保存已生成的部分，历史里能看到半截而不是空白
+5. 客户端断开还会让容器抛 `AsyncRequestNotUsableException`，
+   全局异常处理单独接住它并只记 DEBUG —— 否则会往已断的 `text/event-stream` 里写 JSON，
+   再抛一次 `HttpMessageNotWritableException`，日志里出现两段无意义堆栈
+
+**答案内引用高亮**
+
+- 答案里的 `[1]` 渲染成可点击标记，直达对应来源（新标签打开）
+- 模型输出一律按不可信文本处理：先转义 `& < > "`，再做编号替换；
+  只对**确实存在于引用列表里的编号**生成链接，模型编出 `[9]` 时保持纯文本，避免死链
+- 换行仍交给 `white-space: pre-wrap`，不额外插 `<br/>`
+
 ### 4.11 V1.3 知识库检索（第一阶段）
 
 模块：`com.coolskyai.modules.ai`；表：`kb_knowledge_base` / `kb_document` / `kb_chunk`（V7）；

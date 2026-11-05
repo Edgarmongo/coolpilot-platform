@@ -166,6 +166,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 					});
 		} catch (LlmException e) {
 			throw e;
+		} catch (StreamCancelledException e) {
+			// 上层要求停止（客户端断开）：原样抛出，别包成「模型调用失败」
+			throw e;
 		} catch (ResourceAccessException e) {
 			log.warn("连接大模型超时或不可达 endpoint={}: {}", endpoint, e.getMessage());
 			throw new LlmException("连接大模型超时，请稍后再试", e);

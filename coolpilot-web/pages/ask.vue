@@ -35,8 +35,10 @@
 							<p v-if="msg.role === 'ASSISTANT' && msg.degraded" class="degraded">
 								{{ msg.note || '当前未生成回答，先看下面的检索片段' }}
 							</p>
+							<p v-if="msg.stopped" class="stopped-note">已停止生成</p>
 							<p v-if="msg.streaming && !msg.content" class="thinking">正在检索并组织回答…</p>
-							<p v-else class="text">{{ msg.content }}<span v-if="msg.streaming" class="caret"/></p>
+							<p v-else class="text"><span v-html="renderContent(msg.content, msg.citations)"/><span
+								v-if="msg.streaming" class="caret"/></p>
 							<div v-if="msg.citations && msg.citations.length" class="citations">
 								<div class="cite-title">来源</div>
 								<a v-for="cite in msg.citations" :key="cite.index" :href="cite.url" class="cite">
@@ -54,9 +56,8 @@
 					<textarea v-model="question" rows="2" maxlength="500"
 					          placeholder="问问站内的内容，Enter 发送，Shift + Enter 换行"
 					          @keydown.enter.exact.prevent="send"/>
-					<button class="btn send" :disabled="loading || !question.trim()" @click="send">
-						{{ loading ? '生成中…' : '发送' }}
-					</button>
+					<button v-if="loading" class="btn stop" @click="stop">停止</button>
+					<button v-else class="btn send" :disabled="!question.trim()" @click="send">发送</button>
 				</div>
 				<p class="muted foot">
 					回答由模型基于站内资料生成，可能有偏差；重要信息请点开来源核对。
@@ -78,6 +79,7 @@ type ChatMessage = {
 	degraded?: boolean
 	note?: string
 	streaming?: boolean
+	stopped?: boolean
 }
 
 const messages = ref<ChatMessage[]>([])
@@ -86,6 +88,8 @@ const loading = ref(false)
 const conversationId = ref<number | null>(null)
 const history = ref<any[]>([])
 const listRef = ref<HTMLElement | null>(null)
+/** 当前流式请求的中止句柄，点「停止」时用它掐断连接 */
+let currentAbort: AbortController | null = null
 
 const samples = [
 	'站内的付费内容都讲什么？',
@@ -118,16 +122,23 @@ async function send() {
 	messages.value.push(assistant)
 	scrollToBottom()
 
+	currentAbort = new AbortController()
 	try {
-		await streamAnswer(text, assistant)
-	} catch (e) {
-		// 流式通道不通（代理缓冲、断网、浏览器不支持流）时退回一次性接口，别让用户白问
-		try {
-			await fallbackAnswer(text, assistant)
-		} catch (err: any) {
-			assistant.content = '提问失败，请稍后再试'
+		await streamAnswer(text, assistant, currentAbort.signal)
+	} catch (e: any) {
+		if (isAbortError(e)) {
+			// 用户主动停止：已经收到的内容保留，不再走降级接口
+			assistant.stopped = true
+		} else {
+			// 流式通道不通（代理缓冲、断网、浏览器不支持流）时退回一次性接口，别让用户白问
+			try {
+				await fallbackAnswer(text, assistant)
+			} catch (err: any) {
+				assistant.content = '提问失败，请稍后再试'
+			}
 		}
 	} finally {
+		currentAbort = null
 		assistant.streaming = false
 		loading.value = false
 		if (isLogin.value) {
@@ -143,7 +154,7 @@ async function send() {
  * 用 fetch 而不是 EventSource：EventSource 只支持 GET，发不了请求体
  * （问题可能很长，不适合塞进 URL）。
  */
-async function streamAnswer(text: string, assistant: ChatMessage) {
+async function streamAnswer(text: string, assistant: ChatMessage, signal: AbortSignal) {
 	const headers: Record<string, string> = {'Content-Type': 'application/json'}
 	if (token.value) {
 		headers.authorization = token.value
@@ -151,6 +162,7 @@ async function streamAnswer(text: string, assistant: ChatMessage) {
 	const res = await fetch('/api/ai/chat/stream', {
 		method: 'POST',
 		headers,
+		signal,
 		body: JSON.stringify({question: text, conversationId: conversationId.value})
 	})
 	if (!res.ok || !res.body) {
@@ -210,6 +222,47 @@ async function streamAnswer(text: string, assistant: ChatMessage) {
 	if (!received) {
 		throw new Error('empty stream')
 	}
+}
+
+/**
+ * 停止生成：掐断 SSE 连接，后端感知断连后会一并停止上游模型
+ */
+function stop() {
+	if (currentAbort) {
+		currentAbort.abort()
+	}
+}
+
+function isAbortError(error: any) {
+	return error && (error.name === 'AbortError' || error.code === 20)
+}
+
+/**
+ * 把答案里的 [1] 变成可点击的引用标记
+ *
+ * 模型输出一律当不可信文本处理：先转义再替换，
+ * 只对「确实存在于引用列表里的编号」生成链接，避免模型编出 [9] 时出现死链。
+ * 换行交给容器的 white-space: pre-wrap，不额外插 <br/>。
+ */
+function renderContent(text: string, citations?: Citation[]) {
+	if (!text) {
+		return ''
+	}
+	const safe = text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+	return safe.replace(/\[(\d{1,2})\]/g, (match, num) => {
+		const index = Number(num)
+		const cite = (citations || []).find(item => item.index === index)
+		if (!cite) {
+			return match
+		}
+		// href 里也要转义 &，否则带查询参数的链接在 XHTML 严格解析下会断
+		const url = String(cite.url || '').replace(/&/g, '&amp;').replace(/"/g, '%22')
+		return `<a class="cite-ref" href="${url}" target="_blank" rel="noopener noreferrer">[${index}]</a>`
+	})
 }
 
 function parseEvent(chunk: string): {name: string, data: any} | null {
@@ -588,5 +641,33 @@ useHead({title: '智能问答 - CoolSkyAI'})
 	to {
 		visibility: hidden;
 	}
+}
+
+.cite-ref {
+	color: var(--teal);
+	font-weight: 600;
+	text-decoration: none;
+	border-bottom: 1px dotted rgba(15, 118, 110, .5);
+}
+
+.cite-ref:hover {
+	background: #eef7f5;
+	border-bottom-style: solid;
+}
+
+.stopped-note {
+	margin: 0 0 6px;
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.btn.stop {
+	background: #fff;
+	color: #b42318;
+	border: 1px solid #f3c6c1;
+}
+
+.btn.stop:hover {
+	background: #fdecea;
 }
 </style>
