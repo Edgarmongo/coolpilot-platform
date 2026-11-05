@@ -4,45 +4,45 @@
 			<div class="head">
 				<div>
 					<div class="crumbs">
-						<span class="tag">需求</span>
+						<span class="tag">{{ t('demandDetail.tag') }}</span>
 						<span class="mono muted">{{ demand.demandNo }}</span>
 						<span :class="['status', statusClass(demand.status)]">{{ statusText(demand.status) }}</span>
 					</div>
 					<h1 class="page-title">{{ demand.title }}</h1>
 					<p class="page-desc">
-						{{ typeText(demand.projectType) }} · 提交于 {{ formatDate(demand.createTime) }}
-						<span v-if="demand.productTitle"> · 关联服务「{{ demand.productTitle }}」</span>
+						{{ typeText(demand.projectType) }} · {{ t('demandDetail.submittedAt', {date: formatDate(demand.createTime)}) }}
+						<span v-if="demand.productTitle"> · {{ t('demandDetail.related', {name: demand.productTitle}) }}</span>
 					</p>
 				</div>
 				<div class="head-actions">
-					<button v-if="cancelable" class="btn ghost" :disabled="busy" @click="cancel">取消需求</button>
+					<button v-if="cancelable" class="btn ghost" :disabled="busy" @click="cancel">{{ t('demandDetail.cancel') }}</button>
 				</div>
 			</div>
 
 			<div class="meta">
-				<div><span class="muted">预算</span><strong>{{ budgetText }}</strong></div>
-				<div><span class="muted">期望交付</span><strong>{{ demand.expectDate || '未填写' }}</strong></div>
-				<div><span class="muted">技术栈</span><strong>{{ demand.techStack || '未填写' }}</strong></div>
-				<div v-if="demand.contact"><span class="muted">联系方式</span><strong>{{ demand.contact }}</strong></div>
+				<div><span class="muted">{{ t('demandDetail.budget') }}</span><strong>{{ budgetText }}</strong></div>
+				<div><span class="muted">{{ t('demandDetail.expect') }}</span><strong>{{ demand.expectDate || t('demandDetail.notFilled') }}</strong></div>
+				<div><span class="muted">{{ t('demandDetail.tech') }}</span><strong>{{ demand.techStack || t('demandDetail.notFilled') }}</strong></div>
+				<div v-if="demand.contact"><span class="muted">{{ t('demandDetail.contact') }}</span><strong>{{ demand.contact }}</strong></div>
 			</div>
 
 			<div class="desc">{{ demand.description }}</div>
 
 			<div v-if="demand.attachmentFileId" class="attach">
-				<span class="muted">附件已上传</span>
+				<span class="muted">{{ t('demandDetail.attachUploaded') }}</span>
 			</div>
 
-			<p v-if="demand.rejectReason" class="reject">未通过原因：{{ demand.rejectReason }}</p>
+			<p v-if="demand.rejectReason" class="reject">{{ t('demandDetail.rejected', {reason: demand.rejectReason}) }}</p>
 		</div>
 
 		<!-- 报价 -->
 		<div class="card section">
-			<h2 class="sub-title">报价单</h2>
-			<div v-if="!quotes.length" class="empty">平台评估后会在这里给出报价</div>
+			<h2 class="sub-title">{{ t('demandDetail.quotes') }}</h2>
+			<div v-if="!quotes.length" class="empty">{{ t('demandDetail.noQuotes') }}</div>
 			<div v-for="quote in quotes" :key="quote.id" class="quote">
 				<div class="quote-head">
 					<div>
-						<strong>第 {{ quote.version }} 版报价</strong>
+						<strong>{{ t('demandDetail.version', {n: quote.version}) }}</strong>
 						<span class="mono muted">{{ quote.quoteNo }}</span>
 					</div>
 					<div class="quote-right">
@@ -52,20 +52,20 @@
 				</div>
 				<p v-if="quote.scope" class="scope">{{ quote.scope }}</p>
 				<p class="muted small">
-					有效期至 {{ quote.validUntil || '未设置' }}
-					<span v-if="quote.status === 'SENT'"> · 确认后平台会立即立项</span>
+					{{ t('demandDetail.validUntil', {date: quote.validUntil || t('demandDetail.notSet')}) }}
+					<span v-if="quote.status === 'SENT'"> · {{ t('demandDetail.afterConfirm') }}</span>
 				</p>
 				<div v-if="quote.status === 'SENT' && canAct" class="quote-actions">
-					<button class="btn" :disabled="busy" @click="acceptQuote(quote)">接受报价</button>
-					<button class="btn ghost" :disabled="busy" @click="rejectQuote(quote)">不合适</button>
+					<button class="btn" :disabled="busy" @click="acceptQuote(quote)">{{ t('demandDetail.accept') }}</button>
+					<button class="btn ghost" :disabled="busy" @click="rejectQuote(quote)">{{ t('demandDetail.reject') }}</button>
 				</div>
 			</div>
 		</div>
 
 		<!-- 项目 -->
 		<div v-if="projects.length" class="card section">
-			<h2 class="sub-title">项目</h2>
-			<NuxtLink v-for="project in projects" :key="project.id" :to="`/project/${project.projectNo}`" class="project">
+			<h2 class="sub-title">{{ t('demandDetail.projects') }}</h2>
+			<NuxtLink v-for="project in projects" :key="project.id" :to="localePath(`/project/${project.projectNo}`)" class="project">
 				<div>
 					<strong>{{ project.name }}</strong>
 					<span class="mono muted">{{ project.projectNo }}</span>
@@ -73,15 +73,15 @@
 				<div class="project-right">
 					<span class="amount">¥{{ price(project.amount) }}</span>
 					<span class="status">{{ projectStatusText(project.status) }}</span>
-					<span class="muted">查看进度 →</span>
+					<span class="muted">{{ t('demandDetail.viewProgress') }}</span>
 				</div>
 			</NuxtLink>
 		</div>
 
 		<!-- 流水 -->
 		<div class="card section">
-			<h2 class="sub-title">进度记录</h2>
-			<div v-if="!timeline.length" class="empty">暂无记录</div>
+			<h2 class="sub-title">{{ t('demandDetail.timeline') }}</h2>
+			<div v-if="!timeline.length" class="empty">{{ t('demandDetail.noEvents') }}</div>
 			<div v-for="(event, index) in timeline" :key="event.id" class="event">
 				<span class="dot"/>
 				<div class="event-main">
@@ -92,19 +92,21 @@
 						</span>
 					</div>
 					<p v-if="event.remark" class="muted small">{{ event.remark }}</p>
-					<p class="muted small">{{ event.operatorName || '系统' }} · {{ formatDate(event.createTime) }}</p>
+					<p class="muted small">{{ event.operatorName || t('demandDetail.system') }} · {{ formatDate(event.createTime) }}</p>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div v-else class="empty card">需求不存在或无权查看</div>
+	<div v-else class="empty card">{{ t('demandDetail.notFound') }}</div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const {call, isLogin} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
-useHead({title: '需求详情 - CoolSkyAI'})
+useHead({title: t('demandDetail.head')})
 
 if (!isLogin.value) {
 	await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
@@ -129,31 +131,31 @@ const budgetText = computed(() => {
 		return ''
 	}
 	if (d.budgetNegotiable) {
-		return '面议'
+		return t('demandDetail.budgetNegotiable')
 	}
 	if (d.budgetMin && d.budgetMax) {
 		return `¥${price(d.budgetMin)} - ¥${price(d.budgetMax)}`
 	}
 	if (d.budgetMax) {
-		return `不超过 ¥${price(d.budgetMax)}`
+		return t('demandDetail.budgetMax', {amount: `¥${price(d.budgetMax)}`})
 	}
 	if (d.budgetMin) {
-		return `¥${price(d.budgetMin)} 起`
+		return t('demandDetail.budgetMin', {amount: `¥${price(d.budgetMin)}`})
 	}
-	return '面议'
+	return t('demandDetail.budgetNegotiable')
 })
 
 async function acceptQuote(quote: any) {
-	if (!confirm(`确认接受 ¥${price(quote.amount)} 的报价？确认后项目立即立项。`)) {
+	if (!confirm(t('demandDetail.acceptConfirm', {amount: `¥${price(quote.amount)}`}))) {
 		return
 	}
 	busy.value = true
 	try {
 		const res: any = await call(`/quote/${quote.id}/accept`, {method: 'POST'})
 		if (res.code === 200) {
-			await navigateTo(`/project/${res.data.project.projectNo}`)
+			await navigateTo(localePath(`/project/${res.data.project.projectNo}`))
 		} else {
-			alert(res.msg || '操作失败')
+			alert(res.msg || t('demandDetail.failed'))
 		}
 	} finally {
 		busy.value = false
@@ -161,7 +163,7 @@ async function acceptQuote(quote: any) {
 }
 
 async function rejectQuote(quote: any) {
-	const reason = prompt('方便说一下哪里不合适吗？（可留空，平台会重新报价）') ?? ''
+	const reason = prompt(t('demandDetail.rejectPrompt')) ?? ''
 	busy.value = true
 	try {
 		const res: any = await call(`/quote/${quote.id}/reject`, {method: 'POST', body: {reason}})
@@ -176,7 +178,7 @@ async function rejectQuote(quote: any) {
 }
 
 async function cancel() {
-	if (!confirm('确定取消这个需求？')) {
+	if (!confirm(t('demandDetail.cancelConfirm'))) {
 		return
 	}
 	busy.value = true
@@ -197,16 +199,16 @@ function price(value: number) {
 }
 
 function typeText(type: string) {
-	return {BACKEND: '后端开发', AI: 'AI 应用', DEPLOY: '部署运维', CONSULT: '技术咨询', OTHER: '其他'}[type] || type
+	const key = `demandNew.types.${type}`
+	return te(key) ? t(key) : type
 }
 
 function statusText(status: string) {
-	return {
-		PENDING_REVIEW: '待审核', PENDING_CONTACT: '待联系', EVALUATING: '评估中', PENDING_QUOTE: '待报价',
-		PENDING_CONFIRM: '待确认报价', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收', COMPLETED: '已完成',
-		REJECTED: '未通过', CANCELLED: '已取消', DISPUTED: '有争议',
-		DRAFT: '草稿', SENT: '待确认', ACCEPTED: '已接受', EXPIRED: '已过期'
-	}[status] || status || ''
+	if (!status) {
+		return ''
+	}
+	const key = `demandDetail.status.${status}`
+	return te(key) ? t(key) : status
 }
 
 function statusClass(status: string) {
@@ -220,22 +222,18 @@ function statusClass(status: string) {
 }
 
 function quoteStatusText(status: string) {
-	return {DRAFT: '草稿', SENT: '待确认', ACCEPTED: '已接受', REJECTED: '已拒绝', EXPIRED: '已失效'}[status] || status
+	const key = `demandDetail.quoteStatus.${status}`
+	return te(key) ? t(key) : status
 }
 
 function projectStatusText(status: string) {
-	return {
-		NOT_STARTED: '未开始', IN_PROGRESS: '实施中', PENDING_ACCEPT: '待验收',
-		COMPLETED: '已完成', ARCHIVED: '已归档'
-	}[status] || status
+	const key = `demandDetail.projectStatus.${status}`
+	return te(key) ? t(key) : status
 }
 
 function actionText(action: string) {
-	return {
-		SUBMIT: '提交需求', APPROVE: '审核通过', REJECT: '拒绝', MOVE: '状态调整',
-		QUOTE: '创建报价', UPDATE: '修改报价', SEND: '发送报价', SEND_QUOTE: '报价已发出',
-		ACCEPT: '接受报价', ACCEPT_QUOTE: '确认报价', REJECT_QUOTE: '拒绝报价', CANCEL: '取消需求'
-	}[action] || action
+	const key = `demandDetail.action.${action}`
+	return te(key) ? t(key) : action
 }
 </script>
 
