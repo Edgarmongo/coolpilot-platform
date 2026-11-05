@@ -47,7 +47,7 @@ public class RerankService {
 	 * 缓存键要带上它：提示词或截断规则一改，同一批候选的旧排序结果就不再适用。
 	 * 改提示词 / 截断逻辑时手动 +1，比「等 15 分钟自然过期」可靠。
 	 */
-	private static final String STRATEGY_VERSION = "2";
+	private static final String STRATEGY_VERSION = "3";
 
 	/** 送进重排的正文长度：Title 之后最多这么多字 */
 	private static final int DOC_LIMIT = 240;
@@ -217,17 +217,20 @@ public class RerankService {
 	}
 
 	/**
-	 * 缓存键：实现 + 问题 + 候选指纹
+	 * 缓存键：策略版本 + 实现 + 问题 + 候选内容指纹
 	 *
-	 * 候选指纹用 docId:chunkIndex 的顺序串，顺序变了就是不同的候选集
-	 * （换 embedding 模型、重建索引都会导致顺序变化，自然不会误命中旧结果）。
+	 * 指纹取**正文内容的摘要**而不是 docId:chunkIndex：
+	 * 文章改了内容但块划分没变时，id 完全一样，用 id 做键会命中旧排序 ——
+	 * 表现是「内容更新了，搜索结果还是按老文本排的」，而且 15 分钟内反复出现。
+	 * 摘要只看标题与正文，块位置变化也自然失效。
 	 */
 	private String fingerprint(String provider, String query, List<Retrieved> candidates) {
-		StringBuilder sb = new StringBuilder(64);
+		StringBuilder sb = new StringBuilder(256);
 		for (Retrieved item : candidates) {
-			sb.append(item.getDocId()).append(':').append(item.getChunkIndex()).append(',');
+			sb.append(item.getTitle()).append('\u0001')
+					.append(item.getContent()).append('\u0002');
 		}
-		return STRATEGY_VERSION + "|" + provider + "|" + query + "|" + sb;
+		return STRATEGY_VERSION + "|" + provider + "|" + query + "|" + AiCache.shortSha1(sb.toString());
 	}
 
 	private void remember(String provider, String query, List<Retrieved> candidates, List<Integer> order) {

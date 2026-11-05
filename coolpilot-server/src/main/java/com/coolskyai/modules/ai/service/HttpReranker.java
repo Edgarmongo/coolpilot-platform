@@ -55,11 +55,32 @@ public class HttpReranker implements Reranker {
 	private int timeoutSeconds;
 
 	/**
-	 * 相关性下限：低于它的候选直接丢弃
+	 * 分数形态：auto / logit / probability
 	 *
-	 * 只有专用 rerank 服务给的是「同一问题内的可比分数」，才敢定绝对阈值。
-	 * 默认 0 = 不截断 —— bge-reranker 的原生 logits 范围因模型而异，
-	 * 随手填一个数就误杀，比不截断更难排查。
+	 * bge-reranker 这类交叉编码器返回的是 logits（可正可负、范围因模型而异），
+	 * Jina / Cohere 返回的已经是 0~1 的相关度。阈值要能通用，先统一到 0~1：
+	 * logits 走 sigmoid，概率原样使用。
+	 * auto 的判据是「出现负数或大于 1 的值 → 判定为 logits」，实践中足够稳。
+	 */
+	@Value("${ai.rerank.score-mode:auto}")
+	private String scoreMode;
+
+	/**
+	 * 相对下限：低于「首位分数 × 该系数」的候选丢弃
+	 *
+	 * 这是替代「拍脑袋定绝对阈值」的做法 —— 交叉编码器的分数量纲各不相同，
+	 * 但「与最高分的比例」是同一套语义。0 表示关闭。
+	 * 例：首位 0.9、系数 0.5 → 低于 0.45 的丢掉；全是 0.8~0.9 时会全部保留，
+	 * 因为它们同样相关，没有可切的空档。
+	 */
+	@Value("${ai.rerank.relative-floor:0.5}")
+	private double relativeFloor;
+
+	/**
+	 * 绝对下限（0~1 空间）：低于它的候选直接丢弃，0 表示不启用
+	 *
+	 * 需要标定时才用：先用日志观察同一问题的分数分布，再决定切在哪。
+	 * 不确定就别填 —— 相对下限已经能处理大多数情况。
 	 */
 	@Value("${ai.rerank.min-score:0}")
 	private double minScore;
@@ -133,33 +154,70 @@ public class HttpReranker implements Reranker {
 			throw new IllegalStateException("重排响应格式无法识别");
 		}
 
-		List<int[]> scored = new ArrayList<>(rows.size());
+		List<double[]> raw = new ArrayList<>(rows.size());
 		for (Object row : rows) {
 			if (!(row instanceof Map<?, ?> item)) {
 				continue;
 			}
 			Object index = item.get("index");
 			Object score = item.get("relevance_score") != null ? item.get("relevance_score") : item.get("score");
-			if (index instanceof Number i && score instanceof Number s) {
-				scored.add(new int[]{i.intValue(), (int) Math.round(s.doubleValue() * 100000)});
+			if (index instanceof Number i && score instanceof Number sc) {
+				raw.add(new double[]{i.intValue(), sc.doubleValue()});
 			}
 		}
-		if (scored.isEmpty()) {
+		if (raw.isEmpty()) {
 			throw new IllegalStateException("重排响应里没有可用的分数");
 		}
-		scored.sort(Comparator.comparingInt((int[] row) -> row[1]).reversed());
-		int floor = (int) Math.round(minScore * 100000);
+		// 先统一到 0~1，阈值才有意义
+		boolean logits = isLogits(raw);
+		List<double[]> scored = new ArrayList<>(raw.size());
+		for (double[] row : raw) {
+			scored.add(new double[]{row[0], logits ? sigmoid(row[1]) : clamp(row[1])});
+		}
+		scored.sort(Comparator.comparingDouble((double[] row) -> row[1]).reversed());
+
+		double top = scored.get(0)[1];
+		double floor = Math.max(minScore, relativeFloor > 0 ? top * relativeFloor : 0);
 		List<Integer> ordered = new ArrayList<>(scored.size());
-		for (int[] row : scored) {
-			if (row[0] < 0 || row[0] >= size || ordered.contains(row[0])) {
+		for (double[] row : scored) {
+			int index = (int) row[0];
+			if (index < 0 || index >= size || ordered.contains(index)) {
 				continue;
 			}
-			if (minScore > 0 && row[1] < floor) {
+			if (row[1] < floor) {
 				continue;
 			}
-			ordered.add(row[0]);
+			ordered.add(index);
 		}
 		return ordered.size() > topN ? new ArrayList<>(ordered.subList(0, topN)) : ordered;
+	}
+
+	/**
+	 * 判断返回的是不是 logits
+	 *
+	 * 显式配置优先；auto 时看是否有负数或超过 1 的值 —— 概率不会出现这两种情况。
+	 */
+	private boolean isLogits(List<double[]> raw) {
+		if ("logit".equalsIgnoreCase(scoreMode)) {
+			return true;
+		}
+		if ("probability".equalsIgnoreCase(scoreMode)) {
+			return false;
+		}
+		for (double[] row : raw) {
+			if (row[1] < 0 || row[1] > 1) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private double sigmoid(double value) {
+		return 1.0 / (1.0 + Math.exp(-value));
+	}
+
+	private double clamp(double value) {
+		return Math.max(0, Math.min(1, value));
 	}
 
 	private String trimTrailingSlash(String url) {

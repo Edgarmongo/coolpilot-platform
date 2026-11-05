@@ -385,6 +385,7 @@ AI_SEARCH_HYBRID_ALPHA=0.65
 # 会话里的「那退款呢」先补全成独立问题再检索；失败自动回退到原话
 AI_CHAT_REWRITE=true
 AI_CHAT_REWRITE_HISTORY=3      # 带进 prompt 的历史轮数（用改写后的句子）
+AI_CHAT_REWRITE_ANSWER=180     # 上一轮回答进 prompt 的节选长度（「第一篇讲什么」这类指代靠它）
 AI_CHAT_REWRITE_CACHE=3600     # 改写结果缓存秒数
 
 # 重排：none / llm / http
@@ -396,9 +397,14 @@ AI_RERANK_API_KEY=
 AI_RERANK_MODEL=bge-reranker-v2-m3
 AI_RERANK_CANDIDATES=20        # 第一轮多取多少候选交给重排挑
 AI_RERANK_MIN_KEEP=2           # 截断下限：至少保留几条
-AI_RERANK_MIN_SCORE=0          # 仅 http：相关性下限，0=不截断（量纲因模型而异）
+AI_RERANK_SCORE_MODE=auto      # 仅 http：auto / logit / probability，logits 自动过 sigmoid
+AI_RERANK_RELATIVE_FLOOR=0.5   # 仅 http：低于「首位分数×该系数」的丢弃，0=关闭
+AI_RERANK_MIN_SCORE=0          # 仅 http：绝对下限（归一化后 0~1），0=不启用
 AI_RERANK_CACHE=900            # 重排结果缓存秒数
 ```
+
+`AI_RERANK_RELATIVE_FLOOR` 就是「不用标定」的答案：交叉编码器的分数量纲各不相同，
+但「与最高分的比例」语义一致。只有在需要业务硬卡一条线时才动 `AI_RERANK_MIN_SCORE`。
 
 重排可以选择「只保留相关项」，因此结果条数可能少于上限：模型判断无关的会被丢掉，
 但至少保留 `AI_RERANK_MIN_KEEP` 条；全都不相关且首位原始分低于 0.5 时返回 0 条，

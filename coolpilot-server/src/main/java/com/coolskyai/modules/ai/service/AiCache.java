@@ -82,10 +82,16 @@ public class AiCache {
 		for (String part : parts) {
 			raw.append(part == null ? "" : part).append('\u0000');
 		}
-		return "ai:" + category + ":" + digest(raw.toString());
+		return "ai:" + category + ":" + shortSha1(raw.toString());
 	}
 
-	private String digest(String text) {
+	/**
+	 * 短摘要（32 位十六进制），既用于缓存键，也用于「内容指纹」这类判断
+	 *
+	 * 用 SHA-1 而不是 hashCode：后者只有 32 位且碰撞容易，拿它判断
+	 * 「内容有没有变」会出现「改了内容仍命中旧缓存」的静默错误。
+	 */
+	public static String shortSha1(String text) {
 		try {
 			MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
 			byte[] bytes = sha1.digest(text.getBytes(StandardCharsets.UTF_8));

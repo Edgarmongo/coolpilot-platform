@@ -44,7 +44,8 @@ public class QueryRewriter {
 			2. 「那 X 呢」有两种意思，必须分清：
 			   - X 是新对象（「那 RAG 手册呢」）→ 换话题，改写成围绕 X 的问题，不要把上一轮的对象塞进去；
 			   - X 是上一轮对象的某个方面（「那成本呢」「那分块呢」）→ 补成「上一轮对象 + X」。
-			3. 代词（它、这个、那个）指向最近一次明确提到的对象。
+			3. 代词（它、这个、那个）先指向最近提问里明确提到的对象；提问里找不到时，
+			   再看「上一轮回答（节选）」里提到的对象，不要凭空编。
 			4. 不要引入对话里没出现过的新话题，也不要把两个不相干的对象拼在一起。
 			5. 专有名词、型号、版本号原样保留；本轮已独立时原样输出；不超过 40 字，不换行。
 			示例：
@@ -80,6 +81,15 @@ public class QueryRewriter {
 	 */
 	@Value("${ai.chat.rewrite-history:3}")
 	private int historyRounds;
+
+	/**
+	 * 上一轮回答进 prompt 的节选长度
+	 *
+	 * 只要够看清「回答了哪几个对象」即可，整段回答进 prompt 既贵又会把追问淹没。
+	 * 0 表示完全不用回答内容（退回只看提问的旧行为）。
+	 */
+	@Value("${ai.chat.rewrite-answer-length:180}")
+	private int answerLength;
 
 	/** 单条历史问题截断长度：长问题进 prompt 只会淹没本轮追问 */
 	@Value("${ai.chat.rewrite-history-length:60}")
@@ -126,9 +136,10 @@ public class QueryRewriter {
 		if (history.isEmpty()) {
 			return unchanged(question, 0);
 		}
+		String answerExcerpt = answerExcerpt(conversation.getId());
 
 		long start = System.currentTimeMillis();
-		String cached = aiCache.get("rw", String.join("\n", history), question);
+		String cached = aiCache.get("rw", String.join("\n", history), answerExcerpt, question);
 		if (cached != null) {
 			if (CACHE_NONE.equals(cached)) {
 				return unchanged(question, System.currentTimeMillis() - start);
@@ -137,13 +148,14 @@ public class QueryRewriter {
 		}
 
 		try {
-			String cleaned = cleanup(llmClient.chat(SYSTEM_PROMPT, buildPrompt(history, question)));
+			String cleaned = cleanup(llmClient.chat(SYSTEM_PROMPT,
+					buildPrompt(history, answerExcerpt, question)));
 			if (cleaned == null) {
 				// 记下「不需要改写」，同一个问题不再白花一次调用
-				aiCache.put("rw", CACHE_NONE, cacheSeconds, String.join("\n", history), question);
+				aiCache.put("rw", CACHE_NONE, cacheSeconds, String.join("\n", history), answerExcerpt, question);
 				return unchanged(question, System.currentTimeMillis() - start);
 			}
-			aiCache.put("rw", cleaned, cacheSeconds, String.join("\n", history), question);
+			aiCache.put("rw", cleaned, cacheSeconds, String.join("\n", history), answerExcerpt, question);
 			return new Result(cleaned, !cleaned.equals(question), System.currentTimeMillis() - start);
 		} catch (Exception e) {
 			// 改写是锦上添花：失败就按原问题检索，让问答继续走下去（也不缓存，下次还能再试）
@@ -181,8 +193,30 @@ public class QueryRewriter {
 		return kept;
 	}
 
-	private String buildPrompt(List<String> history, String question) {
-		StringBuilder sb = new StringBuilder(256);
+	/**
+	 * 上一轮回答的节选：去掉换行、截断
+	 *
+	 * 回答里常出现「《某文档》」这类具体对象，追问的代词可能只指向它们。
+	 */
+	private String answerExcerpt(Long conversationId) {
+		if (answerLength <= 0) {
+			return "";
+		}
+		try {
+			String answer = conversationMapper.lastAnswer(conversationId);
+			if (answer == null || answer.isBlank()) {
+				return "";
+			}
+			String text = answer.replace('\n', ' ').trim();
+			return text.length() <= answerLength ? text : text.substring(0, answerLength) + "…";
+		} catch (Exception e) {
+			log.debug("读取上一轮回答失败，忽略回答上下文：{}", e.getMessage());
+			return "";
+		}
+	}
+
+	private String buildPrompt(List<String> history, String answerExcerpt, String question) {
+		StringBuilder sb = new StringBuilder(320);
 		if (history.size() == 1) {
 			sb.append("上一轮问题：").append(history.get(0)).append('\n');
 		} else {
@@ -190,6 +224,9 @@ public class QueryRewriter {
 			for (int i = 0; i < history.size(); i++) {
 				sb.append(i + 1).append(". ").append(history.get(i)).append('\n');
 			}
+		}
+		if (answerExcerpt != null && !answerExcerpt.isEmpty()) {
+			sb.append("上一轮回答（节选）：").append(answerExcerpt).append('\n');
 		}
 		sb.append("本轮追问：").append(question);
 		return sb.toString();
