@@ -78,6 +78,20 @@ public class JwtFilter extends GenericFilterBean {
 						List<GrantedAuthority> authorities = AuthorityUtils
 								.commaSeparatedStringToAuthorityList(
 										Role.normalizeAuthorities(authoritiesClaim));
+						if (authorities.isEmpty()) {
+							/*
+							 * 兼容 /login 签发的「只有 subject 和版本」的 token：
+							 * 这类 token 不带 authorities，早先只用于前台浏览，
+							 * 结果所有者用它访问 /me、收藏、分享全被判成「无权限访问」。
+							 * 身份前缀本身在签名保护内，按前缀补出角色即可，
+							 * 不额外增加信任面（改不了 subject 就改不了角色）。
+							 */
+							if (JwtConstants.isOwnerSubject(subject)) {
+								authorities = AuthorityUtils.createAuthorityList(Role.OWNER);
+							} else if (JwtConstants.isUserSubject(subject)) {
+								authorities = AuthorityUtils.createAuthorityList(Role.USER);
+							}
+						}
 						UsernamePasswordAuthenticationToken authentication =
 								new UsernamePasswordAuthenticationToken(subject, null, authorities);
 						authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
