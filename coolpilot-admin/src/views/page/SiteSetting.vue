@@ -32,12 +32,35 @@ const saving = ref(false)
 const tab = ref('1')
 const all = ref([])
 
-const groups = computed(() => [
-	{type: 1, label: '基础设置', items: all.value.filter(item => item.type === 1)},
-	{type: 2, label: '资料卡', items: all.value.filter(item => item.type === 2)},
-	{type: 3, label: '徽标', items: all.value.filter(item => item.type === 3)},
-	{type: 4, label: '友链说明', items: all.value.filter(item => item.type === 4)}
-].filter(group => group.items.length > 0))
+// 分组标题按 type 映射；后端按库里实际存在的 type 动态返回，
+// 所以这里不再写死 1~4 —— 以后加新分组（比如支付设置）不用再改前端。
+const TYPE_LABELS = {
+	1: '基础设置',
+	2: '资料卡',
+	3: '徽标',
+	4: '友链说明',
+	5: '支付设置'
+}
+
+const groups = computed(() => {
+	const grouped = new Map()
+	for (const item of all.value) {
+		if (item.type === null || item.type === undefined) {
+			continue
+		}
+		if (!grouped.has(item.type)) {
+			grouped.set(item.type, [])
+		}
+		grouped.get(item.type).push(item)
+	}
+	return [...grouped.entries()]
+		.sort((a, b) => a[0] - b[0])
+		.map(([type, items]) => ({
+			type,
+			label: TYPE_LABELS[type] || `其他设置（type ${type}）`,
+			items
+		}))
+})
 
 function isLong(item) {
 	return (item.value || '').length > 60

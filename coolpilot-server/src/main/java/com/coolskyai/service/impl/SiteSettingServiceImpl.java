@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,31 +39,26 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 
 	private static final Pattern PATTERN = Pattern.compile("\"(.*?)\"");
 
+	/**
+	 * 按 type 分组返回，键为 typeN。
+	 *
+	 * 原先这里是 switch 写死 1/2/3，type 4（友链说明）和 type 5（收款码）
+	 * 永远不会返回 —— 后台「站点设置」看不到这两组，收款码实际上改不了，
+	 * 与 PaymentService 注释里写的「后台可改」不符。
+	 * 改成按库里实际存在的 type 动态分组，以后再新增分组不用改这段代码。
+	 */
 	@Override
 	public Map<String, List<SiteSetting>> getList() {
 		List<SiteSetting> siteSettings = siteSettingMapper.getList();
-		List<SiteSetting> type1 = new ArrayList<>();
-		List<SiteSetting> type2 = new ArrayList<>();
-		List<SiteSetting> type3 = new ArrayList<>();
+		Map<Integer, List<SiteSetting>> grouped = new TreeMap<>();
 		for (SiteSetting s : siteSettings) {
-			switch (s.getType()) {
-				case 1:
-					type1.add(s);
-					break;
-				case 2:
-					type2.add(s);
-					break;
-				case 3:
-					type3.add(s);
-					break;
-				default:
-					break;
+			if (s.getType() == null) {
+				continue;
 			}
+			grouped.computeIfAbsent(s.getType(), key -> new ArrayList<>()).add(s);
 		}
-		Map<String, List<SiteSetting>> map = new HashMap<>(8);
-		map.put("type1", type1);
-		map.put("type2", type2);
-		map.put("type3", type3);
+		Map<String, List<SiteSetting>> map = new LinkedHashMap<>(8);
+		grouped.forEach((type, list) -> map.put("type" + type, list));
 		return map;
 	}
 
