@@ -1,5 +1,7 @@
 package com.coolskyai.modules.ai.service;
 
+import com.coolskyai.modules.ai.entity.AiUsage;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +67,7 @@ public class LlmReranker implements Reranker {
 		if (documents.size() <= 1) {
 			return indexes(documents.size(), topN);
 		}
-		String answer = llmClient.chat(systemPrompt(), buildPrompt(query, documents));
+		String answer = llmClient.chat(AiUsage.SCENE_RERANK, systemPrompt(), buildPrompt(query, documents));
 		List<Integer> ordered = parse(answer, documents.size());
 		if (ordered == null) {
 			// 解析不出来才当失败：让调用方回退原顺序，而不是把候选全丢掉

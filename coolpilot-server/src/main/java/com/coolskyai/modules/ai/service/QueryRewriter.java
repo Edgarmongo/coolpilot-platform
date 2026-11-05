@@ -1,5 +1,7 @@
 package com.coolskyai.modules.ai.service;
 
+import com.coolskyai.modules.ai.entity.AiUsage;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -243,7 +245,7 @@ public class QueryRewriter {
 			return new Result(cached, !cached.equals(question), 0);
 		}
 		try {
-			String cleaned = cleanup(llmClient.chat(SYSTEM_PROMPT,
+			String cleaned = cleanup(llmClient.chat(AiUsage.SCENE_REWRITE, SYSTEM_PROMPT,
 					buildPrompt(history, answers, question)));
 			if (cleaned == null) {
 				// 记下「不需要改写」，同一个问题不再白花一次调用

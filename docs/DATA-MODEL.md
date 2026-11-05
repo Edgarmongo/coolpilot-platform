@@ -679,6 +679,8 @@ CREATE TABLE `milestone` (
 | `kb_chunk` | id, doc_id, kb_id, chunk_index, content, vector_id, **product_id, is_public** | 分块；冗余权限字段供检索过滤 |
 | `ai_conversation` | id, user_id, title | 会话 |
 | `ai_message` | id, conversation_id, role, content, citations, **share_token, share_expires_at, share_views, share_likes** | 消息，`citations` 存引用原文位置；后四列为 V10/V11 的分享令牌、到期时间与统计 |
+| `ai_setting` | id, setting_key, setting_value, encrypted（V20） | 模型运行时可改配置；键与 `ai.*` 属性一一对应，表里没有则回落配置文件 |
+| `ai_usage` | id, scene, model, prompt_tokens, completion_tokens, total_tokens, duration_ms, success, estimated, user_id, create_time（V20） | 每次模型调用的计量；只存数字不存正文，`estimated=1` 表示 token 按字符估算 |
 | `comment` | 新增 **target_type / target_id**（V12） | 多态扩展：`SHARE` 表示分享页留言（`target_id=ai_message.id`、`page=3`）；文章评论仍以 `blog_id` 为准，不回填 |
 
 **权限隔离的实现**（对应 PRD 修正建议 5）

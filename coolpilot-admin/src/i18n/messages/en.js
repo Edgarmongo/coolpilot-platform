@@ -30,6 +30,8 @@ export default {
 		refunds: 'Refunds',
 		entitlements: 'Entitlements',
 		ai: 'AI',
+		aiModel: 'Model settings',
+		aiUsage: 'Usage',
 		knowledge: 'Knowledge index',
 		chatLogs: 'Chat logs',
 		services: 'Services',

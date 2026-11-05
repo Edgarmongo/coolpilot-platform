@@ -290,6 +290,24 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 
 ---
 
+### 4.9 AI 模型配置与用量（V20）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/admin/ai/config` | 当前生效值 + 配置文件默认值 + `overridden`（哪些被后台改过）。密钥一律返回掩码，`defaults` 里的密钥同样掩码 |
+| PUT | `/admin/ai/config` | 保存整组配置，保存后热加载。密钥传空或掩码表示不修改；非密钥传空表示删除自定义值、回落 `.env` |
+| GET | `/admin/ai/usage?days=7` | `today` / `summary` / `byDay`（补零）/ `byModel` / `byScene` |
+| GET | `/admin/ai/llm` | 当前模型状态（只读） |
+| POST | `/admin/ai/llm/test` | 连通性自测，单独记 `TEST` 场景，不混入问答用量 |
+
+**热生效的边界**：对话模型的地址 / Key / 模型名 / 温度 / 上限保存即生效；
+向量与重排的 `provider` 由启动时的 `@ConditionalOnProperty` 决定，
+换方案（hashing ↔ openai、none ↔ llm ↔ http）必须重启，界面上有对应提示。
+
+**用量记录**：每次模型调用写一行 `ai_usage`（场景、模型、输入/输出 token、耗时、成功与否）。
+流式请求带 `stream_options.include_usage`，服务端返回 usage 就记精确值，
+拿不到则按字符估算并标 `estimated=1`。
+
 ## 五、支付渠道设计（结合你的实际条件）
 
 你目前有 **PayPal 账户 + 微信收款码 + 支付宝收款码**。这三者都**不是**商户 API 接入，因此设计上必须把"渠道"和"收款方式"分开。

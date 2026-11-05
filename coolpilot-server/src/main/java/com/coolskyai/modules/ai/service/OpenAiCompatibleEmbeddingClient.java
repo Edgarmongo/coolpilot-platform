@@ -3,12 +3,12 @@ package com.coolskyai.modules.ai.service;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import com.coolskyai.modules.ai.entity.AiUsage;
 import com.coolskyai.util.JacksonUtils;
 
 import java.util.ArrayList;
@@ -40,34 +40,43 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 
 	private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleEmbeddingClient.class);
 
-	@Value("${ai.embedding.base-url:}")
-	private String baseUrl;
+	/**
+	 * 参数统一走运行时配置：后台改完保存立即生效。
+	 * 但 provider（hashing / openai）由启动时的 @ConditionalOnProperty 决定，
+	 * 换方案仍需重启 —— 后台界面对此有提示。
+	 */
+	private final AiRuntimeConfig config;
 
-	@Value("${ai.embedding.api-key:}")
-	private String apiKey;
+	private final AiUsageService usageService;
 
-	@Value("${ai.embedding.model:}")
-	private String model;
+	private static final int TIMEOUT_SECONDS = 30;
 
-	@Value("${ai.embedding.dim:1024}")
-	private int dim;
+	private final RestClient restClient;
 
-	@Value("${ai.embedding.timeout-seconds:30}")
-	private int timeoutSeconds;
+	public OpenAiCompatibleEmbeddingClient(AiRuntimeConfig config, AiUsageService usageService) {
+		this.config = config;
+		this.usageService = usageService;
+		SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+		factory.setConnectTimeout(Math.min(10, Math.max(3, TIMEOUT_SECONDS / 5)) * 1000);
+		factory.setReadTimeout(TIMEOUT_SECONDS * 1000);
+		this.restClient = RestClient.builder().requestFactory(factory).build();
+	}
 
-	private RestClient restClient;
+	private String baseUrl() {
+		return config.getRaw(AiRuntimeConfig.EMB_BASE_URL);
+	}
+
+	private String apiKey() {
+		return config.getRaw(AiRuntimeConfig.EMB_API_KEY);
+	}
 
 	@PostConstruct
 	void init() {
-		SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-		factory.setConnectTimeout(Math.min(10, Math.max(3, timeoutSeconds / 5)) * 1000);
-		factory.setReadTimeout(timeoutSeconds * 1000);
-		this.restClient = RestClient.builder().requestFactory(factory).build();
-		if (baseUrl == null || baseUrl.isBlank() || model == null || model.isBlank()) {
-			log.warn("embedding 选择了 openai 协议但未配置 base-url / model，检索会持续失败");
+		if (baseUrl().isBlank() || model().isBlank()) {
+			log.warn("embedding 选了 openai 协议但没配 base-url / model，检索会持续失败（后台 AI → 模型配置可填）");
 			return;
 		}
-		log.info("embedding 已启用远程模型：provider=openai model={} dim={} baseUrl={}", model, dim, baseUrl);
+		log.info("embedding 已启用远程模型：provider=openai model={} dim={} baseUrl={}", model(), dim(), baseUrl());
 	}
 
 	@Override
@@ -77,12 +86,12 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 
 	@Override
 	public int dim() {
-		return dim;
+		return config.getInt(AiRuntimeConfig.EMB_DIM, 1024);
 	}
 
 	@Override
 	public String model() {
-		return model == null ? "" : model;
+		return config.getRaw(AiRuntimeConfig.EMB_MODEL);
 	}
 
 	@Override
@@ -99,15 +108,18 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 		if (texts.isEmpty()) {
 			return vectors;
 		}
+		int dim = dim();
+		long start = System.currentTimeMillis();
 		Map<String, Object> body = Map.of("model", model(), "input", texts);
 		String response;
 		try {
 			response = restClient.post()
-					.uri(trimTrailingSlash(baseUrl) + "/embeddings")
+					.uri(trimTrailingSlash(baseUrl()) + "/embeddings")
 					.contentType(MediaType.APPLICATION_JSON)
 					.headers(headers -> {
-						if (apiKey != null && !apiKey.isBlank()) {
-							headers.setBearerAuth(apiKey);
+						String key = apiKey();
+						if (!key.isBlank()) {
+							headers.setBearerAuth(key);
 						}
 					})
 					.body(JacksonUtils.writeValueAsString(body))
@@ -118,6 +130,7 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 		}
 
 		Map<String, Object> parsed = JacksonUtils.readValue(response, Map.class);
+		recordUsage(parsed, texts, start);
 		List<Map<String, Object>> data = parsed == null ? List.of() : (List<Map<String, Object>>) parsed.get("data");
 		if (data == null || data.size() != texts.size()) {
 			throw new IllegalStateException("embedding 返回条数与输入不一致：" + (data == null ? 0 : data.size())
@@ -142,6 +155,26 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 			vectors.add(normalize(vector));
 		}
 		return vectors;
+	}
+
+	/**
+	 * embedding 也按输入 token 计费，统计里单列 EMBED 场景：
+	 * 重建索引那天会明显冲高，用户能一眼看出是批量任务而不是日常问答。
+	 */
+	private void recordUsage(Map<String, Object> parsed, List<String> texts, long start) {
+		int promptTokens = 0;
+		boolean estimated = true;
+		Object usage = parsed == null ? null : parsed.get("usage");
+		if (usage instanceof Map<?, ?> map && map.get("prompt_tokens") instanceof Number number) {
+			promptTokens = number.intValue();
+			estimated = false;
+		} else {
+			for (String text : texts) {
+				promptTokens += AiUsageService.estimateTokens(text);
+			}
+		}
+		usageService.record(AiUsage.SCENE_EMBED, model(), promptTokens, 0,
+				System.currentTimeMillis() - start, true, estimated, null);
 	}
 
 	private float[] normalize(float[] vector) {

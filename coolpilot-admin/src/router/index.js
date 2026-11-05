@@ -198,9 +198,21 @@ export const routes = [
 	{
 		path: '/ai',
 		component: Layout,
-		redirect: '/ai/knowledge',
+		redirect: '/ai/model',
 		meta: {title: 'menu.ai', icon: 'MagicStick'},
 		children: [
+			{
+				path: 'model',
+				name: 'AiModel',
+				component: () => import('@/views/ai/ModelConfig.vue'),
+				meta: {title: 'menu.aiModel', icon: 'Setting'}
+			},
+			{
+				path: 'usage',
+				name: 'AiUsage',
+				component: () => import('@/views/ai/Usage.vue'),
+				meta: {title: 'menu.aiUsage', icon: 'DataLine'}
+			},
 			{
 				path: 'knowledge',
 				name: 'KnowledgeIndex',

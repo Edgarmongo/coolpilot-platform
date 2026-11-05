@@ -384,12 +384,14 @@ public class RagChatService {
 		Map<String, Object> data = new LinkedHashMap<>(4);
 		if (!llmClient.available()) {
 			data.put("ok", false);
-			data.put("message", "未配置大模型：请在环境变量里设置 AI_LLM_BASE_URL 与 AI_LLM_MODEL");
+			data.put("message", "未配置大模型：到「AI → 模型配置」填接口地址与模型名，或设置环境变量 AI_LLM_BASE_URL / AI_LLM_MODEL");
 			return data;
 		}
 		long start = System.currentTimeMillis();
 		try {
-			String reply = llmClient.chat("你是连通性检查助手，只回复 OK。", "OK");
+			// 单独记 TEST 场景，别混进用户问答的用量里
+			String reply = llmClient.chat(com.coolskyai.modules.ai.entity.AiUsage.SCENE_TEST,
+					"你是连通性检查助手，只回复 OK。", "OK");
 			data.put("ok", true);
 			data.put("tookMs", System.currentTimeMillis() - start);
 			data.put("reply", reply.length() > 60 ? reply.substring(0, 60) : reply);
