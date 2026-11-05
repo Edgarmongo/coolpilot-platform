@@ -131,6 +131,11 @@
 					<p class="fb-content">{{ item.content }}</p>
 					<div v-if="item.parentCommentId && item.parentCommentId !== -1" class="muted">这是对某条留言的回复</div>
 				</div>
+				<div v-if="talks.length < talkTotal" class="more-row">
+					<button class="btn ghost" :disabled="loadingTalks" @click="loadMoreTalks">
+						{{ loadingTalks ? '加载中…' : `加载更多（还有 ${talkTotal - talks.length} 条）` }}
+					</button>
+				</div>
 			</template>
 
 			<!-- 我的评论 -->
@@ -259,8 +264,12 @@ const favorites = ref<any[]>([])
 const messages = ref<any[]>([])
 const feedbacks = ref<any[]>([])
 const comments = ref<any[]>([])
-/** 分享页的留言 */
+/** 分享页的留言：分页加载，避免留言多了首屏拖一长条 */
+const TALK_PAGE_SIZE = 20
 const talks = ref<any[]>([])
+const talkTotal = ref(0)
+const talkPage = ref(1)
+const loadingTalks = ref(false)
 const unread = ref(0)
 
 const feedback = reactive({content: '', contact: ''})
@@ -285,7 +294,7 @@ if (!isLogin.value) {
 		call('/messages/unread-count').catch(() => null),
 		call('/me/feedbacks?pageNum=1&pageSize=20').catch(() => null),
 		call('/me/comments?pageNum=1&pageSize=50').catch(() => null),
-		call('/me/share-comments?pageNum=1&pageSize=50').catch(() => null)
+		call(`/me/share-comments?pageNum=1&pageSize=${TALK_PAGE_SIZE}`).catch(() => null)
 	])
 	orders.value = orderRes?.data?.list || []
 	demands.value = demandRes?.data?.list || []
@@ -297,10 +306,35 @@ if (!isLogin.value) {
 	feedbacks.value = fbRes?.data?.list || []
 	comments.value = cmRes?.data?.list || []
 	talks.value = talkRes?.data?.list || []
+	talkTotal.value = Number(talkRes?.data?.total || 0)
 	const me = meRes?.data || user.value || {}
 	profile.nickname = me.nickname || ''
 	profile.avatar = me.avatar || ''
 	profile.email = me.email || ''
+}
+
+/**
+ * 加载更多留言
+ *
+ * 发新留言会让分页整体后移，所以按 id 去重，避免同一页里出现重复项
+ */
+async function loadMoreTalks() {
+	if (loadingTalks.value || talks.value.length >= talkTotal.value) {
+		return
+	}
+	loadingTalks.value = true
+	try {
+		const res: any = await call(`/me/share-comments?pageNum=${talkPage.value + 1}&pageSize=${TALK_PAGE_SIZE}`)
+		if (res && res.code === 200) {
+			const seen = new Set(talks.value.map((item: any) => item.id))
+			const fresh = (res.data?.list || []).filter((item: any) => !seen.has(item.id))
+			talks.value = talks.value.concat(fresh)
+			talkTotal.value = Number(res.data?.total || talkTotal.value)
+			talkPage.value += 1
+		}
+	} finally {
+		loadingTalks.value = false
+	}
 }
 
 /** 分享还在有效期内才能点回原页面；撤销/过期后只展示内容 */
@@ -740,50 +774,6 @@ async function changePassword() {
 	padding: 9px 14px;
 }
 
-.cm-link {
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--teal);
-	text-decoration: none;
-}
-
-.set-row {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-bottom: 12px;
-}
-
-.set-row label {
-	width: 62px;
-	flex: none;
-	font-size: 13px;
-	color: #606266;
-}
-
-.set-row input {
-	flex: 1;
-	padding: 9px 12px;
-	border: 1px solid var(--line);
-	border-radius: 8px;
-	font-size: 13.5px;
-	outline-color: var(--teal);
-}
-
-.set-actions {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	margin: 4px 0 8px 72px;
-}
-
-.btn.ghost {
-	background: #fff;
-	color: var(--teal);
-	border: 1px solid var(--teal);
-	padding: 9px 14px;
-}
-
 .msg-type {
 	display: inline-block;
 	padding: 0 6px;
@@ -804,5 +794,11 @@ async function changePassword() {
 	color: var(--muted);
 	font-weight: 500;
 	cursor: default;
+}
+
+.more-row {
+	display: flex;
+	justify-content: center;
+	margin-top: 12px;
 }
 </style>
