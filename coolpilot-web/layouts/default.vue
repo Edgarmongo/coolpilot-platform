@@ -138,6 +138,9 @@ async function logout() {
 	color: #fff;
 	font-weight: 700;
 	font-size: 13px;
+	/* 标记现在可配置，超过两个字时裁切，避免撑破方块 */
+	overflow: hidden;
+	white-space: nowrap;
 }
 
 .brand-text {
