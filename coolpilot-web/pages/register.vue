@@ -1,29 +1,31 @@
 <template>
 	<div class="card login">
-		<h1 class="page-title">注册访客账号</h1>
-		<p class="page-desc">仅用于收藏、下单与查看已购内容</p>
+		<h1 class="page-title">{{ t('auth.registerTitle') }}</h1>
+		<p class="page-desc">{{ t('auth.registerDesc') }}</p>
 
 		<div class="form">
-			<input v-model="form.username" placeholder="用户名" autocomplete="username">
-			<input v-model="form.password" type="password" placeholder="密码（至少 6 位）" autocomplete="new-password">
-			<input v-model="form.nickname" placeholder="昵称（可选）">
-			<input v-model="form.email" placeholder="邮箱（可选，用于找回）">
-			<button class="btn" :disabled="busy" @click="submit">{{ busy ? '提交中…' : '注册' }}</button>
+			<input v-model="form.username" :placeholder="t('auth.username')" autocomplete="username">
+			<input v-model="form.password" type="password" :placeholder="t('auth.passwordHint')" autocomplete="new-password">
+			<input v-model="form.nickname" :placeholder="t('auth.nickname')">
+			<input v-model="form.email" :placeholder="t('auth.email')">
+			<button class="btn" :disabled="busy" @click="submit">{{ busy ? t('auth.submitting') : t('auth.register') }}</button>
 		</div>
-		<p class="hint">已有账号？<NuxtLink to="/login" class="link">去登录</NuxtLink></p>
+		<p class="hint">{{ t('auth.hasAccount') }}<NuxtLink :to="localePath('/login')" class="link">{{ t('auth.toLogin') }}</NuxtLink></p>
 	</div>
 </template>
 
 <script setup lang="ts">
 const router = useRouter()
 const {call, setSession} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 
 const busy = ref(false)
 const form = reactive({username: '', password: '', nickname: '', email: ''})
 
 async function submit() {
 	if (!form.username || !form.password) {
-		alert('请填写用户名和密码')
+		alert(t('auth.needCreds'))
 		return
 	}
 	busy.value = true

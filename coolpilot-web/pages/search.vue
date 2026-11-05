@@ -1,27 +1,27 @@
 <template>
 	<div>
-		<h1 class="page-title">搜索</h1>
-		<p class="page-desc">关键词找文章，或让智能检索按语义找片段（含付费内容，需已购买）</p>
+		<h1 class="page-title">{{ t('search.title') }}</h1>
+		<p class="page-desc">{{ t('search.desc') }}</p>
 
 		<div class="search-box card">
-			<input v-model="keyword" placeholder="输入关键词后回车" @keyup.enter="doSearch">
-			<button class="btn" @click="doSearch">搜索</button>
+			<input v-model="keyword" :placeholder="t('search.placeholder')" @keyup.enter="doSearch">
+			<button class="btn" @click="doSearch">{{ t('search.title') }}</button>
 		</div>
 
 		<!-- 智能检索：知识库片段召回，带来源与相关度 -->
 		<NuxtLink v-if="current" :to="`/ask?q=${encodeURIComponent(current)}`" class="ask-tip">
-			想让 AI 直接回答？用「{{ current }}」去提问 →
+			{{ t('search.askTip', {q: current}) }}
 		</NuxtLink>
 
 		<div v-if="searched" class="result ai">
 			<div class="ai-head">
-				<h2>智能检索</h2>
+				<h2>{{ t('search.aiTitle') }}</h2>
 				<span class="muted small" v-if="aiMeta">
-					{{ aiMeta.candidates }} 个片段 · {{ aiMeta.tookMs }}ms · {{ aiMeta.model }}
+					{{ t('search.aiMeta', {n: aiMeta.candidates, ms: aiMeta.tookMs, model: aiMeta.model}) }}
 				</span>
 			</div>
-			<p v-if="aiLoading" class="muted">检索中…</p>
-			<p v-else-if="!aiResults.length" class="muted">没有匹配的片段</p>
+			<p v-if="aiLoading" class="muted">{{ t('search.aiLoading') }}</p>
+			<p v-else-if="!aiResults.length" class="muted">{{ t('search.aiEmpty') }}</p>
 			<div v-for="item in aiResults" :key="item.docId" class="ai-item">
 				<NuxtLink :to="item.url" class="ai-title">{{ item.title }}</NuxtLink>
 				<span class="tag">{{ sourceText(item.sourceType) }}</span>
@@ -31,8 +31,8 @@
 		</div>
 
 		<div v-if="searched" class="result">
-			<p class="muted">「{{ current }}」在标题与摘要中找到 {{ posts.length }} 篇</p>
-			<PostList :posts="pageItems" :page-num="page" :total-page="totalPage" empty-text="没有匹配的文章"
+			<p class="muted">{{ t('search.resultCount', {q: current, n: posts.length}) }}</p>
+			<PostList :posts="pageItems" :page-num="page" :total-page="totalPage" :empty-text="t('search.emptyResult')"
 			          @change="go"/>
 		</div>
 	</div>
@@ -42,6 +42,7 @@
 const route = useRoute()
 const router = useRouter()
 const {call} = useApi()
+const {t, te} = useI18n()
 
 const keyword = ref(String(route.query.q || ''))
 const current = ref(String(route.query.q || ''))
@@ -91,10 +92,11 @@ function go(target: number) {
 }
 
 function sourceText(type: string) {
-	return {BLOG: '文章', PRODUCT: '商品', LESSON: '课时'}[type] || type
+	const key = `search.sources.${type.toLowerCase()}`
+	return te(key) ? t(key) : type
 }
 
-useHead({title: '搜索 - CoolSkyAI'})
+useHead({title: t('search.title')})
 </script>
 
 <style scoped>

@@ -1,0 +1,167 @@
+{
+  "site": {
+    "description": "CoolSkyAI 技术平台 —— 个人技术知识与服务"
+  },
+  "common": {
+    "loading": "加载中…",
+    "empty": "暂无内容",
+    "more": "加载更多",
+    "back": "返回",
+    "save": "保存",
+    "cancel": "取消",
+    "submit": "提交",
+    "search": "搜索",
+    "prev": "上一页",
+    "next": "下一页",
+    "from": "{price} 起",
+    "quote": "按需报价"
+  },
+  "nav": {
+    "home": "首页",
+    "archives": "归档",
+    "topics": "专题",
+    "moments": "动态",
+    "friends": "友链",
+    "about": "关于",
+    "knowledge": "知识付费",
+    "service": "技术服务",
+    "ask": "问答",
+    "search": "搜索"
+  },
+  "header": {
+    "my": "我的",
+    "login": "登录",
+    "logout": "退出"
+  },
+  "home": {
+    "tag": "技术 · 知识 · 服务",
+    "title": "把技术写成可以交付的东西",
+    "desc": "文章、课程、文档与代码资源，一套账号打通阅读、购买与下载。",
+    "ctaKnowledge": "看看知识付费",
+    "ctaLatest": "最新文章",
+    "blogUnit": "篇文章",
+    "productUnit": "个知识商品",
+    "latest": "最新文章",
+    "empty": "还没有文章",
+    "reads": "{n} 次阅读"
+  },
+  "archives": {
+    "title": "归档",
+    "desc": "按时间倒序，共 {n} 篇",
+    "empty": "还没有文章",
+    "count": "（{n} 篇）",
+    "headTitle": "归档"
+  },
+  "moments": {
+    "title": "动态",
+    "desc": "短想法、随手记",
+    "empty": "还没有动态"
+  },
+  "friends": {
+    "title": "友人帐",
+    "desc": "交换友链，欢迎来信",
+    "empty": "暂无友链",
+    "headTitle": "友人帐"
+  },
+  "about": {
+    "title": "关于",
+    "empty": "暂无内容",
+    "headTitle": "关于"
+  },
+  "topics": {
+    "title": "专题",
+    "desc": "把零散的文章串成一条线，按顺序读更省力",
+    "empty": "还没有专题",
+    "noDesc": "暂无简介",
+    "meta": "{n} 篇 · 更新于 {date}"
+  },
+  "search": {
+    "title": "搜索",
+    "desc": "关键词找文章，或让智能检索按语义找片段（含付费内容，需已购买）",
+    "placeholder": "输入关键词后回车",
+    "askTip": "想让 AI 直接回答？用「{q}」去提问 →",
+    "aiTitle": "智能检索",
+    "aiLoading": "检索中…",
+    "aiEmpty": "没有匹配的片段",
+    "aiMeta": "{n} 个片段 · {ms}ms · {model}",
+    "resultCount": "「{q}」在标题与摘要中找到 {n} 篇",
+    "emptyResult": "没有匹配的文章",
+    "sources": {
+      "blog": "文章",
+      "product": "商品",
+      "lesson": "课时"
+    }
+  },
+  "knowledge": {
+    "title": "知识付费",
+    "desc": "文档、课程、专栏与代码资源，购买后长期可看",
+    "empty": "暂无商品",
+    "sold": "{n} 人已购",
+    "types": {
+      "COURSE": "视频课程",
+      "DOC": "付费文档",
+      "COLUMN": "知识专栏",
+      "CODE": "代码资源",
+      "SERVICE": "技术服务"
+    }
+  },
+  "post": {
+    "reads": "{n} 次阅读",
+    "inTopic": "本篇属于专题",
+    "topicCount": "共 {n} 篇",
+    "related": "相关付费内容",
+    "owned": "已拥有",
+    "favorite": "收藏",
+    "favorited": "已收藏",
+    "like": "点赞",
+    "liked": "已赞",
+    "lockedTitle": "受密码保护",
+    "lockedDesc": "这篇文章需要密码才能查看",
+    "pwdPlaceholder": "请输入访问密码",
+    "verifying": "验证中…",
+    "unlock": "解锁",
+    "unlockHint": "验证一次后 30 天内再次访问无需重复输入",
+    "notFound": "文章不存在或已被删除",
+    "types": {
+      "DOC": "文档",
+      "COURSE": "课程",
+      "COLUMN": "专栏",
+      "CODE": "代码",
+      "SERVICE": "服务"
+    }
+  },
+  "auth": {
+    "loginTitle": "访客登录",
+    "loginDesc": "登录后可收藏、下单与查看已购内容",
+    "username": "用户名",
+    "password": "密码",
+    "signingIn": "登录中…",
+    "login": "登录",
+    "noAccount": "还没有账号？",
+    "registerLink": "注册一个",
+    "registerTitle": "注册访客账号",
+    "registerDesc": "仅用于收藏、下单与查看已购内容",
+    "passwordHint": "密码（至少 6 位）",
+    "nickname": "昵称（可选）",
+    "email": "邮箱（可选，用于找回）",
+    "submitting": "提交中…",
+    "register": "注册",
+    "hasAccount": "已有账号？",
+    "toLogin": "去登录",
+    "needCreds": "请填写用户名和密码"
+  },
+  "comments": {
+    "title": "评论",
+    "empty": "还没有评论，来说两句",
+    "anonymous": "匿名",
+    "reply": "回复",
+    "placeholder": "说点什么…（最多 250 字）",
+    "cancel": "取消",
+    "submit": "发表",
+    "nickname": "昵称",
+    "email": "邮箱（不公开）",
+    "submitting": "提交中…",
+    "submitBtn": "提交评论",
+    "replyTo": "回复"
+  }
+}

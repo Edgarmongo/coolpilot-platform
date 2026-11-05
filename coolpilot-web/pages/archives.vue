@@ -1,16 +1,16 @@
 <template>
 	<div>
-		<h1 class="page-title">归档</h1>
-		<p class="page-desc">按时间倒序，共 {{ totalCount }} 篇</p>
+		<h1 class="page-title">{{ t('archives.title') }}</h1>
+		<p class="page-desc">{{ t('archives.desc', {n: totalCount}) }}</p>
 
 		<div class="card">
-			<div v-if="!groups.length" class="empty">还没有文章</div>
+			<div v-if="!groups.length" class="empty">{{ t('archives.empty') }}</div>
 			<section v-for="group in groups" :key="group.month" class="group">
-				<h2 class="month">{{ group.month }}<span class="muted">（{{ group.items.length }} 篇）</span></h2>
+				<h2 class="month">{{ group.month }}<span class="muted">{{ t('archives.count', {n: group.items.length}) }}</span></h2>
 				<ul class="list">
 					<li v-for="item in group.items" :key="item.id">
 						<span class="day">{{ item.day }}</span>
-						<NuxtLink :to="`/blog/${item.id}`" class="title">{{ item.title }}</NuxtLink>
+						<NuxtLink :to="localePath(`/blog/${item.id}`)" class="title">{{ item.title }}</NuxtLink>
 					</li>
 				</ul>
 			</section>
@@ -20,6 +20,8 @@
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 
 const {data} = await useAsyncData('archives', () => call('/archives'))
 const blogMap = computed(() => (data.value as any)?.data?.blogMap || {})

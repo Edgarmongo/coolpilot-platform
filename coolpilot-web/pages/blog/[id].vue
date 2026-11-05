@@ -7,28 +7,28 @@
 				<div class="post-meta meta">
 					<span>{{ formatDate(blog.createTime, 'YYYY-MM-DD') }}</span>
 					<span v-if="blog.category">· {{ blog.category.name }}</span>
-					<span>· {{ blog.views || 0 }} 次阅读</span>
+					<span>· {{ t('post.reads', {n: blog.views || 0}) }}</span>
 				</div>
 				<div class="article" v-html="blog.content"></div>
 
 				<!-- 本篇所属专题：从单篇回到系列阅读路径 -->
 				<div v-if="topics.length" class="topic-tip">
-					<span class="muted">本篇属于专题</span>
-					<NuxtLink v-for="item in topics" :key="item.id" :to="`/topic/${item.slug}`" class="tag">
+					<span class="muted">{{ t('post.inTopic') }}</span>
+					<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)" class="tag">
 						{{ item.title }}
 					</NuxtLink>
-					<span class="muted" v-if="topics[0].articleCount">共 {{ topics[0].articleCount }} 篇</span>
+					<span class="muted" v-if="topics[0].articleCount">{{ t('post.topicCount', {n: topics[0].articleCount}) }}</span>
 				</div>
 
 				<!-- 关联付费内容：内容底部导流到商品 -->
 				<div v-if="relatedProducts.length" class="related">
-					<h3>相关付费内容</h3>
+					<h3>{{ t('post.related') }}</h3>
 					<div class="related-grid">
 						<NuxtLink v-for="item in relatedProducts" :key="item.id"
-						          :to="`/knowledge/${item.productNo}`" class="related-item">
+						          :to="localePath(`/knowledge/${item.productNo}`)" class="related-item">
 							<div class="ri-head">
 								<span class="tag">{{ typeText(item.productType) }}</span>
-								<span v-if="item.owned" class="owned">已拥有</span>
+								<span v-if="item.owned" class="owned">{{ t('post.owned') }}</span>
 							</div>
 							<strong>{{ item.title }}</strong>
 							<p class="muted ri-summary">{{ item.summary }}</p>
@@ -40,10 +40,10 @@
 				<!--收藏与点赞：未登录时点击跳转登录-->
 				<div class="actions">
 					<button :class="['act', {active: favorited}]" @click="toggleFavorite">
-						{{ favorited ? '已收藏' : '收藏' }}
+						{{ favorited ? t('post.favorited') : t('post.favorite') }}
 					</button>
 					<button :class="['act', {active: liked}]" @click="toggleLike">
-						{{ liked ? '已赞' : '点赞' }}<span v-if="likeCount" class="cnt">{{ likeCount }}</span>
+						{{ liked ? t('post.liked') : t('post.like') }}<span v-if="likeCount" class="cnt">{{ likeCount }}</span>
 					</button>
 				</div>
 			</template>
@@ -51,19 +51,19 @@
 			<!--需要密码-->
 			<template v-else-if="locked">
 				<div class="lock">
-					<h1 class="page-title">受密码保护</h1>
-					<p class="page-desc">{{ message || '这篇文章需要密码才能查看' }}</p>
+					<h1 class="page-title">{{ t('post.lockedTitle') }}</h1>
+					<p class="page-desc">{{ message || t('post.lockedDesc') }}</p>
 					<div class="lock-form">
-						<input v-model="password" type="password" placeholder="请输入访问密码" @keyup.enter="unlock">
+						<input v-model="password" type="password" :placeholder="t('post.pwdPlaceholder')" @keyup.enter="unlock">
 						<button class="btn" :disabled="unlocking" @click="unlock">
-							{{ unlocking ? '验证中…' : '解锁' }}
+							{{ unlocking ? t('post.verifying') : t('post.unlock') }}
 						</button>
 					</div>
-					<p class="muted">验证一次后 30 天内再次访问无需重复输入</p>
+					<p class="muted">{{ t('post.unlockHint') }}</p>
 				</div>
 			</template>
 
-			<div v-else class="empty">{{ message || '文章不存在或已被删除' }}</div>
+			<div v-else class="empty">{{ message || t('post.notFound') }}</div>
 		</div>
 
 		<CommentSection v-if="blog" :blog-id="blogId"/>
@@ -73,6 +73,8 @@
 <script setup lang="ts">
 const route = useRoute()
 const {call, isLogin} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
 /**
  * 路由参数既可能是旧链接的 id，也可能是新链接的 slug。
@@ -208,21 +210,23 @@ async function loadRelated() {
 }
 
 function typeText(type: string) {
-	return {DOC: '文档', COURSE: '课程', COLUMN: '专栏', CODE: '代码', SERVICE: '服务'}[type] || type
+	const key = `post.types.${type}`
+	return te(key) ? t(key) : type
 }
 
 function priceLabel(product: any) {
 	if (product.priceMode === 'CUSTOM') {
-		return '按需报价'
+		return t('common.quote')
 	}
 	const value = Number(product.price || 0).toFixed(2).replace(/\.00$/, '')
-	return product.priceMode === 'STARTING' ? `¥${value} 起` : `¥${value}`
+	const amount = `¥${value}`
+	return product.priceMode === 'STARTING' ? t('common.from', {price: amount}) : amount
 }
 
 if (blog.value) {
-	useHead({title: `${blog.value.title} - CoolSkyAI`})
+	useHead({title: blog.value.title})
 } else {
-	useHead({title: '受密码保护 - CoolSkyAI'})
+	useHead({title: t('post.lockedTitle')})
 }
 </script>
 

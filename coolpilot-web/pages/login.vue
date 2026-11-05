@@ -1,16 +1,16 @@
 <template>
 	<div class="card login">
-		<h1 class="page-title">访客登录</h1>
-		<p class="page-desc">登录后可收藏、下单与查看已购内容</p>
+		<h1 class="page-title">{{ t('auth.loginTitle') }}</h1>
+		<p class="page-desc">{{ t('auth.loginDesc') }}</p>
 
 		<div class="form">
-			<input v-model="form.username" placeholder="用户名" autocomplete="username">
-			<input v-model="form.password" type="password" placeholder="密码" autocomplete="current-password"
+			<input v-model="form.username" :placeholder="t('auth.username')" autocomplete="username">
+			<input v-model="form.password" type="password" :placeholder="t('auth.password')" autocomplete="current-password"
 			       @keyup.enter="submit">
-			<button class="btn" :disabled="busy" @click="submit">{{ busy ? '登录中…' : '登录' }}</button>
+			<button class="btn" :disabled="busy" @click="submit">{{ busy ? t('auth.signingIn') : t('auth.login') }}</button>
 		</div>
 		<p class="hint">
-			还没有账号？<NuxtLink to="/register" class="link">注册一个</NuxtLink>
+			{{ t('auth.noAccount') }}<NuxtLink :to="localePath('/register')" class="link">{{ t('auth.registerLink') }}</NuxtLink>
 		</p>
 	</div>
 </template>
@@ -19,6 +19,8 @@
 const route = useRoute()
 const router = useRouter()
 const {call, setSession} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 
 const busy = ref(false)
 const form = reactive({username: '', password: ''})

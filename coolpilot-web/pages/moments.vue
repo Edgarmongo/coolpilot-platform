@@ -1,9 +1,9 @@
 <template>
 	<div>
-		<h1 class="page-title">动态</h1>
-		<p class="page-desc">短想法、随手记</p>
+		<h1 class="page-title">{{ t('moments.title') }}</h1>
+		<p class="page-desc">{{ t('moments.desc') }}</p>
 
-		<div v-if="!moments.length" class="empty card">还没有动态</div>
+		<div v-if="!moments.length" class="empty card">{{ t('moments.empty') }}</div>
 
 		<div v-for="moment in moments" :key="moment.id" class="card moment">
 			<p class="content">{{ moment.content }}</p>
@@ -16,15 +16,16 @@
 		</div>
 
 		<div class="pager" v-if="totalPage > 1">
-			<button :disabled="pageNum <= 1" @click="go(pageNum - 1)">上一页</button>
+			<button :disabled="pageNum <= 1" @click="go(pageNum - 1)">{{ t('common.prev') }}</button>
 			<span>{{ pageNum }} / {{ totalPage }}</span>
-			<button :disabled="pageNum >= totalPage" @click="go(pageNum + 1)">下一页</button>
+			<button :disabled="pageNum >= totalPage" @click="go(pageNum + 1)">{{ t('common.next') }}</button>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t} = useI18n()
 
 const pageNum = ref(1)
 const moments = ref<any[]>([])
@@ -55,7 +56,7 @@ async function like(moment: any) {
 }
 
 await load(1)
-useHead({title: '动态 - CoolSkyAI'})
+useHead({title: t('moments.title')})
 </script>
 
 <style scoped>

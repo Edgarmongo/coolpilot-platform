@@ -1,17 +1,17 @@
 <template>
 	<div>
-		<h1 class="page-title">专题</h1>
-		<p class="page-desc">把零散的文章串成一条线，按顺序读更省力</p>
+		<h1 class="page-title">{{ t('topics.title') }}</h1>
+		<p class="page-desc">{{ t('topics.desc') }}</p>
 
-		<div v-if="!topics.length" class="card muted">还没有专题</div>
+		<div v-if="!topics.length" class="card muted">{{ t('topics.empty') }}</div>
 
 		<div v-else class="topic-grid">
-			<NuxtLink v-for="item in topics" :key="item.id" :to="`/topic/${item.slug}`" class="topic-card">
+			<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)" class="topic-card">
 				<div v-if="item.cover" class="cover" :style="{backgroundImage: `url(${item.cover})`}"></div>
 				<div class="body">
 					<h2>{{ item.title }}</h2>
-					<p class="desc">{{ item.description || '暂无简介' }}</p>
-					<span class="meta">{{ item.articleCount || 0 }} 篇 · 更新于 {{ formatDate(item.updateTime) }}</span>
+					<p class="desc">{{ item.description || t('topics.noDesc') }}</p>
+					<span class="meta">{{ t('topics.meta', {n: item.articleCount || 0, date: formatDate(item.updateTime)}) }}</span>
 				</div>
 			</NuxtLink>
 		</div>
@@ -20,13 +20,14 @@
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 
 const {data} = await useAsyncData('topic-list', () => call('/topics'))
 const topics = computed<any[]>(() => (data.value as any)?.data || [])
 
 useHead({
-	title: '专题 - CoolSkyAI',
-	meta: [{name: 'description', content: '按主题成组阅读 CoolSkyAI 的文章'}]
+	title: t('topics.title')
 })
 </script>
 

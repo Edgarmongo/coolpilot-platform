@@ -1,19 +1,19 @@
 <template>
 	<section class="comments">
-		<h3 class="title">评论 <span class="muted">({{ comments.length }})</span></h3>
+		<h3 class="title">{{ t('comments.title') }} <span class="muted">({{ comments.length }})</span></h3>
 
-		<div v-if="!comments.length" class="empty">还没有评论，来说两句</div>
+		<div v-if="!comments.length" class="empty">{{ t('comments.empty') }}</div>
 
 		<ul class="list">
 			<li v-for="item in comments" :key="item.id" class="item">
 				<img class="avatar" :src="item.avatar || '/img/avatar.jpg'" alt="">
 				<div class="body">
 					<div class="meta">
-						<strong>{{ item.nickname || '匿名' }}</strong>
+						<strong>{{ item.nickname || t('comments.anonymous') }}</strong>
 						<span class="muted">{{ formatDate(item.createTime) }}</span>
 					</div>
 					<p class="content">{{ item.content }}</p>
-					<button class="reply-btn" @click="startReply(item)">回复</button>
+					<button class="reply-btn" @click="startReply(item)">{{ t('comments.reply') }}</button>
 					<ul v-if="item.replyComments && item.replyComments.length" class="replies">
 						<li v-for="reply in item.replyComments" :key="reply.id">
 							<strong>{{ reply.nickname }}</strong>：{{ reply.content }}
@@ -24,20 +24,20 @@
 		</ul>
 
 		<div class="form">
-			<h4>写下你的评论</h4>
+			<h4>{{ t('comments.placeholder') }}</h4>
 			<div class="fields">
-				<input v-model="form.nickname" placeholder="昵称" maxlength="20">
-				<input v-model="form.email" placeholder="邮箱（不公开）" maxlength="50">
+				<input v-model="form.nickname" :placeholder="t('comments.nickname')" maxlength="20">
+				<input v-model="form.email" :placeholder="t('comments.email')" maxlength="50">
 			</div>
 			<div v-if="replyTo" class="reply-hint">
-				回复 <strong>@{{ replyTo.nickname }}</strong>
-				<button class="cancel" @click="replyTo = null">取消</button>
+				{{ t('comments.replyTo') }} <strong>@{{ replyTo.nickname }}</strong>
+				<button class="cancel" @click="replyTo = null">{{ t('common.cancel') }}</button>
 			</div>
-			<textarea v-model="form.content" placeholder="说点什么…（最多 250 字）" maxlength="250"/>
+			<textarea v-model="form.content" :placeholder="t('comments.placeholder')" maxlength="250"/>
 			<div class="actions">
 				<span class="muted">{{ form.content.length }}/250</span>
 				<button class="btn" :disabled="submitting" @click="submit">
-					{{ submitting ? '提交中…' : '提交评论' }}
+					{{ submitting ? t('comments.submitting') : t('comments.submitBtn') }}
 				</button>
 			</div>
 		</div>
@@ -47,6 +47,7 @@
 <script setup lang="ts">
 const props = defineProps<{ blogId: number }>()
 const {call} = useApi()
+const {t} = useI18n()
 
 const comments = ref<any[]>([])
 const submitting = ref(false)

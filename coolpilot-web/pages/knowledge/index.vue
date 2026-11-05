@@ -1,15 +1,16 @@
 <template>
 	<div>
-		<h1 class="page-title">知识付费</h1>
-		<p class="page-desc">文档、课程、专栏与代码资源，购买后长期可看</p>
+		<h1 class="page-title">{{ t('knowledge.title') }}</h1>
+		<p class="page-desc">{{ t('knowledge.desc') }}</p>
 
-		<div v-if="!products.length" class="empty card">暂无商品</div>
+		<div v-if="!products.length" class="empty card">{{ t('knowledge.empty') }}</div>
 
 		<div class="grid">
-			<NuxtLink v-for="product in products" :key="product.id" :to="`/knowledge/${product.productNo}`" class="card item">
+			<NuxtLink v-for="product in products" :key="product.id" :to="localePath(`/knowledge/${product.productNo}`)"
+			          class="card item">
 				<div class="item-head">
 					<span class="tag">{{ typeLabel(product.productType) }}</span>
-					<span v-if="product.salesCount" class="muted">{{ product.salesCount }} 人已购</span>
+					<span v-if="product.salesCount" class="muted">{{ t('knowledge.sold', {n: product.salesCount}) }}</span>
 				</div>
 				<h3>{{ product.title }}</h3>
 				<p class="item-desc">{{ product.summary || product.subtitle }}</p>
@@ -24,12 +25,15 @@
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t, te} = useI18n()
+const localePath = useLocalePath()
 
 const {data} = await useAsyncData('products', () => call('/products?pageNum=1&pageSize=12'))
 const products = computed(() => (data.value as any)?.data?.list || [])
 
 function typeLabel(type: string) {
-	return {COURSE: '视频课程', DOC: '付费文档', COLUMN: '知识专栏', CODE: '代码资源', SERVICE: '技术服务'}[type] || type
+	const key = `knowledge.types.${type}`
+	return te(key) ? t(key) : type
 }
 
 function price(value: number) {

@@ -1,0 +1,167 @@
+{
+  "site": {
+    "description": "CoolSkyAI — technical writing, knowledge products and engineering services"
+  },
+  "common": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "more": "Load more",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "search": "Search",
+    "prev": "Previous",
+    "next": "Next",
+    "from": "from {price}",
+    "quote": "Quote on request"
+  },
+  "nav": {
+    "home": "Home",
+    "archives": "Archive",
+    "topics": "Topics",
+    "moments": "Moments",
+    "friends": "Links",
+    "about": "About",
+    "knowledge": "Knowledge",
+    "service": "Services",
+    "ask": "Ask AI",
+    "search": "Search"
+  },
+  "header": {
+    "my": "Account",
+    "login": "Sign in",
+    "logout": "Sign out"
+  },
+  "home": {
+    "tag": "Engineering · Knowledge · Services",
+    "title": "Writing technology down as something you can ship",
+    "desc": "Articles, courses, documents and source code — one account for reading, buying and downloading.",
+    "ctaKnowledge": "Browse knowledge products",
+    "ctaLatest": "Latest articles",
+    "blogUnit": "articles",
+    "productUnit": "products",
+    "latest": "Latest articles",
+    "empty": "No articles yet",
+    "reads": "{n} views"
+  },
+  "archives": {
+    "title": "Archive",
+    "desc": "Newest first · {n} articles in total",
+    "empty": "No articles yet",
+    "count": "({n})",
+    "headTitle": "Archive"
+  },
+  "moments": {
+    "title": "Moments",
+    "desc": "Short notes and quick thoughts",
+    "empty": "No moments yet"
+  },
+  "friends": {
+    "title": "Links",
+    "desc": "Friends of this site — say hello",
+    "empty": "No links yet",
+    "headTitle": "Links"
+  },
+  "about": {
+    "title": "About",
+    "empty": "Nothing here yet",
+    "headTitle": "About"
+  },
+  "topics": {
+    "title": "Topics",
+    "desc": "Scattered articles, arranged into a reading order",
+    "empty": "No topics yet",
+    "noDesc": "No description",
+    "meta": "{n} articles · updated {date}"
+  },
+  "search": {
+    "title": "Search",
+    "desc": "Find articles by keyword, or let semantic search look inside the knowledge base (paid content requires a purchase).",
+    "placeholder": "Type a keyword and press Enter",
+    "askTip": "Want the AI to answer directly? Ask “{q}” →",
+    "aiTitle": "Semantic search",
+    "aiLoading": "Searching…",
+    "aiEmpty": "No matching passages",
+    "aiMeta": "{n} passages · {ms}ms · {model}",
+    "resultCount": "{n} articles match “{q}” in title or summary",
+    "emptyResult": "No matching articles",
+    "sources": {
+      "blog": "Article",
+      "product": "Product",
+      "lesson": "Lesson"
+    }
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "desc": "Documents, courses, columns and source code — yours to keep once purchased",
+    "empty": "No products yet",
+    "sold": "{n} sold",
+    "types": {
+      "COURSE": "Video course",
+      "DOC": "Paid document",
+      "COLUMN": "Column",
+      "CODE": "Source code",
+      "SERVICE": "Service"
+    }
+  },
+  "post": {
+    "reads": "{n} views",
+    "inTopic": "Part of the series",
+    "topicCount": "{n} articles",
+    "related": "Related paid content",
+    "owned": "Owned",
+    "favorite": "Save",
+    "favorited": "Saved",
+    "like": "Like",
+    "liked": "Liked",
+    "lockedTitle": "Password protected",
+    "lockedDesc": "This article is password protected",
+    "pwdPlaceholder": "Enter the access password",
+    "verifying": "Verifying…",
+    "unlock": "Unlock",
+    "unlockHint": "You will not need to enter it again for 30 days",
+    "notFound": "Article not found or already deleted",
+    "types": {
+      "DOC": "Document",
+      "COURSE": "Course",
+      "COLUMN": "Column",
+      "CODE": "Code",
+      "SERVICE": "Service"
+    }
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginDesc": "Sign in to save articles, place orders and access what you bought",
+    "username": "Username",
+    "password": "Password",
+    "signingIn": "Signing in…",
+    "login": "Sign in",
+    "noAccount": "No account yet?",
+    "registerLink": "Create one",
+    "registerTitle": "Create an account",
+    "registerDesc": "Only used for saving, ordering and accessing purchased content",
+    "passwordHint": "Password (at least 6 characters)",
+    "nickname": "Nickname (optional)",
+    "email": "Email (optional, for recovery)",
+    "submitting": "Submitting…",
+    "register": "Sign up",
+    "hasAccount": "Already registered?",
+    "toLogin": "Sign in",
+    "needCreds": "Please enter a username and password"
+  },
+  "comments": {
+    "title": "Comments",
+    "empty": "No comments yet — be the first",
+    "anonymous": "Anonymous",
+    "reply": "Reply",
+    "placeholder": "Say something… (max 250 characters)",
+    "cancel": "Cancel",
+    "submit": "Post",
+    "nickname": "Nickname",
+    "email": "Email (not published)",
+    "submitting": "Submitting…",
+    "submitBtn": "Post comment",
+    "replyTo": "Reply to"
+  }
+}

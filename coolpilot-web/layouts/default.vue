@@ -2,7 +2,7 @@
 	<div class="shell">
 		<header class="header">
 			<div class="container header-inner">
-				<NuxtLink to="/" class="brand">
+				<NuxtLink :to="localePath('/')" class="brand">
 					<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
 					<span class="brand-text">{{ brand.brandName }}</span>
 				</NuxtLink>
@@ -11,18 +11,24 @@
 					<template v-for="item in navItems" :key="item.id || item.path">
 						<a v-if="isExternal(item.path)" :href="item.path" class="nav-item"
 						   :target="item.target || '_self'" rel="noopener noreferrer">{{ item.label }}</a>
-						<NuxtLink v-else :to="item.path" class="nav-item" active-class="is-active"
+						<NuxtLink v-else :to="localePath(item.path)" class="nav-item" active-class="is-active"
 						          :target="item.target === '_blank' ? '_blank' : undefined">{{ item.label }}</NuxtLink>
 					</template>
 				</nav>
 
 				<div class="header-right">
-					<NuxtLink to="/me" class="nav-item">我的</NuxtLink>
+					<div class="langs">
+						<NuxtLink v-for="item in langOptions" :key="item.code" :to="switchLocalePath(item.code)"
+						          class="lang-item" :class="{active: locale === item.code}">
+							{{ item.short }}
+						</NuxtLink>
+					</div>
+					<NuxtLink :to="localePath('/me')" class="nav-item">{{ t('header.my') }}</NuxtLink>
 					<template v-if="isLogin">
 						<span class="who">{{ user && (user.nickname || user.username) }}</span>
-						<button class="link" @click="logout">退出</button>
+						<button class="link" @click="logout">{{ t('header.logout') }}</button>
 					</template>
-					<NuxtLink v-else to="/login" class="btn btn-sm">登录</NuxtLink>
+					<NuxtLink v-else :to="localePath('/login')" class="btn btn-sm">{{ t('header.login') }}</NuxtLink>
 				</div>
 			</div>
 		</header>
@@ -52,6 +58,15 @@ const {call, isLogin, user, clearSession} = useApi()
 // 品牌名与页脚文案来自站点设置，接口失败时由 composable 回落到改造前的默认文案
 const brand = useBrand()
 
+const {t, locale} = useI18n()
+const localePath = useLocalePath()
+const switchLocalePath = useSwitchLocalePath()
+
+const langOptions = [
+	{code: 'zh-CN', short: '中'},
+	{code: 'en', short: 'EN'}
+]
+
 interface NavItem {
 	id?: number
 	label: string
@@ -62,29 +77,35 @@ interface NavItem {
 /**
  * 兜底菜单：只在「接口拿不到」时使用（后端重启、网络抖动、迁移没跑）。
  * 配置化之后导航仍不能因为一次请求失败就白掉 —— 导航消失比菜单文字旧更伤。
+ * 注意这里存的是 i18n key，渲染时再翻译，否则兜底菜单永远是中文。
  */
-const FALLBACK_NAV: NavItem[] = [
-	{label: '首页', path: '/'},
-	{label: '归档', path: '/archives'},
-	{label: '专题', path: '/topic'},
-	{label: '动态', path: '/moments'},
-	{label: '友链', path: '/friends'},
-	{label: '关于', path: '/about'},
-	{label: '知识付费', path: '/knowledge'},
-	{label: '技术服务', path: '/service'},
-	{label: '问答', path: '/ask'},
-	{label: '搜索', path: '/search'}
+const FALLBACK_NAV: { key: string, path: string }[] = [
+	{key: 'nav.home', path: '/'},
+	{key: 'nav.archives', path: '/archives'},
+	{key: 'nav.topics', path: '/topic'},
+	{key: 'nav.moments', path: '/moments'},
+	{key: 'nav.friends', path: '/friends'},
+	{key: 'nav.about', path: '/about'},
+	{key: 'nav.knowledge', path: '/knowledge'},
+	{key: 'nav.service', path: '/service'},
+	{key: 'nav.ask', path: '/ask'},
+	{key: 'nav.search', path: '/search'}
 ]
 
-// SSR 首屏就要有菜单，所以 await；后端对 /nav 做了 Redis 缓存，这次请求很轻
+// 导航是站长配置的内容，会随语言不同返回不同文字；locale 变化要重新取
 const {data: navMenu} = await useAsyncData('nav-menu', async () => {
-	const res: any = await call('/nav').catch(() => null)
+	const res: any = await call(`/nav?lang=${locale.value}`).catch(() => null)
 	// code !== 200 时返回 null，交给下面的 computed 走兜底；
 	// 返回空数组是站长的真实配置（把菜单全隐藏了），此时不兜底
 	return res && res.code === 200 && Array.isArray(res.data) ? (res.data as NavItem[]) : null
-})
+}, {watch: [locale]})
 
-const navItems = computed<NavItem[]>(() => Array.isArray(navMenu.value) ? navMenu.value! : FALLBACK_NAV)
+const navItems = computed<NavItem[]>(() => {
+	if (Array.isArray(navMenu.value)) {
+		return navMenu.value!
+	}
+	return FALLBACK_NAV.map(item => ({label: t(item.key), path: item.path}))
+})
 
 function isExternal(path: string) {
 	return /^https?:\/\//i.test(path || '')
@@ -94,7 +115,7 @@ async function logout() {
 	// 先让服务端吊销 token（递增版本号），失败也要清本地，不能卡住用户
 	await call('/me/logout', {method: 'POST'}).catch(() => null)
 	clearSession()
-	router.push('/')
+	router.push(localePath('/'))
 }
 </script>
 
@@ -177,6 +198,29 @@ async function logout() {
 	display: flex;
 	align-items: center;
 	gap: 12px;
+}
+
+.langs {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.lang-item {
+	padding: 3px 7px;
+	border-radius: 6px;
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.lang-item:hover {
+	color: var(--teal);
+}
+
+.lang-item.active {
+	color: var(--teal);
+	font-weight: 600;
+	background: #eef7f5;
 }
 
 .who {

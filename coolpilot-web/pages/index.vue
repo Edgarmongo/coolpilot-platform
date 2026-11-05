@@ -2,38 +2,39 @@
 	<div>
 		<section class="hero card">
 			<div class="hero-main">
-				<span class="tag">CoolSkyAI 技术平台</span>
-				<h1>把技术写成可以交付的东西</h1>
-				<p>文章、课程、文档与代码资源，一套账号打通阅读、购买与下载。</p>
+				<span class="tag">{{ t('home.tag') }}</span>
+				<h1>{{ t('home.title') }}</h1>
+				<p>{{ t('home.desc') }}</p>
 				<div class="hero-actions">
-					<NuxtLink to="/knowledge" class="btn">看看知识付费</NuxtLink>
-					<a class="btn btn-ghost" href="#latest">最新文章</a>
+					<NuxtLink :to="localePath('/knowledge')" class="btn">{{ t('home.ctaKnowledge') }}</NuxtLink>
+					<a class="btn btn-ghost" href="#latest">{{ t('home.ctaLatest') }}</a>
 				</div>
 			</div>
 			<div class="hero-side">
 				<div class="metric">
 					<strong>{{ blogTotal }}</strong>
-					<span>篇文章</span>
+					<span>{{ t('home.blogUnit') }}</span>
 				</div>
 				<div class="metric">
 					<strong>{{ productTotal }}</strong>
-					<span>个知识商品</span>
+					<span>{{ t('home.productUnit') }}</span>
 				</div>
 			</div>
 		</section>
 
 		<section id="latest" class="section">
 			<div class="section-head">
-				<h2>最新文章</h2>
+				<h2>{{ t('home.latest') }}</h2>
 			</div>
 			<div class="card">
-				<div v-if="!posts.length" class="empty">还没有文章</div>
-				<NuxtLink v-for="post in posts" :key="post.id" :to="`/blog/${post.slug || post.id}`" class="post-item">
+				<div v-if="!posts.length" class="empty">{{ t('home.empty') }}</div>
+				<NuxtLink v-for="post in posts" :key="post.id" :to="localePath(`/blog/${post.slug || post.id}`)"
+				          class="post-item">
 					<h3 class="post-title">{{ post.title }}</h3>
 					<div class="post-meta">
 						<span>{{ formatDate(post.createTime, 'YYYY-MM-DD') }}</span>
 						<span v-if="post.category">· {{ post.category.name }}</span>
-						<span>· {{ post.views || 0 }} 次阅读</span>
+						<span>· {{ t('home.reads', {n: post.views || 0}) }}</span>
 					</div>
 				</NuxtLink>
 			</div>
@@ -43,6 +44,8 @@
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t} = useI18n()
+const localePath = useLocalePath()
 
 const {data: blogRes} = await useAsyncData('home-blogs', () => call('/blogs?pageNum=1'))
 const {data: productRes} = await useAsyncData('home-products', () => call('/products?pageNum=1&pageSize=1'))

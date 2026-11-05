@@ -1,7 +1,7 @@
 <template>
 	<div>
-		<h1 class="page-title">友人帐</h1>
-		<p class="page-desc">交换友链，欢迎来信</p>
+		<h1 class="page-title">{{ t('friends.title') }}</h1>
+		<p class="page-desc">{{ t('friends.desc') }}</p>
 
 		<div v-if="info" class="card intro article" v-html="info"></div>
 
@@ -16,18 +16,19 @@
 			</a>
 		</div>
 
-		<div v-if="!friends.length" class="empty card">暂无友链</div>
+		<div v-if="!friends.length" class="empty card">{{ t('friends.empty') }}</div>
 	</div>
 </template>
 
 <script setup lang="ts">
 const {call} = useApi()
+const {t} = useI18n()
 
 const {data} = await useAsyncData('friends', () => call('/friends'))
 const info = computed(() => (data.value as any)?.data?.friendInfo?.content || '')
 const friends = computed(() => (data.value as any)?.data?.friends || [])
 
-useHead({title: '友人帐 - CoolSkyAI'})
+useHead({title: t('friends.headTitle')})
 </script>
 
 <style scoped>
