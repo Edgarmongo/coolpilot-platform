@@ -38,11 +38,17 @@ public interface ShareCommentMapper {
 	 * 讨论区按「最新的先看到」排，配合「查看更多」翻更早的 ——
 	 * 发完留言立刻能在第一屏看到，比藏在第 5 页合理。
 	 */
-	@Select("SELECT id, target_id, user_id, nickname, avatar, content, create_time, parent_comment_id, is_admin_comment AS adminComment " +
+	@Select("<script>" +
+			"SELECT id, target_id, user_id, nickname, avatar, content, create_time, parent_comment_id, is_admin_comment AS adminComment " +
 			"FROM comment WHERE target_type = 'SHARE' AND target_id = #{targetId} AND is_published = 1 " +
-			"AND parent_comment_id = -1 ORDER BY id DESC LIMIT #{offset}, #{size}")
+			"AND parent_comment_id = -1 " +
+			"ORDER BY " +
+			"<choose><when test='newest'>id DESC</when><otherwise>id ASC</otherwise></choose> " +
+			"LIMIT #{offset}, #{size}" +
+			"</script>")
 	List<ShareComment> pageRoots(@Param("targetId") Long targetId,
-	                             @Param("offset") int offset, @Param("size") int size);
+	                             @Param("offset") int offset, @Param("size") int size,
+	                             @Param("newest") boolean newest);
 
 	/**
 	 * 这一页顶楼下的所有回复（按时间正序，读起来是对话）

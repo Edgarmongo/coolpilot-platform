@@ -66,9 +66,9 @@ public class ShareCommentService {
 	 * @param pageNum  从 1 开始
 	 * @param pageSize 每页顶楼数，默认 20，上限 50
 	 */
-	public Map<String, Object> list(String token, Integer pageNum, Integer pageSize) {
+	public Map<String, Object> list(String token, Integer pageNum, Integer pageSize, String sort) {
 		AiMessage message = ragChatService.requireShare(token);
-		return buildPage(message.getId(), pageNum, pageSize);
+		return buildPage(message.getId(), pageNum, pageSize, sort);
 	}
 
 	/**
@@ -170,12 +170,20 @@ public class ShareCommentService {
 		}
 	}
 
-	private Map<String, Object> buildPage(Long messageId, Integer pageNum, Integer pageSize) {
-		int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
+	private Map<String, Object> buildPage(Long messageId, Integer pageNum, Integer pageSize, String sort) {
+		int requested = pageNum == null || pageNum < 1 ? 1 : pageNum;
 		int size = pageSize == null || pageSize < 1 ? DEFAULT_PAGE_SIZE : Math.min(pageSize, MAX_PAGE_SIZE);
+		boolean newest = !"oldest".equalsIgnoreCase(sort == null ? "" : sort.trim());
 
 		int totalTop = commentMapper.countRoots(messageId);
-		List<ShareComment> roots = commentMapper.pageRoots(messageId, (page - 1) * size, size);
+		int totalPages = Math.max(1, (totalTop + size - 1) / size);
+		/*
+		 * 越界页码夹到最后一页，而不是返回空列表：
+		 * ?page=99 直接给 200 + 空内容，对搜索来说是个软 404，
+		 * 渲染最后一页并让 pageNum 如实返回，前端才能把地址改回来。
+		 */
+		int page = Math.min(requested, totalPages);
+		List<ShareComment> roots = commentMapper.pageRoots(messageId, (page - 1) * size, size, newest);
 		List<ShareComment> all = new ArrayList<>(roots);
 		if (!roots.isEmpty()) {
 			List<Long> ids = new ArrayList<>(roots.size());
@@ -192,6 +200,8 @@ public class ShareCommentService {
 		Map<String, Object> data = new LinkedHashMap<>(8);
 		data.put("pageNum", page);
 		data.put("pageSize", size);
+		data.put("sort", newest ? "newest" : "oldest");
+		data.put("totalPages", totalPages);
 		data.put("totalTop", totalTop);
 		data.put("totalReplies", commentMapper.countReplies(messageId));
 		data.put("hasMore", (long) page * size < totalTop);

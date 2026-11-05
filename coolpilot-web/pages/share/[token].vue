@@ -47,10 +47,23 @@
 				</div>
 			</article>
 
-			<section ref="talkRef" class="talk card">
+			<section id="discuss" ref="talkRef" class="talk card">
 				<div class="talk-head">
 					<span class="talk-title">讨论</span>
-					<span class="muted small">{{ totalCount ? `${totalCount} 条留言` : '还没有留言' }}</span>
+					<div class="talk-tools">
+						<span class="muted small">{{ totalCount ? `${totalCount} 条留言` : '还没有留言' }}</span>
+						<span class="sorter">
+							<!--
+								这些链接只差查询串，NuxtLink 会把它们全判成「当前页」，
+								于是每个链接都带上 router-link-active 和 aria-current。
+								改用原生 a：href 给爬虫，点击交给我们自己跳。
+							-->
+							<a :class="['sort', {on: sort === 'newest'}]" :href="sortHref('newest')"
+							   @click.prevent="go(sortTo('newest'), $event)">最新</a>
+							<a :class="['sort', {on: sort === 'oldest'}]" :href="sortHref('oldest')"
+							   @click.prevent="go(sortTo('oldest'), $event)">最早</a>
+						</span>
+					</div>
 				</div>
 
 				<ul v-if="topComments.length" class="talk-list">
@@ -90,10 +103,14 @@
 					还没有人说话。看完有疑问或补充，留言让作者知道。
 				</p>
 
-				<div v-if="hasMore" class="more-row">
-					<button class="more" :disabled="loadingMore" @click="loadMore">
-						{{ loadingMore ? '加载中…' : `查看更多留言（还有 ${totalTop - topComments.length} 条）` }}
-					</button>
+				<div v-if="totalPages > 1" class="pager">
+					<a v-if="hasPrev" class="page-btn" :href="pagerHref(currentPage - 1)" rel="prev"
+					   @click.prevent="go(pagerTo(currentPage - 1), $event)">上一页</a>
+					<span v-else class="page-btn disabled">上一页</span>
+					<span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+					<a v-if="hasNext" class="page-btn" :href="pagerHref(currentPage + 1)" rel="next"
+					   @click.prevent="go(pagerTo(currentPage + 1), $event)">下一页</a>
+					<span v-else class="page-btn disabled">下一页</span>
 				</div>
 
 				<div v-if="isLogin" class="talk-form">
@@ -222,21 +239,39 @@ async function toggleLike() {
 /** 分页只切顶楼：一页顶楼 + 它们的全部回复 */
 const PAGE_SIZE = 20
 
-const {data: commentPage} = await useAsyncData(`share-comments-${token.value}`, async () => {
-	try {
-		return await call<any>(`/share/answer/${token.value}/comments?pageNum=1&pageSize=${PAGE_SIZE}`)
-	} catch (error) {
-		return null
-	}
+/*
+ * 页码和排序都放在 URL 上（?page=2&sort=oldest）：
+ * 可以直接把某一页发给人，也让爬虫能沿着链接把留言逐页抓完 ——
+ * 只靠「加载更多」的话，第 2 页往后对搜索引擎是不存在的。
+ */
+const pageNum = computed(() => {
+	const raw = Number(route.query.page)
+	return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1
 })
+const sort = computed(() => (route.query.sort === 'oldest' ? 'oldest' : 'newest'))
 
-const comments = ref<any[]>([])
-const totalTop = ref(0)
-const totalReplies = ref(0)
-const hasMore = ref(false)
-const loadedPage = ref(1)
-const loadingMore = ref(false)
-const talkRef = ref<HTMLElement | null>(null)
+const {data: commentPage, refresh: refreshComments} = await useAsyncData(
+	() => `share-comments-${token.value}-${pageNum.value}-${sort.value}`,
+	async () => {
+		try {
+			return await call<any>(`/share/answer/${token.value}/comments?pageNum=${pageNum.value}&pageSize=${PAGE_SIZE}&sort=${sort.value}`)
+		} catch (error) {
+			return null
+		}
+	},
+	// 页码/排序变化时重新取，不整页刷新
+	{watch: [pageNum, sort, token]}
+)
+
+const pageMeta = computed<any>(() => (commentPage.value && commentPage.value.code === 200 ? commentPage.value.data : null))
+const comments = computed<any[]>(() => pageMeta.value?.comments || [])
+const totalTop = computed(() => Number(pageMeta.value?.totalTop || 0))
+const totalReplies = computed(() => Number(pageMeta.value?.totalReplies || 0))
+const totalPages = computed(() => Number(pageMeta.value?.totalPages || 0))
+/** 实际渲染的页码：地址写 ?page=99 时后端会夹到最后一页，这里以返回值为准 */
+const currentPage = computed(() => Number(pageMeta.value?.pageNum || pageNum.value))
+const hasPrev = computed(() => currentPage.value > 1)
+const hasNext = computed(() => currentPage.value < totalPages.value)
 
 /** 展示用总数：顶楼 + 回复 */
 const totalCount = computed(() => totalTop.value + totalReplies.value)
@@ -247,66 +282,56 @@ function repliesOf(id: number) {
 	return comments.value.filter(item => item.parentId === id)
 }
 
-function applyPage(data: any, replace: boolean) {
-	if (!data) {
-		return
+// 页码越界（比如 ?page=99，或最后一页的留言被删光）：退到最后一页
+watch([pageNum, currentPage], ([wanted, actual]) => {
+	if (actual >= 1 && wanted !== actual) {
+		navigateTo(pagerTo(actual), {replace: true})
 	}
-	const rows = data.comments || []
-	comments.value = replace ? rows : comments.value.concat(rows)
-	totalTop.value = Number(data.totalTop || 0)
-	totalReplies.value = Number(data.totalReplies || 0)
-	hasMore.value = !!data.hasMore
-	loadedPage.value = Number(data.pageNum || 1)
+})
+
+/** 翻页链接：带 #discuss，落地后直接停在讨论区而不是页首 */
+function pagerTo(target: number) {
+	return {
+		path: route.path,
+		hash: '#discuss',
+		query: {...route.query, page: target <= 1 ? undefined : target}
+	}
 }
 
-// 首屏直接用服务端取到的第一页，避免加载中闪一下
-if (commentPage.value && commentPage.value.code === 200) {
-	applyPage(commentPage.value.data, true)
+/** 排序是同一份内容的另一个视图：切完回到第一页，免得停在一个不存在的页码上 */
+function sortTo(next: string) {
+	return {
+		path: route.path,
+		hash: '#discuss',
+		query: {...route.query, page: undefined, sort: next === 'newest' ? undefined : next}
+	}
 }
 
-async function fetchPage(page: number) {
-	const res: any = await call(`/share/answer/${token.value}/comments?pageNum=${page}&pageSize=${PAGE_SIZE}`)
-	return res && res.code === 200 ? res.data : null
+/** 页面里的 href 由我们自己拼：原生 a 需要真实地址，爬虫才跟得下去 */
+function hrefOf(loc: { query: Record<string, any> }) {
+	const parts = Object.entries(loc.query)
+		.filter(([, value]) => value !== undefined && value !== null && value !== '')
+		.map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+	return `${route.path}${parts.length ? `?${parts.join('&')}` : ''}#discuss`
 }
 
-async function loadMore() {
-	if (loadingMore.value || !hasMore.value) {
-		return
-	}
-	loadingMore.value = true
-	try {
-		const data = await fetchPage(loadedPage.value + 1)
-		if (data) {
-			applyPage(data, false)
-		}
-	} finally {
-		loadingMore.value = false
-	}
+function pagerHref(target: number) {
+	return hrefOf(pagerTo(target))
+}
+
+function sortHref(next: string) {
+	return hrefOf(sortTo(next))
 }
 
 /**
- * 发言/删除后按已加载的页数重新取一遍：
- * 只重新取第 1 页会把用户已经翻到的旧留言吞掉
+ * 自己跳（原生 a 默认整页刷新）：
+ * 留出 ctrl/cmd/中键在新标签打开的常规行为
  */
-async function reloadLoaded() {
-	const pages = loadedPage.value
-	const merged: any[] = []
-	let meta: any = null
-	for (let page = 1; page <= pages; page++) {
-		const data = await fetchPage(page)
-		if (!data) {
-			break
-		}
-		merged.push(...(data.comments || []))
-		meta = data
-	}
-	if (!meta) {
+function go(loc: any, event: MouseEvent) {
+	if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
 		return
 	}
-	comments.value = merged
-	totalTop.value = Number(meta.totalTop || 0)
-	totalReplies.value = Number(meta.totalReplies || 0)
-	hasMore.value = !!meta.hasMore
+	navigateTo(loc)
 }
 
 const draft = ref('')
@@ -345,9 +370,11 @@ async function submitComment() {
 			draft.value = ''
 			replyTo.value = null
 			notice.value = ''
-			await reloadLoaded()
-			// 新留言排在顶楼最前面，滚过去让作者看到自己刚发的那条
-			if (!wasReply) {
+			if (!wasReply && (pageNum.value !== 1 || sort.value !== 'newest')) {
+				// 新留言落在「最新」的第一页，把作者带过去，否则发完看不到自己那条
+				await navigateTo(sortTo('newest'))
+			} else {
+				await refreshComments()
 				talkRef.value?.scrollIntoView({behavior: 'smooth', block: 'start'})
 			}
 		} else {
@@ -367,7 +394,7 @@ async function removeComment(item: any) {
 	const res: any = await call(`/share/answer/${token.value}/comments/${item.id}`, {method: 'DELETE'})
 	if (res && res.code === 200) {
 		notice.value = ''
-		await reloadLoaded()
+		await refreshComments()
 	} else {
 		notice.value = res?.msg || '删除失败，请稍后再试'
 	}
@@ -398,16 +425,34 @@ function sourceText(type: string) {
 	return {BLOG: '文章', PRODUCT: '商品', LESSON: '课时'}[type] || '内容'
 }
 
-useHead(() => ({
-	title: question.value ? `${question.value} - 问答分享 - CoolSkyAI` : '问答分享 - CoolSkyAI',
-	meta: [
-		...(answer.value ? [{name: 'description', content: answer.value.slice(0, 120)}] : []),
-		{property: 'og:type', content: 'article'},
-		{property: 'og:title', content: question.value || 'CoolSkyAI 问答分享'},
-		{property: 'og:description', content: answer.value.slice(0, 120) || '来自 CoolSkyAI 的站内问答'},
-		{name: 'robots', content: expired.value ? 'noindex' : 'index'}
-	]
-}))
+const siteUrl = String(useRuntimeConfig().public.siteUrl || '').replace(/\/$/, '')
+
+/** 分页地址：canonical 与 rel=prev/next 都要绝对 URL，爬虫才认 */
+function absUrl(target: number) {
+	const query = target > 1 ? `?page=${target}` : ''
+	return `${siteUrl}${route.path}${query}`
+}
+
+useHead(() => {
+	const links: Record<string, string>[] = [{rel: 'canonical', href: absUrl(currentPage.value)}]
+	if (hasPrev.value) {
+		links.push({rel: 'prev', href: absUrl(currentPage.value - 1)})
+	}
+	if (hasNext.value) {
+		links.push({rel: 'next', href: absUrl(currentPage.value + 1)})
+	}
+	return {
+		title: question.value ? `${question.value} - 问答分享 - CoolSkyAI` : '问答分享 - CoolSkyAI',
+		meta: [
+			...(answer.value ? [{name: 'description', content: answer.value.slice(0, 120)}] : []),
+			{property: 'og:type', content: 'article'},
+			{property: 'og:title', content: question.value || 'CoolSkyAI 问答分享'},
+			{property: 'og:description', content: answer.value.slice(0, 120) || '来自 CoolSkyAI 的站内问答'},
+			{name: 'robots', content: expired.value ? 'noindex' : 'index'}
+		],
+		link: links
+	}
+})
 </script>
 
 <style scoped>
@@ -778,29 +823,65 @@ useHead(() => ({
 	color: #b91c1c;
 }
 
-.more-row {
+.talk-tools {
 	display: flex;
-	justify-content: center;
-	margin-top: 12px;
+	align-items: center;
+	gap: 12px;
 }
 
-.more {
-	border: 1px dashed var(--line);
-	background: #fff;
-	color: var(--muted);
+.sorter {
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--line);
 	border-radius: 999px;
-	padding: 5px 16px;
-	font-size: 12.5px;
-	cursor: pointer;
 }
 
-.more:hover:not(:disabled) {
+.sort {
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.sort:hover {
+	color: var(--teal);
+}
+
+.sort.on {
+	background: #eef7f5;
+	color: var(--teal);
+	font-weight: 600;
+}
+
+.pager {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 16px;
+	font-size: 12.5px;
+}
+
+.page-btn {
+	padding: 4px 12px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	color: var(--muted);
+}
+
+.page-btn:hover {
 	border-color: var(--teal);
 	color: var(--teal);
 }
 
-.more:disabled {
+.page-btn.disabled {
+	opacity: .45;
 	cursor: default;
-	opacity: .7;
+	pointer-events: none;
+}
+
+.page-info {
+	color: var(--muted);
 }
 </style>

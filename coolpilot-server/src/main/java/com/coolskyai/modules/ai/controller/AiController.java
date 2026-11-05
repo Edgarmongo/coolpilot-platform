@@ -160,8 +160,9 @@ public class AiController {
 	@GetMapping("/share/answer/{token}/comments")
 	public Result shareComments(@PathVariable String token,
 	                            @RequestParam(defaultValue = "1") Integer pageNum,
-	                            @RequestParam(defaultValue = "20") Integer pageSize) {
-		return Result.ok("OK", shareCommentService.list(token, pageNum, pageSize));
+	                            @RequestParam(defaultValue = "20") Integer pageSize,
+	                            @RequestParam(defaultValue = "newest") String sort) {
+		return Result.ok("OK", shareCommentService.list(token, pageNum, pageSize, sort));
 	}
 
 	/**
