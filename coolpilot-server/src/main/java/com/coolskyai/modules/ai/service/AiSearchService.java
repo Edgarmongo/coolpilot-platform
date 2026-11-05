@@ -49,6 +49,20 @@ public class AiSearchService {
 	private int maxLimit;
 
 	/**
+	 * 每个文档最多取几块内容
+	 *
+	 * 1 就是旧行为（只取最像的那块）。长文里的问题常常分散在多块：
+	 * 问「状态管理用什么」，最像的一块可能是「性能」，而答案在相邻块里。
+	 * 取 2 块并合并，代价是 prompt 变长一点，换来「答得全」。
+	 */
+	@Value("${ai.search.chunks-per-doc:2}")
+	private int chunksPerDoc;
+
+	/** 合并多块时的正文上限，避免把上下文撑爆 */
+	@Value("${ai.search.merge-limit:650}")
+	private int mergeLimit;
+
+	/**
 	 * 重排候选数
 	 *
 	 * 第一轮打分只负责「别漏」，重排负责「别乱」。多取几倍候选再让重排挑，
@@ -158,7 +172,8 @@ public class AiSearchService {
 		Set<String> queryTerms = TextTokenizer.terms(text);
 		Set<Long> allowedProducts = allowedProducts(userId);
 
-		Map<Long, Scored> bestPerDocument = new LinkedHashMap<>();
+		// 每个文档保留得分最高的若干块（再按 chunkIndex 拼回原文顺序）
+		Map<Long, List<Scored>> perDocument = new LinkedHashMap<>();
 		for (Entry entry : current.entries()) {
 			if (!entry.isPublic()) {
 				// 付费块：没有权益直接跳过，绝不进入打分与结果
@@ -199,13 +214,18 @@ public class AiSearchService {
 			if (score < minScore) {
 				continue;
 			}
-			Scored previous = bestPerDocument.get(entry.docId());
-			if (previous == null || score > previous.score()) {
-				bestPerDocument.put(entry.docId(), new Scored(entry, score));
-			}
+			perDocument.computeIfAbsent(entry.docId(), key -> new ArrayList<>(2))
+					.add(new Scored(entry, score));
 		}
 
-		List<Scored> ranked = new ArrayList<>(bestPerDocument.values());
+		List<Scored> ranked = new ArrayList<>(perDocument.size());
+		for (List<Scored> chunks : perDocument.values()) {
+			chunks.sort(Comparator.comparingDouble(Scored::score).reversed());
+			if (chunks.size() > Math.max(1, chunksPerDoc)) {
+				chunks.subList(Math.max(1, chunksPerDoc), chunks.size()).clear();
+			}
+			ranked.add(chunks.get(0));
+		}
 		ranked.sort(Comparator.comparingDouble(Scored::score).reversed());
 
 		/*
@@ -223,12 +243,13 @@ public class AiSearchService {
 			if (document == null) {
 				continue;
 			}
+			List<Scored> chunks = perDocument.getOrDefault(scored.entry().docId(), List.of(scored));
 			Retrieved item = new Retrieved();
 			item.setDocId(document.getId());
 			item.setSourceType(document.getSourceType());
 			item.setTitle(document.getTitle());
 			item.setUrl(document.getUrl());
-			item.setContent(scored.entry().content());
+			item.setContent(mergeChunks(chunks));
 			item.setSnippet(snippet(scored.entry().content()));
 			item.setScore(Math.round(scored.score() * 1000) / 1000.0);
 			item.setProductId(document.getProductId());
@@ -237,6 +258,40 @@ public class AiSearchService {
 		}
 		// 重排失败/未启用时原样返回：它只改顺序，不改内容
 		return rerank ? rerankService.rerank(text, results, size) : results;
+	}
+
+	/**
+	 * 把同一文档的若干块按原文顺序拼起来，受 mergeLimit 约束
+	 *
+	 * 按 chunkIndex 而不是分数排：拼出来的段落要能顺读，
+	 * 分数顺序会让上下文跳来跳去，模型更难判断「哪句在回答什么」。
+	 */
+	private String mergeChunks(List<Scored> chunks) {
+		if (chunks.size() == 1) {
+			return chunks.get(0).entry().content();
+		}
+		List<Scored> ordered = new ArrayList<>(chunks);
+		ordered.sort(Comparator.comparingInt(item -> item.entry().chunkIndex()));
+		StringBuilder sb = new StringBuilder(mergeLimit + 80);
+		for (Scored chunk : ordered) {
+			String content = chunk.entry().content() == null ? "" : chunk.entry().content().trim();
+			if (content.isEmpty()) {
+				continue;
+			}
+			if (sb.length() > 0 && sb.length() + content.length() > mergeLimit) {
+				// 剩余预算够就截一段，不够就停：宁可少给，也不要拼出半句话
+				int room = mergeLimit - sb.length();
+				if (room > 80) {
+					sb.append('\n').append(content, 0, room - 1).append('…');
+				}
+				break;
+			}
+			if (sb.length() > 0) {
+				sb.append('\n');
+			}
+			sb.append(content);
+		}
+		return sb.toString();
 	}
 
 	/**
