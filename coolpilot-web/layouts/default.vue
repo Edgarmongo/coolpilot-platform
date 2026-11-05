@@ -3,8 +3,8 @@
 		<header class="header">
 			<div class="container header-inner">
 				<NuxtLink to="/" class="brand">
-					<span class="brand-mark">CP</span>
-					<span class="brand-text">CoolSkyAI</span>
+					<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
+					<span class="brand-text">{{ brand.brandName }}</span>
 				</NuxtLink>
 
 				<nav class="nav">
@@ -35,9 +35,12 @@
 
 		<footer class="footer">
 			<div class="container">
-				<span>CoolSkyAI 技术平台</span>
-				<span class="dot">·</span>
-				<span>技术知识与服务</span>
+				<span v-if="brand.footerText">{{ brand.footerText }}</span>
+				<span v-if="brand.footerText && brand.footerTagline" class="dot">·</span>
+				<span v-if="brand.footerTagline">{{ brand.footerTagline }}</span>
+				<span v-if="brand.beian && (brand.footerText || brand.footerTagline)" class="dot">·</span>
+				<a v-if="brand.beian" class="beian" href="https://beian.miit.gov.cn/" target="_blank"
+				   rel="noopener noreferrer">{{ brand.beian }}</a>
 			</div>
 		</footer>
 	</div>
@@ -46,6 +49,8 @@
 <script setup lang="ts">
 const router = useRouter()
 const {call, isLogin, user, clearSession} = useApi()
+// 品牌名与页脚文案来自站点设置，接口失败时由 composable 回落到改造前的默认文案
+const brand = useBrand()
 
 interface NavItem {
 	id?: number
@@ -208,5 +213,14 @@ async function logout() {
 
 .dot {
 	margin: 0 6px;
+}
+
+.beian {
+	color: var(--muted);
+	text-decoration: none;
+}
+
+.beian:hover {
+	color: var(--teal);
 }
 </style>

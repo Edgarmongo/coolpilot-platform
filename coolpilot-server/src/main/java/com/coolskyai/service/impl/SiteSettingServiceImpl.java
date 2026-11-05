@@ -192,8 +192,12 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 
 	/**
 	 * 删除站点信息缓存
+	 *
+	 * 品牌信息（顶栏/页脚）也是从 site_setting 投影出来的，
+	 * 后台一保存就得跟着失效，否则改完站点名前台还是旧字。
 	 */
 	private void deleteSiteInfoRedisCache() {
 		redisService.deleteCacheByKey(RedisKeyConstants.SITE_INFO_MAP);
+		redisService.deleteCacheByKey(RedisKeyConstants.BRAND_INFO_MAP);
 	}
 }

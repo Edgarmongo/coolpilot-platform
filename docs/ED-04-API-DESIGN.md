@@ -265,7 +265,19 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 任何写操作都会清 `navMenuList` 缓存。前台在接口失败时回落到内置默认菜单（`FALLBACK_NAV`），
 返回空数组则不回落——那是站长主动把菜单全隐藏了。
 
-### 4.7 文件与统计
+### 4.7 品牌与页脚（V16）
+
+顶栏品牌名、页脚文案原本写死在 `layouts/default.vue`，V16 起复用 `site_setting`（type = 1）。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/brand` | 公开：`{brandMark, brandName, footerText, footerTagline, beian}`，走 Redis `brandInfoMap` 缓存 |
+
+- `brandName` 复用已有的 `blogName`，不新增同义字段；`beian` 复用已有备案号，非空才在页脚显示并链到工信部。
+- 整行配置缺失时回落到改造前的默认文案；配置存在但值为空表示「主动不显示」（品牌标记、页脚两段均适用）。
+- 后台在「站点设置」保存时同时清 `siteInfoMap` 与 `brandInfoMap`。
+
+### 4.8 文件与统计
 
 | 方法 | 路径 | 说明 |
 |---|---|---|

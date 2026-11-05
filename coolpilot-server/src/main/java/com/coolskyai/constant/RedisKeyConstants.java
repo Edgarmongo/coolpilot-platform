@@ -42,6 +42,10 @@ public class RedisKeyConstants {
 	 */
 	public static final String NAV_MENU_LIST = "navMenuList";
 	/**
+	 * 品牌信息key：顶栏品牌名与页脚文案（每个页面都渲染，随站点设置一起失效）
+	 */
+	public static final String BRAND_INFO_MAP = "brandInfoMap";
+	/**
 	 * 博客归档key
 	 */
 	public static final String ARCHIVE_BLOG_MAP = "archiveBlogMap";
