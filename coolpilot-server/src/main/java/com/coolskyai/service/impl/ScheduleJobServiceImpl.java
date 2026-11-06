@@ -3,6 +3,8 @@ package com.coolskyai.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.SchedulerMetaData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,30 @@ public class ScheduleJobServiceImpl implements ScheduleJobService {
 			} else {
 				ScheduleUtils.updateScheduleJob(scheduler, scheduleJob);
 			}
+		}
+		logSchedulerProfile();
+	}
+
+	/**
+	 * 把调度器的存储方式打到启动日志里。
+	 *
+	 * 任务防重跑依赖两个前提：JobStore 在内存里（调度状态只有本进程知道）、
+	 * 且只有一个实例。这两点不写在配置文件里，只能从运行时读出来。
+	 * 将来加副本部署时，这段日志会直接暴露「每个实例都在自己调度」的问题。
+	 */
+	private void logSchedulerProfile() {
+		try {
+			SchedulerMetaData meta = scheduler.getMetaData();
+			boolean clustered = meta.isJobStoreClustered();
+			log.info("Quartz 调度器就绪：jobStore={}，持久化={}，集群={}，实例={}",
+					meta.getJobStoreClass().getSimpleName(), meta.isJobStoreSupportsPersistence(),
+					clustered, meta.getSchedulerInstanceId());
+			if (!clustered) {
+				log.warn("Quartz 未开启集群：任务只在当前实例内串行（@DisallowConcurrentExecution）。"
+						+ "部署多个副本时每个副本都会各自执行一遍，需改用 JDBC JobStore + isClustered。");
+			}
+		} catch (SchedulerException e) {
+			log.warn("读取 Quartz 调度器信息失败：{}", e.getMessage());
 		}
 	}
 
