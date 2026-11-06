@@ -55,6 +55,12 @@
 					<span :class="['status-text', {off: row.status === 1}]">{{ row.status === 0 ? t('正常') : t('已禁用') }}</span>
 				</template>
 			</el-table-column>
+
+			<el-table-column :label="t('操作')" width="110" fixed="right" align="right">
+				<template #default="{row}">
+					<el-button link type="primary" @click="resetPwd(row)">{{ t('重置密码') }}</el-button>
+				</template>
+			</el-table-column>
 		</el-table>
 
 		<el-pagination v-model:current-page="query.pageNum" v-model:page-size="query.pageSize"
@@ -71,7 +77,7 @@ const t = useT()
 import {onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Search} from '@element-plus/icons-vue'
-import {getUserList, updateUserStatus} from '@/api/user'
+import {getUserList, resetUserPassword, updateUserStatus} from '@/api/user'
 import {formatDate} from '@/util/date'
 
 const loading = ref(false)
@@ -117,6 +123,33 @@ async function toggle(row, enabled) {
 	await updateUserStatus(row.id, next)
 	row.status = next
 	ElMessage.success(next === 1 ? t('已禁用') : t('已启用'))
+}
+
+/**
+ * 重置密码：邮件服务没配好时，访客自助找回走不通，需要站长在这里给一个临时密码。
+ * 用 prompt 而不是新建弹窗：只有一个输入框，弹窗反而多一层交互。
+ */
+async function resetPwd(row) {
+	let value
+	try {
+		const res = await ElMessageBox.prompt(
+			t('为「{name}」设置新密码（6-32 位）。设置后该用户已登录的设备会立即失效，需要重新登录。',
+				{name: row.nickname || row.username}),
+			t('重置密码'),
+			{
+				inputType: 'password',
+				inputPattern: /^.{6,32}$/,
+				inputErrorMessage: t('密码需 6-32 位'),
+				confirmButtonText: t('确定重置'),
+				cancelButtonText: t('取消')
+			}
+		)
+		value = res.value
+	} catch (e) {
+		return
+	}
+	await resetUserPassword(row.id, value)
+	ElMessage.success(t('密码已重置'))
 }
 
 onMounted(load)

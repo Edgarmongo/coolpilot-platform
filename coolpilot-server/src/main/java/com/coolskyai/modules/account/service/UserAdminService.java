@@ -3,9 +3,12 @@ package com.coolskyai.modules.account.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.coolskyai.constant.JwtConstants;
+import com.coolskyai.entity.User;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.mapper.UserMapper;
 import com.coolskyai.model.vo.PageResult;
+import com.coolskyai.modules.auth.service.PasswordResetService;
+import com.coolskyai.util.HashUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -58,5 +61,30 @@ public class UserAdminService {
 		if (status == STATUS_DISABLED) {
 			tokenVersionService.bump(JwtConstants.USER_PREFIX + userId);
 		}
+	}
+
+	/**
+	 * 重置前台用户密码。
+	 *
+	 * 存在的理由：邮件服务没配好时，访客「忘记密码」走不通，
+	 * 站长需要能在后台直接帮他改一个临时密码。
+	 *
+	 * 改完顺手递增 token 版本，把该账号已登录的会话全部踢掉 ——
+	 * 否则「密码重置了但旧设备还在线」等于没重置。
+	 */
+	public void resetPassword(Long userId, String newPassword) {
+		if (userId == null) {
+			throw new BadRequestException("参数有误");
+		}
+		PasswordResetService.checkPassword(newPassword);
+		User user = userMapper.findById(userId);
+		if (user == null) {
+			throw new BadRequestException("用户不存在");
+		}
+		if (!"ROLE_user".equals(user.getRole())) {
+			throw new BadRequestException("只能重置前台访客账号的密码；站长密码请在「账号设置」里修改");
+		}
+		userMapper.updatePassword(userId, HashUtils.getBC(newPassword));
+		tokenVersionService.bump(JwtConstants.USER_PREFIX + userId);
 	}
 }

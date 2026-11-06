@@ -20,4 +20,9 @@ public class ProfileDTO {
 	private String nickname;
 	private String avatar;
 	private String email;
+	/**
+	 * 修改邮箱时必填的验证码。
+	 * 邮箱没变时不需要传 —— 否则只改昵称也得先收一封邮件。
+	 */
+	private String code;
 }

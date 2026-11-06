@@ -104,6 +104,8 @@ public final class SecurityPaths {
 			"/friends", "/friend",
 			// 身份
 			"/login", "/visitor/register", "/visitor/login",
+			// 找回密码：邮箱验证码，未登录可用；只对前台访客账号生效
+			"/auth/password/code", "/auth/password/reset",
 			// 互动：点赞与文章密码校验不需要登录
 			"/moment/like/**", "/checkBlogPassword",
 			// 商品与服务展示

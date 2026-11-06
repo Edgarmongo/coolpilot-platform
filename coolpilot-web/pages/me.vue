@@ -195,6 +195,14 @@
 				<div class="set-row">
 					<label>{{ t('me.email') }}</label>
 					<input v-model="profile.email" :placeholder="t('me.emailPlaceholder')">
+					<button v-if="emailChanged" class="btn ghost" :disabled="sendingCode" @click="sendEmailCode">
+						{{ sendingCode ? t('me.sendingCode') : t('me.sendCode') }}
+					</button>
+				</div>
+				<div v-if="emailChanged" class="set-row">
+					<label>{{ t('me.emailCode') }}</label>
+					<input v-model="emailCode" maxlength="6" inputmode="numeric"
+					       :placeholder="t('me.emailCodePlaceholder')">
 				</div>
 				<div class="set-row">
 					<label>{{ t('me.avatar') }}</label>
@@ -272,6 +280,16 @@ const profile = reactive({nickname: '', avatar: '', email: ''})
 const pwd = reactive({oldPassword: '', newPassword: ''})
 const savingProfile = ref(false)
 const savingPwd = ref(false)
+// 改邮箱需要验证码：记下原邮箱判断有没有改动，改动后才显示验证码输入
+const originalEmail = ref('')
+const emailCode = ref('')
+const sendingCode = ref(false)
+
+const emailChanged = computed(() => {
+	const now = (profile.email || '').trim().toLowerCase()
+	const original = (originalEmail.value || '').trim().toLowerCase()
+	return now !== '' && now !== original
+})
 
 if (!isLogin.value) {
 	await navigateTo('/login?redirect=/me')
@@ -304,6 +322,8 @@ if (!isLogin.value) {
 	profile.nickname = me.nickname || ''
 	profile.avatar = me.avatar || ''
 	profile.email = me.email || ''
+	// 记下原邮箱：改邮箱必须走验证码，这里用它判断有没有改动
+	originalEmail.value = me.email || ''
 }
 
 /**
@@ -435,6 +455,10 @@ async function saveProfile() {
 		alert('昵称不能为空')
 		return
 	}
+	if (emailChanged.value && !/^\d{6}$/.test(emailCode.value)) {
+		alert(t('me.needEmailCode'))
+		return
+	}
 	savingProfile.value = true
 	try {
 		const res: any = await call('/me/profile', {
@@ -442,18 +466,46 @@ async function saveProfile() {
 			body: {
 				nickname: profile.nickname.trim(),
 				avatar: profile.avatar.trim(),
-				email: profile.email.trim()
+				email: profile.email.trim(),
+				// 邮箱没改就不传，避免后端要求一个用户根本没申请的验证码
+				code: emailChanged.value ? emailCode.value : undefined
 			}
 		})
 		if (res && res.code === 200) {
 			// 同步顶栏展示用的 cookie，否则要刷新页面昵称才变
 			user.value = {...(user.value || {}), ...res.data}
+			originalEmail.value = profile.email.trim()
+			emailCode.value = ''
 			alert('资料已保存')
 		} else {
 			alert((res && res.msg) || '保存失败')
 		}
 	} finally {
 		savingProfile.value = false
+	}
+}
+
+/**
+ * 改邮箱前先发验证码到新邮箱。
+ * 邮箱是找回密码的唯一凭证，填错就意味着永久失去找回能力。
+ */
+async function sendEmailCode() {
+	if (!emailChanged.value) {
+		return
+	}
+	sendingCode.value = true
+	try {
+		const res: any = await call('/me/email/code', {
+			method: 'POST',
+			body: {email: profile.email.trim()}
+		})
+		if (res && res.code === 200) {
+			alert(t('me.codeSent'))
+		} else {
+			alert((res && res.msg) || t('me.codeFailed'))
+		}
+	} finally {
+		sendingCode.value = false
 	}
 }
 

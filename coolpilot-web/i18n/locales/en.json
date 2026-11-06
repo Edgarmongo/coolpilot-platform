@@ -179,7 +179,8 @@
     "register": "Sign up",
     "hasAccount": "Already registered?",
     "toLogin": "Sign in",
-    "needCreds": "Please enter a username and password"
+    "needCreds": "Please enter a username and password",
+    "forgot": "Forgot password?"
   },
   "comments": {
     "title": "Comments",
@@ -629,7 +630,14 @@
       "PROJECT": "Project",
       "COMMENT": "Activity",
       "SYSTEM": "System"
-    }
+    },
+    "sendCode": "Send code",
+    "sendingCode": "Sending…",
+    "emailCode": "Email code",
+    "emailCodePlaceholder": "6 digits, send it first",
+    "needEmailCode": "Get a code before changing your email",
+    "codeSent": "Code sent to the new address",
+    "codeFailed": "Failed to send the code"
   },
   "followPage": {
     "title": "Find me elsewhere",
@@ -691,5 +699,32 @@
     "follow": "Follow",
     "about": "About",
     "friends": "Links"
+  },
+  "forgot": {
+    "title": "Reset password",
+    "desc": "Get a code by email and set a new password.",
+    "email": "Email",
+    "emailPlaceholder": "The email on your account",
+    "emailHint": "Self-service reset works for visitor accounts only. If no email is bound, or email delivery is not configured, ask the site owner to reset it.",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "sentTo": "A code was sent to {email}; it is valid for 5 minutes.",
+    "code": "Code",
+    "codePlaceholder": "6 digits",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordPlaceholder": "6-32 characters",
+    "reset": "Reset password",
+    "resetting": "Submitting…",
+    "changeEmail": "Use another email",
+    "resend": "Resend",
+    "codeResent": "Code resent",
+    "backToLogin": "← Back to sign in",
+    "invalidEmail": "Please enter a valid email address",
+    "invalidCode": "Please enter the 6-digit code",
+    "invalidPassword": "Password must be 6-32 characters",
+    "passwordMismatch": "The two passwords do not match",
+    "success": "Password reset. Redirecting to sign in…",
+    "failed": "Something went wrong, please try again"
   }
 }

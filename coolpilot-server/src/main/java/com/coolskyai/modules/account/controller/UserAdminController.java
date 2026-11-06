@@ -4,12 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.coolskyai.annotation.OperationLogger;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.service.UserAdminService;
+
+import java.util.Map;
 
 /**
  * @Description: 后台用户管理（/admin/** 仅平台所有者可访问）
@@ -45,5 +48,15 @@ public class UserAdminController {
 	public Result updateStatus(@PathVariable Long id, @RequestParam Integer status) {
 		userAdminService.setStatus(id, status);
 		return Result.ok(status == 1 ? "已禁用" : "已启用");
+	}
+
+	/**
+	 * 重置用户密码：邮件服务不可用时的兜底，改完会踢掉该账号的已登录会话
+	 */
+	@OperationLogger("重置用户密码")
+	@PutMapping("/user/{id}/password")
+	public Result resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+		userAdminService.resetPassword(id, body.get("password"));
+		return Result.ok("密码已重置，该用户的登录会话已失效");
 	}
 }

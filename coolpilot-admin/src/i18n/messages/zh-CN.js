@@ -31,6 +31,7 @@ export default {
 		system: '系统管理',
 		account: '账号设置',
 		logs: '日志中心',
+		files: '附件管理',
 		jobs: '定时任务',
 		products: '商品管理',
 		productList: '商品列表',

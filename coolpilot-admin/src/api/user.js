@@ -15,3 +15,11 @@ export function getUserList(params) {
 export function updateUserStatus(id, status) {
 	return request({url: `user/${id}/status`, method: 'PUT', params: {status}})
 }
+
+/**
+ * 重置前台用户密码（邮件服务不可用时的兜底）
+ * 后端会同时让该账号已登录的会话失效
+ */
+export function resetUserPassword(id, password) {
+	return request({url: `user/${id}/password`, method: 'PUT', data: {password}})
+}

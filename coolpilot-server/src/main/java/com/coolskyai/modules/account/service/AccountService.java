@@ -11,6 +11,7 @@ import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.mapper.UserMapper;
 import com.coolskyai.modules.account.dto.PasswordDTO;
 import com.coolskyai.modules.account.dto.ProfileDTO;
+import com.coolskyai.modules.auth.service.PasswordResetService;
 import com.coolskyai.service.UserService;
 import com.coolskyai.service.impl.UserServiceImpl;
 import com.coolskyai.util.CurrentUser;
@@ -36,6 +37,8 @@ public class AccountService {
 	private BCryptPasswordEncoder passwordEncoder;
 	@Autowired
 	private TokenVersionService tokenVersionService;
+	@Autowired
+	private PasswordResetService passwordResetService;
 
 	/**
 	 * 当前登录用户，未登录返回 null
@@ -87,6 +90,18 @@ public class AccountService {
 		String email = dto.getEmail() == null ? user.getEmail() : dto.getEmail().trim();
 		if (!email.isEmpty() && (!email.contains("@") || email.length() > 100)) {
 			throw new BadRequestException("邮箱格式不正确");
+		}
+		/**
+		 * 邮箱是找回密码的唯一凭证，改它必须证明「这个新邮箱确实是你的」，
+		 * 否则填错一个字符就永久失去找回能力，也可能占用了别人的邮箱。
+		 * 邮箱没变（比如只改昵称）时不要求验证码。
+		 */
+		String currentEmail = user.getEmail() == null ? "" : user.getEmail().trim();
+		if (!email.isEmpty() && !email.equalsIgnoreCase(currentEmail)) {
+			passwordResetService.verifyCode(email, dto.getCode());
+			if (userMapper.countByEmail(email, userId) > 0) {
+				throw new BadRequestException("该邮箱已被其他账号使用");
+			}
 		}
 		userMapper.updateProfile(userId, nickname, avatar == null ? "" : avatar, email);
 		user.setNickname(nickname);

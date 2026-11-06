@@ -175,6 +175,12 @@ export const routes = [
 				meta: {title: 'menu.logs', icon: 'Document'}
 			},
 			{
+				path: 'files',
+				name: 'FileManage',
+				component: () => import('@/views/system/FileList.vue'),
+				meta: {title: 'menu.files', icon: 'FolderOpened'}
+			},
+			{
 				path: 'jobs',
 				name: 'ScheduleJobs',
 				component: () => import('@/views/system/Jobs.vue'),

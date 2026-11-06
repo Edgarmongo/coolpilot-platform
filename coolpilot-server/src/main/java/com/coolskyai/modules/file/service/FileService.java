@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.coolskyai.exception.BadRequestException;
 import com.coolskyai.modules.file.entity.FileInfo;
 import com.coolskyai.modules.file.mapper.FileInfoMapper;
+import com.coolskyai.modules.file.mapper.FileReferenceMapper;
 import com.coolskyai.modules.product.entity.ProductResource;
 import com.coolskyai.modules.product.mapper.ProductResourceMapper;
 
@@ -60,6 +61,8 @@ public class FileService {
 
 	@Autowired
 	private FileInfoMapper fileInfoMapper;
+	@Autowired
+	private FileReferenceMapper fileReferenceMapper;
 	@Autowired
 	private ProductResourceMapper productResourceMapper;
 	@Autowired
@@ -220,6 +223,81 @@ public class FileService {
 
 	public File physicalFile(FileInfo info) {
 		return new File(uploadPath, info.getObjectKey());
+	}
+
+	// ---------------- 附件管理（后台，CP-BACKEND-02） ----------------
+
+	public java.util.List<FileInfo> listForAdmin(String bizType, String keyword) {
+		return fileInfoMapper.list(
+				bizType == null || bizType.trim().isEmpty() ? null : bizType.trim(),
+				keyword == null || keyword.trim().isEmpty() ? null : keyword.trim());
+	}
+
+	public java.util.Map<String, Object> stats() {
+		java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+		data.put("count", fileInfoMapper.countAll());
+		data.put("bytes", fileInfoMapper.sumSize());
+		data.put("byBizType", fileInfoMapper.statsByBizType());
+		return data;
+	}
+
+	/**
+	 * 列出这个附件在哪里还被用着。
+	 *
+	 * @return 形如 ["文章《xxx》", "商品《xxx》"]，空表示没有任何地方引用
+	 */
+	public java.util.List<String> findReferences(FileInfo info) {
+		String key = info.getObjectKey();
+		java.util.List<String> refs = new java.util.ArrayList<>();
+		for (String title : fileReferenceMapper.blogs(key)) {
+			refs.add("文章《" + title + "》");
+		}
+		for (String title : fileReferenceMapper.products(key)) {
+			refs.add("商品《" + title + "》");
+		}
+		for (String name : fileReferenceMapper.portfolios(key)) {
+			refs.add("项目「" + name + "」");
+		}
+		for (String name : fileReferenceMapper.aboutEntries(key)) {
+			refs.add("关于页「" + name + "」");
+		}
+		for (String name : fileReferenceMapper.socialAccounts(key)) {
+			refs.add("社交账号「" + name + "」");
+		}
+		for (String name : fileReferenceMapper.siteSettings(key)) {
+			refs.add("站点设置「" + name + "」");
+		}
+		return refs;
+	}
+
+	public java.util.List<String> findReferencesById(Long id) {
+		FileInfo info = fileInfoMapper.findById(id);
+		if (info == null) {
+			throw new BadRequestException("附件不存在或已删除");
+		}
+		return findReferences(info);
+	}
+
+	/**
+	 * 删除附件：先确认没被引用，再删磁盘文件，最后标记记录。
+	 *
+	 * 顺序是刻意的：删盘成功才改状态。反过来的话，删盘失败会留下
+	 * 「列表里没了、文件还在磁盘上」的孤儿文件，而且再也没有入口能清掉它。
+	 */
+	public void deleteForAdmin(Long id) {
+		FileInfo info = fileInfoMapper.findById(id);
+		if (info == null) {
+			throw new BadRequestException("附件不存在或已删除");
+		}
+		java.util.List<String> refs = findReferences(info);
+		if (!refs.isEmpty()) {
+			throw new BadRequestException("仍被引用，无法删除：" + String.join("、", refs));
+		}
+		File file = physicalFile(info);
+		if (file.exists() && !file.delete()) {
+			throw new BadRequestException("磁盘文件删除失败，请检查目录权限");
+		}
+		fileInfoMapper.markDeleted(id);
 	}
 
 	private byte[] hmac(String data) {

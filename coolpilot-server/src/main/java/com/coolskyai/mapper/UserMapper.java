@@ -24,6 +24,22 @@ public interface UserMapper {
 	User findById(Long id);
 
 	/**
+	 * 按邮箱找前台访客账号（找回密码用）。
+	 *
+	 * 刻意限定 ROLE_user：站长账号（ROLE_owner）的邮箱可能出现在关于页、
+	 * 联系入口等公开位置，不能让它成为「通过公开邮箱重置管理员密码」的通道。
+	 * 站长忘密码走服务器改库或后台重置。
+	 */
+	@Select("SELECT * FROM user WHERE email = #{email} AND role = 'ROLE_user' ORDER BY id LIMIT 1")
+	User findVisitorByEmail(@Param("email") String email);
+
+	/**
+	 * 邮箱是否已被占用（修改邮箱时查重，排除自己）
+	 */
+	@Select("SELECT COUNT(*) FROM user WHERE email = #{email} AND id <> #{excludeId}")
+	int countByEmail(@Param("email") String email, @Param("excludeId") Long excludeId);
+
+	/**
 	 * 平台所有者 id，用于把后台事件写成站内消息。
 	 * 只取第一条：数据上应当只有一个 ROLE_owner。
 	 */

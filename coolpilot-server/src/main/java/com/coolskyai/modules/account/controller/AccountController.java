@@ -6,12 +6,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import com.coolskyai.annotation.AccessLimit;
 import com.coolskyai.entity.User;
 import com.coolskyai.model.vo.Result;
 import com.coolskyai.modules.account.dto.PasswordDTO;
 import com.coolskyai.modules.account.dto.ProfileDTO;
 import com.coolskyai.modules.account.service.AccountService;
 import com.coolskyai.modules.account.vo.AccountVO;
+import com.coolskyai.modules.auth.service.PasswordResetService;
 
 /**
  * @Description: 账户中心（当前登录用户）
@@ -26,6 +28,8 @@ import com.coolskyai.modules.account.vo.AccountVO;
 public class AccountController {
 	@Autowired
 	private AccountService accountService;
+	@Autowired
+	private PasswordResetService passwordResetService;
 
 	/**
 	 * 当前登录用户信息
@@ -49,6 +53,20 @@ public class AccountController {
 		Long userId = accountService.requireUserId();
 		User user = accountService.updateProfile(userId, dto);
 		return Result.ok("保存成功", AccountVO.of(user));
+	}
+
+	/**
+	 * 修改邮箱前先发验证码到新邮箱。
+	 *
+	 * 放在 /me 下（需要登录）而不是公开接口：只有已登录的人才能给自己换邮箱，
+	 * 否则等于给了一个「向任意邮箱发验证码」的入口。
+	 */
+	@AccessLimit(seconds = 60, maxCount = 3, msg = "操作过于频繁，请稍后再试")
+	@PostMapping("/me/email/code")
+	public Result sendEmailCode(@RequestBody java.util.Map<String, String> body) {
+		accountService.requireUserId();
+		passwordResetService.sendCode(body.get("email"), true);
+		return Result.ok("验证码已发送到新邮箱");
 	}
 
 	/**

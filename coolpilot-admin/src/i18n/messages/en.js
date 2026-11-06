@@ -25,6 +25,7 @@ export default {
 		system: 'System',
 		account: 'Account',
 		logs: 'Logs',
+		files: 'Attachments',
 		jobs: 'Scheduled jobs',
 		products: 'Products',
 		productList: 'Products',

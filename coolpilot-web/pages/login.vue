@@ -12,6 +12,9 @@
 		<p class="hint">
 			{{ t('auth.noAccount') }}<NuxtLink :to="localePath('/register')" class="link">{{ t('auth.registerLink') }}</NuxtLink>
 		</p>
+		<p class="hint forgot-line">
+			<NuxtLink :to="localePath('/forgot')" class="link">{{ t('auth.forgot') }}</NuxtLink>
+		</p>
 	</div>
 </template>
 

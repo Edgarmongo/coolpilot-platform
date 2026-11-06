@@ -38,6 +38,37 @@ public interface FileInfoMapper {
 	@Select("SELECT * FROM file WHERE file_uuid = #{uuid} AND status = 'NORMAL'")
 	FileInfo findByUuid(@Param("uuid") String uuid);
 
+	// ---------------- 附件管理（后台） ----------------
+
+	/**
+	 * 分页列表。bizType 与 keyword 都可空，空则不加条件。
+	 * 用 <script> 而不是 XML：这条查询只有两个可选条件，放进 XML 反而要在
+	 * 另一个文件里来回跳。
+	 */
+	@Select("<script>SELECT * FROM file WHERE status = 'NORMAL' " +
+			"<if test='bizType != null and bizType != \"\"'> AND biz_type = #{bizType}</if> " +
+			"<if test='keyword != null and keyword != \"\"'> AND original_name LIKE CONCAT('%', #{keyword}, '%')</if> " +
+			"ORDER BY id DESC</script>")
+	java.util.List<FileInfo> list(@Param("bizType") String bizType, @Param("keyword") String keyword);
+
+	@Select("SELECT COUNT(*) FROM file WHERE status = 'NORMAL'")
+	long countAll();
+
+	@Select("SELECT IFNULL(SUM(file_size), 0) FROM file WHERE status = 'NORMAL'")
+	long sumSize();
+
+	@Select("SELECT biz_type AS bizType, COUNT(*) AS cnt, IFNULL(SUM(file_size), 0) AS bytes " +
+			"FROM file WHERE status = 'NORMAL' GROUP BY biz_type ORDER BY cnt DESC")
+	java.util.List<java.util.Map<String, Object>> statsByBizType();
+
+	/**
+	 * 软删：置为 DELETED 而不是删行。
+	 * 下载记录、版本记录都还指着这条 id，删行会让历史数据悬空；
+	 * 磁盘文件在 Service 里同步删掉，空间照常释放。
+	 */
+	@Update("UPDATE file SET status = 'DELETED', update_time = NOW() WHERE id = #{id}")
+	int markDeleted(@Param("id") Long id);
+
 	@Insert("INSERT INTO file_version (file_id, version, object_key, file_size, sha256, change_log, create_time) " +
 			"SELECT #{fileId}, IFNULL(MAX(version), 0) + 1, #{objectKey}, #{fileSize}, #{sha256}, #{changeLog}, NOW() " +
 			"FROM file_version WHERE file_id = #{fileId}")
