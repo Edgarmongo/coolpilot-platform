@@ -275,3 +275,16 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+
+/*
+ * 开发期：改了路由表（例如新增一个菜单）时整页重载。
+ *
+ * layout 里是 `import {routes}` 静态引用，路由文件热更新后 layout 不会重新执行，
+ * 已创建的 router 实例也不会重建 —— 表现为「侧边栏要手动刷新才出现新菜单」。
+ * 与其做半套热替换（容易留下旧路由、旧标签页），不如重载一次，行为可预期。
+ *
+ * 生产构建里 import.meta.hot 是 undefined，这段不会执行。
+ */
+if (import.meta.hot) {
+	import.meta.hot.accept(() => window.location.reload())
+}

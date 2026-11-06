@@ -3,6 +3,7 @@ package com.coolskyai.modules.ai.service;
 import com.coolskyai.modules.ai.entity.AiSetting;
 import com.coolskyai.modules.ai.mapper.AiSettingMapper;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -13,6 +14,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Description: AI 运行时配置
@@ -107,6 +111,14 @@ public class AiRuntimeConfig {
 	 */
 	private volatile Map<String, String> overrides = Map.of();
 
+	/**
+	 * 上一次加载时的变更指纹。用来判断「库里是否被人改过」——
+	 * 直接 SQL 改配置不会经过本应用，只能靠轮询发现。
+	 */
+	private volatile String lastFingerprint;
+
+	private ScheduledExecutorService poller;
+
 	public AiRuntimeConfig(Environment environment, AiSettingMapper settingMapper, AiCrypto crypto) {
 		this.environment = environment;
 		this.settingMapper = settingMapper;
@@ -121,12 +133,71 @@ public class AiRuntimeConfig {
 			// 表还没建（迁移没跑）时不能让应用起不来，按配置文件运行即可
 			log.warn("加载 AI 运行时配置失败，本次按配置文件默认值运行：{}", e.getMessage());
 		}
+		startPoller();
+	}
+
+	/**
+	 * 轮询库里的变更。
+	 *
+	 * 没有它的话，直接 SQL 改 ai_setting 完全不生效（内存里是快照），
+	 * 只能重启容器 —— 运维改一个 Key 要停一次服务，代价太高。
+	 * 每次只查「行数 + 最后修改时间」，10 秒一次的开销可以忽略。
+	 *
+	 * 间隔用 ai.config.poll-seconds 控制，设 0 关闭（多实例部署时可关掉，
+	 * 改为通过接口改配置）。
+	 */
+	private void startPoller() {
+		int seconds = environment.getProperty("ai.config.poll-seconds", Integer.class, 10);
+		if (seconds <= 0) {
+			log.info("AI 配置轮询已关闭（ai.config.poll-seconds=0）");
+			return;
+		}
+		poller = Executors.newSingleThreadScheduledExecutor(runnable -> {
+			Thread thread = new Thread(runnable, "ai-config-poller");
+			// 守护线程：别拦住 JVM 退出
+			thread.setDaemon(true);
+			return thread;
+		});
+		poller.scheduleWithFixedDelay(this::refreshIfChanged, seconds, seconds, TimeUnit.SECONDS);
+		log.info("AI 配置轮询已启动：每 {} 秒检查一次 ai_setting", seconds);
+	}
+
+	/**
+	 * 指纹变了才重新加载，避免每次轮询都重建一遍 Map
+	 */
+	public void refreshIfChanged() {
+		try {
+			String current = settingMapper.fingerprint();
+			if (current != null && current.equals(lastFingerprint)) {
+				return;
+			}
+			refresh();
+			log.info("检测到 ai_setting 变更（指纹 {}），AI 配置已重新加载", current);
+		} catch (Exception e) {
+			// 库抖动或表被删：降级为 debug，别周期性刷错误日志
+			log.debug("AI 配置轮询失败：{}", e.getMessage());
+		}
+	}
+
+	@PreDestroy
+	void shutdown() {
+		if (poller != null) {
+			poller.shutdownNow();
+		}
 	}
 
 	/**
 	 * 从数据库重读覆盖值。保存配置后调用，立即生效。
 	 */
-	public void refresh() {
+	public synchronized void refresh() {
+		// 先记指纹再读内容：如果中途有人改，下次轮询会发现指纹不一致再刷一遍，
+		// 不会出现「内容读了、指纹记成新的」导致漏掉一次变更
+		String fingerprint = null;
+		try {
+			fingerprint = settingMapper.fingerprint();
+		} catch (Exception e) {
+			log.debug("读取 ai_setting 指纹失败：{}", e.getMessage());
+		}
 		List<AiSetting> settings = settingMapper.getList();
 		Map<String, String> merged = new HashMap<>(settings.size());
 		for (AiSetting setting : settings) {
@@ -139,6 +210,7 @@ public class AiRuntimeConfig {
 			}
 		}
 		this.overrides = merged;
+		this.lastFingerprint = fingerprint;
 	}
 
 	public String get(String key) {

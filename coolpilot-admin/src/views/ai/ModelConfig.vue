@@ -6,7 +6,7 @@
 				<p class="page-desc">{{ t('对话、向量与重排模型的参数，保存后立即生效') }}</p>
 			</div>
 			<div>
-				<el-button :icon="Refresh" @click="load">{{ t('重新读取') }}</el-button>
+				<el-button :icon="Refresh" @click="load(true)">{{ t('重新读取') }}</el-button>
 				<el-button type="primary" :loading="saving" @click="save">{{ t('保存') }}</el-button>
 			</div>
 		</div>
@@ -92,7 +92,7 @@ const t = useT()
 import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {Refresh} from '@element-plus/icons-vue'
-import {getAiConfig, saveAiConfig, testLlm} from '@/api/ai'
+import {getAiConfig, reloadAiConfig, saveAiConfig, testLlm} from '@/api/ai'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -194,10 +194,12 @@ function isOverridden(key) {
 	return overridden.value.includes(key)
 }
 
-async function load() {
+async function load(force = false) {
 	loading.value = true
 	try {
-		const res = await getAiConfig()
+		// 「重新读取」先让后端重载一遍：直接改库时进程里还是旧快照，
+		// 只发 GET 只会把旧值再读一次，看不出变化
+		const res = force ? await reloadAiConfig() : await getAiConfig()
 		const data = res.data || {}
 		Object.keys(values).forEach(key => delete values[key])
 		Object.assign(values, data.values || {})
@@ -233,7 +235,7 @@ async function test() {
 	}
 }
 
-onMounted(load)
+onMounted(() => load())
 </script>
 
 <style scoped>

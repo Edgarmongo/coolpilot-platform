@@ -119,6 +119,17 @@ public class AiSettingService {
 		log.info("AI 配置已更新，{} 项变更，已热加载", changed);
 	}
 
+	/**
+	 * 强制重新读取。
+	 *
+	 * 轮询已经在做同样的事（每 10 秒），这里是给「我刚改完就想看到」用的：
+	 * 界面上的「重新读取」按钮走这条路，不用等下一轮。
+	 */
+	public void reload() {
+		runtimeConfig.refresh();
+		log.info("AI 配置已手动重新加载");
+	}
+
 	private void upsert(String key, String value, boolean encrypted) {
 		AiSetting setting = new AiSetting();
 		setting.setSettingKey(key);

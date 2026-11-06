@@ -32,4 +32,13 @@ public interface AiSettingMapper {
 
 	@Delete("DELETE FROM ai_setting WHERE setting_key = #{settingKey}")
 	int deleteByKey(@Param("settingKey") String settingKey);
+
+	/**
+	 * 变更指纹：行数 + 最后修改时间。
+	 *
+	 * 轮询只查这一个很小的一行，比每次把整表读出来比对便宜得多；
+	 * 新增/删除会改变行数，改值会推进 update_time（V20 里是 ON UPDATE CURRENT_TIMESTAMP）。
+	 */
+	@Select("SELECT CONCAT(COUNT(*), ':', IFNULL(MAX(update_time), '-')) FROM ai_setting")
+	String fingerprint();
 }

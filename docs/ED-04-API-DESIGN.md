@@ -296,9 +296,15 @@ JSON 多一个字段对 Vue 完全透明（旧代码不读它就不受影响）�
 |---|---|---|
 | GET | `/admin/ai/config` | 当前生效值 + 配置文件默认值 + `overridden`（哪些被后台改过）。密钥一律返回掩码，`defaults` 里的密钥同样掩码 |
 | PUT | `/admin/ai/config` | 保存整组配置，保存后热加载。密钥传空或掩码表示不修改；非密钥传空表示删除自定义值、回落 `.env` |
+| POST | `/admin/ai/config/reload` | 强制重新读取 `ai_setting`（直接改库后不用等轮询） |
 | GET | `/admin/ai/usage?days=7` | `today` / `summary` / `byDay`（补零）/ `byModel` / `byScene` |
 | GET | `/admin/ai/llm` | 当前模型状态（只读） |
 | POST | `/admin/ai/llm/test` | 连通性自测，单独记 `TEST` 场景，不混入问答用量 |
+
+**配置的加载时机**：进程内维护一份快照。走后台保存会立即刷新；
+直接用 SQL 改库由后台轮询兜住——服务每 10 秒比对一次
+「行数 + 最后修改时间」的指纹（`ai.config.poll-seconds` 可调，0 关闭），
+发现变化就重载，不需要重启容器。
 
 **热生效的边界**：对话模型的地址 / Key / 模型名 / 温度 / 上限保存即生效；
 向量与重排的 `provider` 由启动时的 `@ConditionalOnProperty` 决定，

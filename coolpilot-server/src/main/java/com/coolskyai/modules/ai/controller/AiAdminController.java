@@ -111,6 +111,18 @@ public class AiAdminController {
 	}
 
 	/**
+	 * 强制重新读取配置。
+	 *
+	 * 后端每 10 秒会自己检查一次 ai_setting 的变更，这个接口是给
+	 * 「改完立刻要看」用的，省掉等待。
+	 */
+	@PostMapping("/ai/config/reload")
+	public Result reloadConfig() {
+		aiSettingService.reload();
+		return Result.ok("已重新加载", aiSettingService.getForAdmin());
+	}
+
+	/**
 	 * 用量统计：今日 + 区间汇总 + 按天 / 模型 / 场景
 	 */
 	@GetMapping("/ai/usage")

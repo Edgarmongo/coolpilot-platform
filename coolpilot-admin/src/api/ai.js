@@ -74,3 +74,10 @@ export function saveAiConfig(values) {
 export function getAiUsage(days) {
 	return request({url: 'ai/usage', method: 'GET', params: {days}})
 }
+
+/**
+ * 强制后端重新读取 ai_setting（直接改库后不用等 10 秒轮询）
+ */
+export function reloadAiConfig() {
+	return request({url: 'ai/config/reload', method: 'POST'})
+}
