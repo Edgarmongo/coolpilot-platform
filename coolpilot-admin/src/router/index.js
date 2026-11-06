@@ -200,6 +200,9 @@ export const routes = [
 		component: Layout,
 		redirect: '/ai/model',
 		meta: {title: 'menu.ai', icon: 'MagicStick'},
+		// AI 服务：模型、知识库、问答这些「能力」的统一入口。
+		// 智能体、工作流、提示词按规划排在后面，等真有页面再挂上来 ——
+		// 先放一个点进去是空白的入口，比没有更让人困惑。
 		children: [
 			{
 				path: 'model',

@@ -211,7 +211,10 @@ export const UI_EN = {
 	'课时': 'Lessons',
 	'资源': 'Resources',
 
-	// 智能检索
+	// AI 服务
+	'AI 服务': 'AI services',
+	'模型管理': 'Models',
+	'知识库管理': 'Knowledge base',
 	'智能检索': 'AI',
 	'知识库索引': 'Knowledge index',
 	'问答记录': 'Chat logs',
@@ -231,7 +234,6 @@ export const UI_EN = {
 	'验收': 'Acceptance',
 	// —— 第二批：页面正文 ——
 	// —— 第三批：状态与提示 ——
-	// —— AI 模型配置与用量 ——
 	// —— AI 模型配置与用量 ——
 	'{n} 次调用': '{n} calls',
 	'不重排': 'No rerank',

@@ -2,7 +2,7 @@
 	<div v-loading="loading">
 		<div class="page-header">
 			<div>
-				<h2 class="page-title">{{ t('模型配置') }}</h2>
+				<h2 class="page-title">{{ t('模型管理') }}</h2>
 				<p class="page-desc">{{ t('对话、向量与重排模型的参数，保存后立即生效') }}</p>
 			</div>
 			<div>
