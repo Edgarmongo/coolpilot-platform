@@ -66,12 +66,20 @@
 
 		<footer class="footer">
 			<div class="container">
-				<span v-if="brand.footerText">{{ brand.footerText }}</span>
-				<span v-if="brand.footerText && brand.footerTagline" class="dot">·</span>
-				<span v-if="brand.footerTagline">{{ brand.footerTagline }}</span>
-				<span v-if="brand.beian && (brand.footerText || brand.footerTagline)" class="dot">·</span>
-				<a v-if="brand.beian" class="beian" href="https://beian.miit.gov.cn/" target="_blank"
-				   rel="noopener noreferrer">{{ brand.beian }}</a>
+				<nav class="footer-links">
+					<NuxtLink :to="localePath('/planet')">{{ t('footer.planet') }}</NuxtLink>
+					<NuxtLink :to="localePath('/follow')">{{ t('footer.follow') }}</NuxtLink>
+					<NuxtLink :to="localePath('/about')">{{ t('footer.about') }}</NuxtLink>
+					<NuxtLink :to="localePath('/friends')">{{ t('footer.friends') }}</NuxtLink>
+				</nav>
+				<div class="footer-info">
+					<span v-if="brand.footerText">{{ brand.footerText }}</span>
+					<span v-if="brand.footerText && brand.footerTagline" class="dot">·</span>
+					<span v-if="brand.footerTagline">{{ brand.footerTagline }}</span>
+					<span v-if="brand.beian && (brand.footerText || brand.footerTagline)" class="dot">·</span>
+					<a v-if="brand.beian" class="beian" href="https://beian.miit.gov.cn/" target="_blank"
+					   rel="noopener noreferrer">{{ brand.beian }}</a>
+				</div>
 			</div>
 		</footer>
 	</div>
@@ -363,10 +371,35 @@ async function logout() {
 
 .footer {
 	border-top: 1px solid var(--line);
-	padding: 18px 0;
+	padding: 22px 0 20px;
 	color: var(--muted);
 	font-size: 12.5px;
 	text-align: center;
+}
+
+.footer-links {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 22px;
+	margin-bottom: 12px;
+}
+
+.footer-links a {
+	color: var(--muted);
+	font-size: 13px;
+}
+
+.footer-links a:hover {
+	color: var(--teal);
+}
+
+.footer-info {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
 }
 
 .dot {

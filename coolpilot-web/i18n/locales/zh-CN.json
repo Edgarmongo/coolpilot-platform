@@ -49,14 +49,32 @@
     "viewAll": "全部文章 →",
     "empty": "还没有文章",
     "reads": "{n} 次阅读",
-    "entryBlog": "文章归档",
+    "entryBlog": "技术文章",
     "entryBlogDesc": "按时间浏览全部技术文章",
-    "entryKnowledge": "知识付费",
+    "entryKnowledge": "知识产品",
     "entryKnowledgeDesc": "课程、文档与代码资源",
     "entryService": "技术服务",
     "entryServiceDesc": "从需求评估到交付验收",
     "entryAsk": "智能问答",
-    "entryAskDesc": "基于站内内容直接回答"
+    "entryAskDesc": "基于站内内容直接回答",
+    "ctaArticles": "读技术文章",
+    "ctaPlanet": "加入知识星球",
+    "ctaPlanetDetail": "了解知识星球",
+    "ctaServiceDetail": "看看能做什么",
+    "serviceCardDesc": "Java 后端、AI 应用、企业知识库，从评估到交付全程可追踪。",
+    "followTitle": "关注我",
+    "followAll": "全部平台 →",
+    "projectUnit": "个开源项目",
+    "fieldJava": "Java 后端",
+    "fieldAi": "AI 应用开发",
+    "fieldAiEng": "AI 工程实践",
+    "fieldEnterprise": "企业系统",
+    "fieldPractice": "项目实战",
+    "entryTopic": "技术专题",
+    "entryTopicDesc": "按方向串成学习路径",
+    "entryProject": "项目",
+    "entryProjectDesc": "真实工程与技术选型",
+    "planetFallbackDesc": "系统化学习资料、项目实践与持续更新。"
   },
   "archives": {
     "title": "归档",
@@ -612,5 +630,66 @@
       "COMMENT": "互动",
       "SYSTEM": "系统"
     }
+  },
+  "followPage": {
+    "title": "在这些地方找到我",
+    "desc": "公众号、抖音、小红书、GitHub 都在这里，选你顺手的那个。",
+    "empty": "还没有配置社交账号，可在后台「页面管理 → 社交媒体」添加。",
+    "scan": "扫码关注",
+    "visit": "打开主页",
+    "tip": "没找到想关注的平台？也可以直接看看技术服务，或用顶栏搜索文章。",
+    "platforms": {
+      "GITHUB": "GitHub",
+      "TELEGRAM": "Telegram",
+      "QQ": "QQ",
+      "BILIBILI": "bilibili",
+      "NETEASE": "网易云音乐",
+      "EMAIL": "邮箱",
+      "WECHAT": "微信",
+      "WECHAT_MP": "公众号",
+      "DOUYIN": "抖音",
+      "XIAOHONGSHU": "小红书",
+      "ZHIHU": "知乎",
+      "CUSTOM": "其他"
+    }
+  },
+  "planetPage": {
+    "title": "知识星球",
+    "tag": "付费社群",
+    "join": "加入知识星球",
+    "scanTitle": "扫码加入",
+    "scanDesc": "微信扫一扫，或在知识星球 App 里搜索星球名称。",
+    "notice": "交易与成员管理由知识星球官方完成，本站只做介绍与跳转，不参与收款。",
+    "noQr": "站长还没有上传二维码",
+    "noLink": "链接暂未配置",
+    "closedTitle": "知识星球尚未开放",
+    "closedDesc": "内容还在整理，开放后会在这里公布。可以先看看技术文章。",
+    "backHome": "返回首页"
+  },
+  "projectsPage": {
+    "title": "项目",
+    "desc": "参与过的工程实践：做了什么、为什么这么做、技术选型怎么定。",
+    "empty": "还没有公开的项目，正在整理中。",
+    "status": {
+      "ACTIVE": "运行中",
+      "WIP": "开发中",
+      "MAINTAINING": "维护中",
+      "ARCHIVED": "已归档"
+    }
+  },
+  "projectDetail": {
+    "back": "← 全部项目",
+    "backToList": "看看其他项目",
+    "notFound": "项目不存在或未公开",
+    "noContent": "这个项目还没有写详细介绍。",
+    "repo": "查看代码",
+    "demo": "在线预览",
+    "updated": "更新于 {date}"
+  },
+  "footer": {
+    "planet": "知识星球",
+    "follow": "关注我",
+    "about": "关于",
+    "friends": "友链"
   }
 }

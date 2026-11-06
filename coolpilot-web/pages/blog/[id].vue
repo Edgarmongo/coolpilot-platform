@@ -75,6 +75,27 @@ const route = useRoute()
 const {call, isLogin} = useApi()
 const {t, te} = useI18n()
 const localePath = useLocalePath()
+const siteUrl = String(useRuntimeConfig().public.siteUrl || '').replace(/\/$/, '')
+
+/** 摘要要从 HTML 正文里抠纯文本：直接截 HTML 会把标签也塞进 description */
+function plainText(html: string) {
+	return (html || '')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/[#>*`~]+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+}
+
+/** og:image 必须是绝对地址，相对路径各家抓取器都不认 */
+function absoluteUrl(url: string) {
+	if (!url) {
+		return ''
+	}
+	if (/^https?:\/\//i.test(url)) {
+		return url
+	}
+	return siteUrl + (url.startsWith('/') ? url : '/' + url)
+}
 
 /**
  * 路由参数既可能是旧链接的 id，也可能是新链接的 slug。
@@ -224,7 +245,28 @@ function priceLabel(product: any) {
 }
 
 if (blog.value) {
-	useHead({title: blog.value.title})
+	/**
+	 * 文章页的分享与搜索信息要用文章自己的摘要，不能沿用全站那句 description。
+	 *
+	 * 摘要优先取 description（后台填的简介），没有就从正文首段截一段。
+	 * og:image 用封面图，没有的话微信抓到的就是空白卡片。
+	 */
+	const desc = (blog.value.description || plainText(blog.value.content) || '').slice(0, 150)
+	useHead({
+		title: blog.value.title,
+		meta: [
+			{name: 'description', content: desc},
+			{property: 'og:type', content: 'article'},
+			{property: 'og:title', content: blog.value.title},
+			{property: 'og:description', content: desc},
+			...(blog.value.firstPicture
+				? [{property: 'og:image', content: absoluteUrl(blog.value.firstPicture)}]
+				: []),
+			...(blog.value.createTime
+				? [{property: 'article:published_time', content: blog.value.createTime}]
+				: [])
+		]
+	})
 } else {
 	useHead({title: t('post.lockedTitle')})
 }

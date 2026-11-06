@@ -116,6 +116,18 @@ export const routes = [
 				meta: {title: 'menu.navManage', icon: 'Menu'}
 			},
 			{
+				path: 'social',
+				name: 'SocialManage',
+				component: () => import('@/views/page/SocialList.vue'),
+				meta: {title: 'menu.socialManage', icon: 'Share'}
+			},
+			{
+				path: 'portfolio',
+				name: 'PortfolioManage',
+				component: () => import('@/views/page/PortfolioList.vue'),
+				meta: {title: 'menu.portfolioManage', icon: 'Collection'}
+			},
+			{
 				path: 'about',
 				name: 'AboutPage',
 				component: () => import('@/views/page/About.vue'),

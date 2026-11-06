@@ -22,6 +22,8 @@ export default {
 		pages: '页面管理',
 		siteSettings: '站点设置',
 		navManage: '导航管理',
+		socialManage: '社交媒体',
+		portfolioManage: '项目展示',
 		aboutPage: '关于我',
 		friends: '友链管理',
 		users: '用户管理',

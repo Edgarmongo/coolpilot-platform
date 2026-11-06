@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 	const base = (config.public.siteUrl || 'http://localhost:8081').replace(/\/$/, '')
 	const api = config.apiBase
 
-	const staticPaths = ['/', '/archives', '/topic', '/moments', '/friends', '/about', '/knowledge', '/search', '/service']
+	const staticPaths = ['/', '/archives', '/topic', '/projects', '/knowledge', '/service', '/follow', '/about', '/friends', '/search']
 
 	const urls: {loc: string, lastmod?: string, changefreq?: string, priority?: string}[] = staticPaths.map(p => ({
 		loc: base + p,
@@ -53,6 +53,21 @@ export default defineEventHandler(async (event) => {
 				loc: `${base}/knowledge/${p.productNo}`,
 				lastmod: p.updateTime ? new Date(p.updateTime).toISOString().slice(0, 10) : undefined,
 				changefreq: 'weekly',
+				priority: '0.7'
+			})
+		}
+	} catch {
+		// 同上
+	}
+
+	try {
+		// 项目展示：只有 enabled = 1 的才会被接口返回，未公开的不进 sitemap
+		const portfolios: any = await $fetch(`${api}/portfolios`)
+		for (const p of (portfolios?.data || [])) {
+			urls.push({
+				loc: `${base}/projects/${p.slug}`,
+				lastmod: p.updateTime ? new Date(p.updateTime).toISOString().slice(0, 10) : undefined,
+				changefreq: 'monthly',
 				priority: '0.7'
 			})
 		}

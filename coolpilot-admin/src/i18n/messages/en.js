@@ -16,6 +16,8 @@ export default {
 		pages: 'Pages',
 		siteSettings: 'Site settings',
 		navManage: 'Navigation',
+		socialManage: 'Social accounts',
+		portfolioManage: 'Projects',
 		aboutPage: 'About page',
 		friends: 'Links',
 		users: 'Users',

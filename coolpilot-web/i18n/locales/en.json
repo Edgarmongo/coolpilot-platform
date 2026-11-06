@@ -49,14 +49,32 @@
     "viewAll": "All articles →",
     "empty": "No articles yet",
     "reads": "{n} views",
-    "entryBlog": "Archive",
+    "entryBlog": "Articles",
     "entryBlogDesc": "Browse all articles by time",
-    "entryKnowledge": "Knowledge",
+    "entryKnowledge": "Products",
     "entryKnowledgeDesc": "Courses, docs and source code",
     "entryService": "Services",
     "entryServiceDesc": "From brief to delivery and acceptance",
     "entryAsk": "Ask AI",
-    "entryAskDesc": "Answers grounded in site content"
+    "entryAskDesc": "Answers grounded in site content",
+    "ctaArticles": "Read the articles",
+    "ctaPlanet": "Join Knowledge Planet",
+    "ctaPlanetDetail": "About Knowledge Planet",
+    "ctaServiceDetail": "See what I can build",
+    "serviceCardDesc": "Java backends, AI applications, enterprise knowledge bases — from scoping to delivery.",
+    "followTitle": "Follow me",
+    "followAll": "All platforms →",
+    "projectUnit": "open-source projects",
+    "fieldJava": "Java backend",
+    "fieldAi": "AI application",
+    "fieldAiEng": "AI engineering",
+    "fieldEnterprise": "Enterprise systems",
+    "fieldPractice": "Hands-on delivery",
+    "entryTopic": "Topics",
+    "entryTopicDesc": "Articles arranged as learning paths",
+    "entryProject": "Projects",
+    "entryProjectDesc": "Real systems and why they were built that way",
+    "planetFallbackDesc": "Structured learning material, project practice and ongoing updates."
   },
   "archives": {
     "title": "Archive",
@@ -612,5 +630,66 @@
       "COMMENT": "Activity",
       "SYSTEM": "System"
     }
+  },
+  "followPage": {
+    "title": "Find me elsewhere",
+    "desc": "WeChat, Douyin, Xiaohongshu, GitHub — pick whichever you use.",
+    "empty": "No social accounts configured yet. Add them in Pages → Social.",
+    "scan": "Scan to follow",
+    "visit": "Open profile",
+    "tip": "Not on any of these? Browse the services, or search articles from the top bar.",
+    "platforms": {
+      "GITHUB": "GitHub",
+      "TELEGRAM": "Telegram",
+      "QQ": "QQ",
+      "BILIBILI": "bilibili",
+      "NETEASE": "NetEase Music",
+      "EMAIL": "Email",
+      "WECHAT": "WeChat",
+      "WECHAT_MP": "WeChat Official",
+      "DOUYIN": "Douyin",
+      "XIAOHONGSHU": "Xiaohongshu",
+      "ZHIHU": "Zhihu",
+      "CUSTOM": "Other"
+    }
+  },
+  "planetPage": {
+    "title": "Knowledge Planet",
+    "tag": "Paid community",
+    "join": "Join on Knowledge Planet",
+    "scanTitle": "Scan to join",
+    "scanDesc": "Scan with WeChat, or search the planet name in the Knowledge Planet app.",
+    "notice": "Payment and membership are handled entirely by Knowledge Planet. This site only introduces and links to it.",
+    "noQr": "No QR code uploaded yet",
+    "noLink": "Link not configured yet",
+    "closedTitle": "Not open yet",
+    "closedDesc": "Still organising the content. Meanwhile, have a look at the articles.",
+    "backHome": "Back to home"
+  },
+  "projectsPage": {
+    "title": "Projects",
+    "desc": "Engineering work I have been part of: what it does, why it is built that way, how the stack was chosen.",
+    "empty": "No public projects yet — still putting them together.",
+    "status": {
+      "ACTIVE": "Running",
+      "WIP": "In progress",
+      "MAINTAINING": "Maintained",
+      "ARCHIVED": "Archived"
+    }
+  },
+  "projectDetail": {
+    "back": "← All projects",
+    "backToList": "Browse other projects",
+    "notFound": "Project not found or not public",
+    "noContent": "No write-up for this project yet.",
+    "repo": "View code",
+    "demo": "Live demo",
+    "updated": "Updated {date}"
+  },
+  "footer": {
+    "planet": "Knowledge Planet",
+    "follow": "Follow",
+    "about": "About",
+    "friends": "Links"
   }
 }

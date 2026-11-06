@@ -64,7 +64,7 @@ const tab = ref('1')
 const all = ref([])
 
 /** 图片类配置：这些字段的值是图片地址，给预览和上传按钮 */
-const IMAGE_KEYS = new Set(['wechatQr', 'alipayQr', 'footerImgUrl', 'reward', 'avatar'])
+const IMAGE_KEYS = new Set(['wechatQr', 'alipayQr', 'footerImgUrl', 'reward', 'avatar', 'planetCover', 'planetQr'])
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 const fileInput = ref(null)
@@ -80,7 +80,8 @@ const TYPE_LABELS = {
 	2: t('资料卡'),
 	3: t('徽标'),
 	4: t('友链说明'),
-	5: t('支付设置')
+	5: t('支付设置'),
+	6: t('知识星球')
 }
 
 const groups = computed(() => {
