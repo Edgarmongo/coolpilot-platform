@@ -135,9 +135,39 @@ const allMenus = computed(() => {
 	return result
 })
 
+/**
+ * 一级菜单顺序：按业务流排，不是按技术模块。
+ *
+ *   看内容 → 买商品 → 委托服务 → 交易 → 用户 → AI 能力 → 站点外观 → 系统
+ *
+ * 为什么不直接调整 routes 的书写顺序：
+ * 路由数组还要满足「404 兜底必须最后」这类技术约束，两种顺序混在一起，
+ * 动一处就会踩另一处。这里是纯展示规则，集中在一个数组里改。
+ *
+ * 新增模块时把 path 加进来；不登记也能显示，只是会排到列表末尾。
+ */
+const MENU_ORDER = [
+	'/dashboard',
+	'/blog',
+	'/product',
+	'/service',
+	'/trade',
+	'/user',
+	'/ai',
+	'/page',
+	'/system'
+]
+
+function menuOrder(path) {
+	const index = MENU_ORDER.indexOf(path)
+	return index < 0 ? MENU_ORDER.length : index
+}
+
 // meta.bottom 的模块（设置类）只参与排序：始终排在最后，不做固定定位
 const menuList = computed(() => [
-	...allMenus.value.filter(item => !item.bottom),
+	...allMenus.value
+		.filter(item => !item.bottom)
+		.sort((a, b) => menuOrder(a.path) - menuOrder(b.path)),
 	...allMenus.value.filter(item => item.bottom)
 ])
 

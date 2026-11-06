@@ -4,7 +4,16 @@ import Layout from '@/layout/index.vue'
 
 /**
  * 路由即菜单：meta.title 用于侧栏与面包屑，meta.hidden 表示不在菜单展示。
- * 迁移进度：已迁 仪表盘 / 交易管理；其余模块按 docs/FRONTEND-MIGRATION.md 分批补齐。
+ *
+ * 一级菜单基线（8 个业务域 + 仪表盘）：
+ *   内容管理、商品管理、技术服务、交易管理、用户管理、AI 服务、页面管理、系统管理
+ *
+ * 展示顺序不依赖本文件的书写顺序 —— 这里还要满足「404 兜底必须最后」
+ * 这类技术约束，两种顺序混在一起，改一处就踩另一处。
+ * 侧栏顺序统一由 layout/index.vue 的 MENU_ORDER 决定。
+ *
+ * 治理约定：新功能优先挂到已有业务域下，不轻易增加一级菜单；
+ * 确需新增时，同时更新 MENU_ORDER 与这份基线说明。
  */
 export const routes = [
 	{
