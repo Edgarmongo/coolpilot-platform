@@ -169,6 +169,11 @@ services:
       TZ: Asia/Shanghai
       # runtimeConfig.apiBase 的运行时覆盖，仅服务端可见
       NUXT_API_BASE: http://api:8091
+      # runtimeConfig.public.siteUrl 的运行时覆盖：canonical / og:url /
+      # sitemap / robots 里的绝对链接都取它。不注入就会退化成
+      # nuxt.config 的默认值 http://localhost:8081，线上等于把搜索引擎
+      # 指向一台不存在的机器。
+      NUXT_PUBLIC_SITE_URL: ${SITE_URL}
       NUXT_TELEMETRY_DISABLED: "1"
     # 不对外映射端口：统一由 gateway 反代（容器间走 compose 内网）
 
