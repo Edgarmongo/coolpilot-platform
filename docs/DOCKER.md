@@ -123,8 +123,11 @@ docker compose down -v       # 停止并删除数据卷（数据库清空，慎�
 
 ```
 coolpilot-server/src/main/resources/db/migration/
-├── V1__init_schema.sql   # 39 张表的完整结构
-└── V2__init_seed.sql     # 站点配置 36 项、admin 账号、关于页、定时任务、分类标签
+├── V1__init_schema.sql   # 39 张基础表
+├── V2__init_seed.sql     # 站点配置 36 项、admin 账号、关于页、定时任务、分类标签
+├── V3__ … V27__          # 增量演进：交易、技术服务、AI、导航、品牌、双语、
+│                         #   知识星球、社交账号、项目展示、成交模式…
+└── （当前累计 27 个脚本，业务表 59 张）
 ```
 
 启动时的行为分两种：

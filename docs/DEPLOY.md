@@ -40,7 +40,7 @@
 | 服务器 | 2C4G 起步；Docker 24+ 与 compose 插件 |
 | 域名 | A 记录指向服务器 IP；`www` 可选但要和 `SERVER_NAME` 一致 |
 | 端口 | 安全组/防火墙只放 22、80、443；**不要**放 8081/8079/8091 |
-| 代码 | 仓库已打 tag（`v1.2.0`），Release 已把四个镜像推到 GHCR |
+| 代码 | 仓库已打 tag（如 `v1.0.1`），Release 已把四个镜像推到 GHCR |
 
 ---
 
@@ -69,7 +69,7 @@ MYSQL_ROOT_PASSWORD=<强密码>
 REDIS_PASSWORD=<强密码>
 JWT_SECRET=<openssl rand -hex 48 生成，禁止用示例值>
 REGISTRY=ghcr.io/edgarmongo
-TAG=v1.2.0
+TAG=v1.0.1
 SITE_URL=https://coolskyai.com
 SERVER_NAME=coolskyai.com www.coolskyai.com
 ```
@@ -123,6 +123,28 @@ crontab -e
 > 如果你有多个域名，`renew-cert.sh` 只处理 `SERVER_NAME` 的第一个；
 > 其余域名用 `-d` 追加，或直接改脚本里的 `-d` 参数。
 
+### 域名走 Cloudflare 时（必读）
+
+线上实例就是这套：Cloudflare 代理 + 源站自签名证书。**SSL 模式必须是「完整（Full）」**。
+
+| 模式 | 结果 |
+|---|---|
+| 灵活（Flexible） | ❌ CF 用 http 回源 → gateway 的 80 一律 301 到 https → **无限重定向** |
+| 自动 SSL/TLS | ❌ 会自动去验证源站证书，自签名验不过 → 退回 Flexible → 同样死循环 |
+| **完整（Full）** | ✅ CF 用 https 回源且不校验证书，自签名可用 |
+| 完整（严格） | ✅ 但要求源站证书受信任，需先换成 Cloudflare Origin Certificate |
+
+实测特征：`curl -L https://域名/` 跳转 5 次以上仍返回 301，就是踩了这个坑。
+
+`SECURITY_TRUST_FORWARDED_FOR` 在这种情况下要设为 `true` —— Cloudflare 回源时带
+`CF-Connecting-IP` / `X-Forwarded-For`，gateway 用 `$remote_addr` 覆盖该头，
+后端拿到的才是访客真实 IP。不设的话限流会按 Cloudflare 的 IP 计数，
+等于全站共用一个限流桶。
+
+想升到「完整（严格）」：Cloudflare → SSL/TLS → 源服务器 → 创建证书，
+把 cert 与 key 分别写入 `certs/fullchain.pem` / `certs/privkey.pem`，
+`docker compose -f docker-compose.prod.yml restart gateway`，再把模式切到严格。
+
 ---
 
 ## 五、日常发布与回滚
@@ -150,7 +172,7 @@ docker compose -f docker-compose.prod.yml up -d
 镜像不可变，回滚就是改回上一个 tag：
 
 ```bash
-sed -i 's/^TAG=.*/TAG=v1.2.0/' .env
+sed -i 's/^TAG=.*/TAG=v1.0.1/' .env
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
@@ -256,13 +278,19 @@ curl -fsS https://coolskyai.com/api/health
 
 - [ ] `JWT_SECRET` 已换成 64 位随机值，且**不在**任何聊天记录/仓库里
 - [ ] MySQL/Redis 密码已换，`.env` 权限 600
-- [ ] 默认账号 `Admin / 123456` 已改
+- [ ] 默认账号 `Admin / 123456` 已改（站长密码只能走 `/me/password`，管理员重置接口只针对访客）
 - [ ] 防火墙只开 22/80/443，`docker ps` 里没有 `0.0.0.0:8091` 之类的映射
 - [ ] `https://域名/api/health` 返回 200 且 `db`、`redis` 都是 `UP`
 - [ ] `/cms/` 可以正常登录，浏览器地址栏是锁标
 - [ ] 备份定时任务已启用，`systemctl list-timers` 有记录，且**实际恢复过一次**
 - [ ] `security.trust-forwarded-for` 与入口方式匹配（用自带 gateway → true；裸奔 → false）
 - [ ] 已确认 `BLOG_API` / `BLOG_VIEW` / `SITE_URL` 三处都是 https 域名
+- [ ] 走 Cloudflare 时 SSL 模式为**完整**，`curl -L https://域名/` 不出现多次 301
+- [ ] 页面源码里 `canonical`、`sitemap.xml`、`robots.txt` 指向的是真实域名而不是 `localhost:8081`
+  （web 容器必须注入 `NUXT_PUBLIC_SITE_URL=${SITE_URL}`，漏了就退化成默认值）
+- [ ] `.env` 的 `SERVER_NAME` 多个域名**带引号** —— `backup.sh` 会 `source` 它，
+  不加引号 bash 会把第二个域名当命令执行，备份静默失败（`systemctl --failed` 里能看到）
+- [ ] 脚本换行符为 LF（`file *.sh` 不出现 CRLF），否则容器/systemd 报 `bash\r: not found`
 
 ---
 

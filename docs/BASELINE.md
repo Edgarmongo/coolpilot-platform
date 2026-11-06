@@ -37,7 +37,7 @@ tag     v0.1.0-baseline
 |---|---|
 | 工程化 | JDK 21、Spring Boot 4.1、Maven 阿里云镜像、Docker Compose 五服务编排、`.env` 外置密钥 |
 | 安全修复 | JWT 密钥 64 位强随机、`SecurityFilterChain` 重写、后台越权漏洞修复、Tomcat 11 参数校验适配 |
-| 数据 | 39 张表；结构由 Flyway 管理（`db/migration/V1__init_schema.sql`），后续变更按 `V3__xxx.sql` 追加 |
+| 数据 | 基线时 39 张表；结构由 Flyway 管理（`db/migration/V1__init_schema.sql`），后续变更按 `V3__xxx.sql` 追加。**当前已演进到 59 张 / V27** |
 | 业务 | `modules/account` `community` `file` `product` `trade` `entitlement` |
 | 前端 | 前台门户改版；后台新增「交易管理」 |
 | 文档 | `docs/` 下架构、PRD、数据模型、接口、任务卡、Docker、交易闭环 |
@@ -68,7 +68,7 @@ tag     v0.1.0-baseline
 | `feature/<短横线描述>` | 新功能 | 例：`feature/cms-product-manage` |
 | `fix/<短横线描述>` | 缺陷修复 | 例：`fix/order-expire-close` |
 | `chore/<短横线描述>` | 工程化、依赖、配置 | 例：`chore/upgrade-vue3` |
-| `tag vX.Y.Z` | 可交付节点 | `v0.1.0-baseline`、`v1.2.0` |
+| `tag vX.Y.Z` | 可交付节点 | `v0.1.0-baseline`、`v1.0.0`、`v1.0.1` |
 
 - 不直接在 `main` 上提交；本地临时改动也走分支。
 - 合并前必须满足：能 `docker compose up -d --build` 启动、相关接口自测通过、文档同步更新。

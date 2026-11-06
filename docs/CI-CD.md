@@ -20,7 +20,9 @@
 
 `migrations` 这个 job 值得单独说：**迁移脚本是表结构的唯一来源**，写错一条就等于
 发布一个起不来的版本。CI 里起一个空 MySQL，用 `flyway/flyway:11` 真跑一遍
-`V*.sql`，然后断言「业务表 39 张、site_setting ≥ 30 项」。
+`V*.sql`，然后断言「业务表 ≥ 53 张、site_setting ≥ 30 项」。
+用下限而不是等值：后续版本还会加表，等值断言每加一张表就要改 CI。
+（当前实际 59 张 / V27。）
 脚本语法错、顺序错、忘了建表，都会在 PR 阶段红掉。
 
 几点说明：
@@ -46,8 +48,8 @@
 镜像 tag 同时打几个：
 
 ```
-v1.2.0       ← 精确版本，部署用这个
-1.2          ← 大版本浮动
+v1.0.1       ← 精确版本，部署用这个
+1.0          ← 大版本浮动
 sha-1a5960f  ← 按提交定位，排查用
 latest       ← 只在 tag 时更新
 ```
@@ -121,7 +123,7 @@ SITE_URL=https://coolskyai.com
 
 ```bash
 cd $DEPLOY_PATH
-export TAG=v1.2.0
+export TAG=v1.0.1
 docker compose -f docker-compose.prod.yml pull     # 拉新镜像
 docker compose -f docker-compose.prod.yml up -d    # 只重建变化的容器
 docker image prune -f                              # 清悬空镜像
@@ -162,8 +164,8 @@ proxy_set_header X-Forwarded-For $remote_addr;   # 不要用 $proxy_add_x_forwar
 ### 发布
 
 ```bash
-git tag -a v1.2.0 -m "v1.2.0: 交易闭环"
-git push origin v1.2.0
+git tag -a v1.0.1 -m "v1.0.1: 品牌名按语言区分"
+git push origin v1.0.1
 ```
 
 推 tag 触发 release，镜像好了自动部署（如果开了 `DEPLOY_ENABLED`）。
