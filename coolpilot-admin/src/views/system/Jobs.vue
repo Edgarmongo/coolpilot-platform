@@ -9,7 +9,7 @@
 		</div>
 
 		<el-alert class="mb" type="info" :closable="false" show-icon
-		          :title="t('执行是异步的：点完立即返回，实际结果看「日志」。同一个任务如果上一次还没跑完，两次执行可能重叠。')"/>
+		          :title="t('执行是异步的：点完立即返回，实际结果看「日志」。同一个任务不会重叠执行——上一次还没结束，新的触发会排队等它结束（点两次「执行」会依次跑两遍）。')"/>
 
 		<el-table v-loading="loading" :data="jobs" size="small" border>
 			<el-table-column :label="t('任务名称')" min-width="210">
@@ -170,12 +170,17 @@ async function run(row) {
 /**
  * 启停：用单向绑定（:model-value），接口成功才改本地状态。
  * 失败时开关会自己弹回原位，不会出现「界面显示已启用、后端其实没动」
+ *
+ * 成功后必须重新拉列表：暂停/恢复会改变「下次执行时间」，
+ * 这个值只存在于 Quartz 的 Trigger 上，本地那行数据里没有，
+ * 只改 row.status 会让「禁用任务还显示下次执行时间」。
  */
 async function toggleStatus(row, next) {
 	try {
 		await updateJobStatus(row.jobId, next)
 		row.status = next
 		ElMessage.success(next ? t('已启用') : t('已禁用'))
+		await loadJobs()
 	} catch (e) {
 		loadJobs()
 	}

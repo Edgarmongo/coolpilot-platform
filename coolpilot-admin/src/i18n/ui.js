@@ -246,7 +246,7 @@ export const UI_EN = {
 	'执行': 'Run',
 	'执行日志': 'Execution logs',
 	'执行日志 · {name}': 'Execution logs · {name}',
-	'执行是异步的：点完立即返回，实际结果看「日志」。同一个任务如果上一次还没跑完，两次执行可能重叠。': 'Runs are asynchronous — the call returns immediately; check Logs for the result. If the previous run is still going, two runs may overlap.',
+	'执行是异步的：点完立即返回，实际结果看「日志」。同一个任务不会重叠执行——上一次还没结束，新的触发会排队等它结束（点两次「执行」会依次跑两遍）。': 'Runs are asynchronous — the call returns immediately; check Logs for the result. A job never runs twice at once: if the previous run is still going, the next trigger waits in line (clicking Run twice executes it twice, one after the other).',
 	'日志': 'Logs',
 	'由 Quartz 调度，页面上的「执行」与定时触发用的是同一个任务': 'Scheduled by Quartz. “Run” here triggers the same job as the cron schedule.',
 	'确认执行': 'Confirm',

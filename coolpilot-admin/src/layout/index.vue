@@ -20,7 +20,7 @@
 					</el-sub-menu>
 					<el-menu-item v-else :index="item.path">
 						<el-icon><component :is="item.icon"/></el-icon>
-						<span>{{ item.title }}</span>
+						<span>{{ t(item.title) }}</span>
 					</el-menu-item>
 				</template>
 			</el-menu>
