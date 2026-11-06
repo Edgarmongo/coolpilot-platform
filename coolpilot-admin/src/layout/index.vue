@@ -3,7 +3,7 @@
 		<el-aside :width="collapsed ? '64px' : '216px'" class="layout-aside">
 			<div class="layout-logo">
 				<span class="layout-logo-mark">CP</span>
-				<span v-show="!collapsed" class="layout-logo-text">CoolSkyAI</span>
+				<span v-show="!collapsed" class="layout-logo-text">{{ t('layout.brand') }}</span>
 			</div>
 			<el-menu :default-active="activeMenu" :collapse="collapsed" router
 			         background-color="#1f2d3d" text-color="#bfcbd9" active-text-color="#4ec9b0">

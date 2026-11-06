@@ -50,7 +50,17 @@ useHead({
 		if (!title) {
 			return name
 		}
-		const clean = title.replace(/ - CoolSkyAI$/, '')
+		// 去掉页面可能已经带上的后缀，避免「归档 - 酷天AI - 酷天AI」。
+		// 要同时兼容两种情况：品牌名按语言切换（中文酷天AI / 英文CoolSkyAI），
+		// 以及历史上写死在页面里的 ' - CoolSkyAI'。所以不能用固定正则。
+		let clean = title.trim()
+		for (const suffix of [name, 'CoolSkyAI', '酷天AI']) {
+			const tail = ` - ${suffix}`
+			if (suffix && clean.endsWith(tail)) {
+				clean = clean.slice(0, -tail.length).trim()
+				break
+			}
+		}
 		return clean === name ? name : `${clean} - ${name}`
 	}
 })

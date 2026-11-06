@@ -4,7 +4,7 @@
 			<div class="login-brand">
 				<span class="login-mark">CP</span>
 				<div>
-					<h1>CoolSkyAI</h1>
+					<h1>{{ t('layout.brand') }}</h1>
 					<p>{{ t('login.subtitle') }}</p>
 				</div>
 			</div>

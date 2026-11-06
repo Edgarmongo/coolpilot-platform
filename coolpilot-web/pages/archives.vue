@@ -29,7 +29,10 @@ const blogMap = computed(() => (data.value as any)?.data?.blogMap || {})
 const groups = computed(() => Object.keys(blogMap.value).map(month => ({month, items: blogMap.value[month]})))
 const totalCount = computed(() => groups.value.reduce((sum, group) => sum + group.items.length, 0))
 
-useHead({title: '归档 - CoolSkyAI'})
+// 只给页面自己的名字，后缀由 app.vue 的 titleTemplate 按当前语言的品牌名补。
+// 原来这里硬编码了 '归档 - CoolSkyAI'：英文站会显示中文标题，
+// 且品牌名改成「酷天AI」后这条会跟模板拼出双后缀。
+useHead({title: t('archives.headTitle')})
 </script>
 
 <style scoped>

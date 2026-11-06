@@ -49,7 +49,8 @@ export default {
 		projects: '项目管理'
 	},
 	layout: {
-		adminTitle: 'CoolSkyAI 管理后台',
+		adminTitle: '酷天AI 管理后台',
+		brand: '酷天AI',
 		viewSite: '前台首页',
 		logout: '退出登录',
 		notLoggedIn: '未登录'

@@ -44,6 +44,7 @@ export default {
 	},
 	layout: {
 		adminTitle: 'CoolSkyAI Admin',
+		brand: 'CoolSkyAI',
 		viewSite: 'View site',
 		logout: 'Sign out',
 		notLoggedIn: 'Signed out'
