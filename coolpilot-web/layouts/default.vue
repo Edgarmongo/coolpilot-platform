@@ -1,36 +1,61 @@
 <template>
 	<div class="shell">
 		<header class="header">
-			<div class="container header-inner">
-				<NuxtLink :to="localePath('/')" class="brand">
-					<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
-					<span class="brand-text">{{ brand.brandName }}</span>
-				</NuxtLink>
+			<!-- 第一行：Logo + 搜索 + 语言 + 登录 -->
+			<div class="topbar">
+				<div class="container topbar-inner">
+					<NuxtLink :to="localePath('/')" class="brand">
+						<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
+						<span class="brand-text">{{ brand.brandName }}</span>
+					</NuxtLink>
 
-				<nav class="nav">
+					<form class="search" :action="localePath('/search')" @submit.prevent="doSearch">
+						<input v-model="q" class="search-input" type="search"
+						       :placeholder="t('header.searchPlaceholder')"/>
+						<button type="submit" class="search-btn" :aria-label="t('header.search')">
+							<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+							     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="11" cy="11" r="7"/>
+								<path d="m21 21-4.3-4.3"/>
+							</svg>
+						</button>
+					</form>
+
+					<div class="topbar-right">
+						<div class="langs">
+							<NuxtLink v-for="item in langOptions" :key="item.code" :to="switchLocalePath(item.code)"
+							          class="lang-item" :class="{active: locale === item.code}">
+								{{ item.short }}
+							</NuxtLink>
+						</div>
+						<NuxtLink :to="localePath('/me')" class="topbar-my">{{ t('header.my') }}</NuxtLink>
+						<template v-if="isLogin">
+							<span class="who">{{ user && (user.nickname || user.username) }}</span>
+							<button class="link" @click="logout">{{ t('header.logout') }}</button>
+						</template>
+						<NuxtLink v-else :to="localePath('/login')" class="topbar-login">
+							<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+							     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="8" r="4"/>
+								<path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>
+							</svg>
+							{{ t('header.login') }}
+						</NuxtLink>
+					</div>
+				</div>
+			</div>
+
+			<!-- 第二行：横向多分类菜单 -->
+			<nav class="nav">
+				<div class="container nav-inner">
 					<template v-for="item in navItems" :key="item.id || item.path">
 						<a v-if="isExternal(item.path)" :href="item.path" class="nav-item"
 						   :target="item.target || '_self'" rel="noopener noreferrer">{{ item.label }}</a>
 						<NuxtLink v-else :to="localePath(item.path)" class="nav-item" active-class="is-active"
 						          :target="item.target === '_blank' ? '_blank' : undefined">{{ item.label }}</NuxtLink>
 					</template>
-				</nav>
-
-				<div class="header-right">
-					<div class="langs">
-						<NuxtLink v-for="item in langOptions" :key="item.code" :to="switchLocalePath(item.code)"
-						          class="lang-item" :class="{active: locale === item.code}">
-							{{ item.short }}
-						</NuxtLink>
-					</div>
-					<NuxtLink :to="localePath('/me')" class="nav-item">{{ t('header.my') }}</NuxtLink>
-					<template v-if="isLogin">
-						<span class="who">{{ user && (user.nickname || user.username) }}</span>
-						<button class="link" @click="logout">{{ t('header.logout') }}</button>
-					</template>
-					<NuxtLink v-else :to="localePath('/login')" class="btn btn-sm">{{ t('header.login') }}</NuxtLink>
 				</div>
-			</div>
+			</nav>
 		</header>
 
 		<main class="main">
@@ -66,6 +91,12 @@ const langOptions = [
 	{code: 'zh-CN', short: '中'},
 	{code: 'en', short: 'EN'}
 ]
+
+// 顶栏搜索：跳转到搜索页并带上关键词
+const q = ref('')
+function doSearch() {
+	router.push({path: localePath('/search'), query: {q: q.value || undefined}})
+}
 
 interface NavItem {
 	id?: number
@@ -130,119 +161,199 @@ async function logout() {
 	position: sticky;
 	top: 0;
 	z-index: 20;
-	background: rgba(255, 255, 255, .92);
-	border-bottom: 1px solid var(--line);
-	backdrop-filter: blur(8px);
+	background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-deep) 100%);
+	box-shadow: 0 1px 6px rgba(0, 0, 0, .12);
 }
 
-.header-inner {
+/* ---------------- 第一行 ---------------- */
+.topbar-inner {
 	display: flex;
 	align-items: center;
-	gap: 28px;
-	height: 62px;
+	gap: 18px;
+	height: 58px;
 }
 
 .brand {
 	display: flex;
 	align-items: center;
 	gap: 10px;
+	flex-shrink: 0;
 }
 
 .brand-mark {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 30px;
-	height: 30px;
+	width: 32px;
+	height: 32px;
 	border-radius: 8px;
-	background: var(--teal);
+	background: rgba(255, 255, 255, .14);
 	color: #fff;
 	font-weight: 700;
 	font-size: 13px;
-	/* 标记现在可配置，超过两个字时裁切，避免撑破方块 */
 	overflow: hidden;
 	white-space: nowrap;
 }
 
 .brand-text {
-	font-size: 16.5px;
+	font-size: 17px;
 	font-weight: 700;
 	letter-spacing: .3px;
+	color: #fff;
 }
 
-.nav {
+.search {
 	display: flex;
-	gap: 4px;
+	align-items: center;
 	flex: 1;
+	max-width: 340px;
+	height: 34px;
+	border-radius: 8px;
+	background: rgba(0, 0, 0, .18);
+	overflow: hidden;
 }
 
-.nav-item {
-	padding: 6px 12px;
-	border-radius: 7px;
-	font-size: 14px;
-	color: var(--muted);
+.search-input {
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+	padding: 0 12px;
+	border: none;
+	background: transparent;
+	color: #fff;
+	font-size: 13.5px;
+	outline: none;
 }
 
-.nav-item:hover {
-	background: #f2f7f6;
-	color: var(--teal);
+.search-input::placeholder {
+	color: rgba(255, 255, 255, .6);
 }
 
-.nav-item.is-active {
-	color: var(--teal);
-	font-weight: 600;
-	background: #eef7f5;
+.search-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 100%;
+	border: none;
+	background: transparent;
+	color: rgba(255, 255, 255, .8);
+	cursor: pointer;
 }
 
-.header-right {
+.search-btn:hover {
+	color: #fff;
+}
+
+.topbar-right {
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	margin-left: auto;
+	flex-shrink: 0;
 }
 
 .langs {
 	display: flex;
 	align-items: center;
-	gap: 2px;
+	gap: 4px;
 }
 
 .lang-item {
 	padding: 3px 7px;
 	border-radius: 6px;
 	font-size: 12.5px;
-	color: var(--muted);
+	color: rgba(255, 255, 255, .75);
 }
 
 .lang-item:hover {
-	color: var(--teal);
+	color: #fff;
 }
 
 .lang-item.active {
-	color: var(--teal);
+	color: #fff;
 	font-weight: 600;
-	background: #eef7f5;
+	background: rgba(255, 255, 255, .16);
+}
+
+.topbar-my {
+	font-size: 13.5px;
+	color: rgba(255, 255, 255, .85);
+}
+
+.topbar-my:hover {
+	color: #fff;
+}
+
+.topbar-login {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 14px;
+	border-radius: 8px;
+	background: #fff;
+	color: var(--teal);
+	font-size: 13.5px;
+	font-weight: 600;
+}
+
+.topbar-login:hover {
+	background: #eafff5;
 }
 
 .who {
 	font-size: 13px;
-	color: var(--muted);
+	color: rgba(255, 255, 255, .85);
 }
 
 .link {
 	border: none;
 	background: none;
-	color: var(--muted);
+	color: rgba(255, 255, 255, .8);
 	font-size: 13px;
 	cursor: pointer;
 }
 
 .link:hover {
-	color: var(--teal);
+	color: #fff;
 }
 
-.btn-sm {
-	padding: 5px 14px;
-	font-size: 13px;
+/* ---------------- 第二行：菜单 ---------------- */
+.nav {
+	background: rgba(0, 0, 0, .08);
+	border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.nav-inner {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	height: 44px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.nav-inner::-webkit-scrollbar {
+	display: none;
+}
+
+.nav-item {
+	padding: 6px 13px;
+	border-radius: 7px;
+	font-size: 13.5px;
+	color: rgba(255, 255, 255, .85);
+	white-space: nowrap;
+}
+
+.nav-item:hover {
+	background: rgba(255, 255, 255, .14);
+	color: #fff;
+}
+
+.nav-item.is-active {
+	color: #fff;
+	font-weight: 600;
+	background: rgba(255, 255, 255, .18);
 }
 
 .main {
@@ -269,5 +380,25 @@ async function logout() {
 
 .beian:hover {
 	color: var(--teal);
+}
+
+/* 移动端：顶栏换行，搜索框占满，菜单横向可滚动 */
+@media (max-width: 720px) {
+	.topbar-inner {
+		flex-wrap: wrap;
+		height: auto;
+		padding: 10px 0;
+		gap: 10px;
+	}
+
+	.search {
+		order: 3;
+		flex-basis: 100%;
+		max-width: none;
+	}
+
+	.nav-inner {
+		height: 42px;
+	}
 }
 </style>

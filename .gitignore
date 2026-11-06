@@ -87,3 +87,6 @@ certbot/
 
 # 临时调试产物（token、抓取的 HTML 等）
 out/
+
+# 浏览器验收截图等临时产物
+/tmp/

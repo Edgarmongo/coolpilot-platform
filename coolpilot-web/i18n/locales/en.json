@@ -31,19 +31,32 @@
   "header": {
     "my": "Account",
     "login": "Sign in",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "search": "Search",
+    "searchPlaceholder": "Search the site…"
   },
   "home": {
     "tag": "Engineering · Knowledge · Services",
     "title": "Writing technology down as something you can ship",
     "desc": "Articles, courses, documents and source code — one account for reading, buying and downloading.",
     "ctaKnowledge": "Browse knowledge products",
+    "ctaService": "Engineering services",
+    "ctaAsk": "Ask AI",
     "ctaLatest": "Latest articles",
     "blogUnit": "articles",
     "productUnit": "products",
     "latest": "Latest articles",
+    "viewAll": "All articles →",
     "empty": "No articles yet",
-    "reads": "{n} views"
+    "reads": "{n} views",
+    "entryBlog": "Archive",
+    "entryBlogDesc": "Browse all articles by time",
+    "entryKnowledge": "Knowledge",
+    "entryKnowledgeDesc": "Courses, docs and source code",
+    "entryService": "Services",
+    "entryServiceDesc": "From brief to delivery and acceptance",
+    "entryAsk": "Ask AI",
+    "entryAskDesc": "Answers grounded in site content"
   },
   "archives": {
     "title": "Archive",

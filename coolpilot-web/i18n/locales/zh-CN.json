@@ -31,19 +31,32 @@
   "header": {
     "my": "我的",
     "login": "登录",
-    "logout": "退出"
+    "logout": "退出",
+    "search": "搜索",
+    "searchPlaceholder": "搜索站内内容…"
   },
   "home": {
     "tag": "技术 · 知识 · 服务",
     "title": "把技术写成可以交付的东西",
     "desc": "文章、课程、文档与代码资源，一套账号打通阅读、购买与下载。",
     "ctaKnowledge": "看看知识付费",
+    "ctaService": "技术服务",
+    "ctaAsk": "智能问答",
     "ctaLatest": "最新文章",
     "blogUnit": "篇文章",
     "productUnit": "个知识商品",
     "latest": "最新文章",
+    "viewAll": "全部文章 →",
     "empty": "还没有文章",
-    "reads": "{n} 次阅读"
+    "reads": "{n} 次阅读",
+    "entryBlog": "文章归档",
+    "entryBlogDesc": "按时间浏览全部技术文章",
+    "entryKnowledge": "知识付费",
+    "entryKnowledgeDesc": "课程、文档与代码资源",
+    "entryService": "技术服务",
+    "entryServiceDesc": "从需求评估到交付验收",
+    "entryAsk": "智能问答",
+    "entryAskDesc": "基于站内内容直接回答"
   },
   "archives": {
     "title": "归档",
