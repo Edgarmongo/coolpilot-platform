@@ -90,6 +90,12 @@ public final class SecurityPaths {
 			"/nav",
 			// 品牌信息：顶栏品牌名与页脚文案，只含展示字段
 			"/brand",
+			// 社交账号：关注我页与首页图标行；只返回 enabled = 1 的条目
+			"/social",
+			// 项目展示：列表与详情都只返回 enabled = 1 的项目
+			"/portfolios", "/portfolio/*",
+			// 知识星球：介绍页与首页卡片；未启用时返回 enabled=false
+			"/planet",
 			// 专题：公开页面，文章本身仍由 /blog 的可见性规则把关
 			"/topics", "/topic/*",
 			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）

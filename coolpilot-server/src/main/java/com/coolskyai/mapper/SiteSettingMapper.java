@@ -28,6 +28,15 @@ public interface SiteSettingMapper {
 	@Select("SELECT value FROM site_setting WHERE name_en = #{nameEn} LIMIT 1")
 	String getValueByNameEn(@Param("nameEn") String nameEn);
 
+	/**
+	 * 按分组取全部配置项（知识星球用的 type=6）。
+	 *
+	 * 走注解而不是 XML：这是一条只读的简单查询，放进 XML 反而要在
+	 * 一个几百行的文件里找位置，维护成本更高。
+	 */
+	@Select("SELECT * FROM site_setting WHERE `type` = #{type} ORDER BY id ASC")
+	List<SiteSetting> listByType(@Param("type") int type);
+
 	int updateSiteSetting(SiteSetting siteSetting);
 
 	int deleteSiteSettingById(Integer id);
