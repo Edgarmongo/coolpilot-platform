@@ -27,11 +27,22 @@ docker build -f deploy/docker/server/Dockerfile -t coolpilot-server .
 
 ## 生产环境
 
-当前只有开发编排。生产部署（反向代理、HTTPS、备份）尚未落地，规划如下，落地时在本目录新增：
+生产部署已经落地，**操作步骤见 [`docs/DEPLOY.md`](../docs/DEPLOY.md)**，本文件只说明资产放在哪。
 
 ```
 deploy/
-├── nginx/            # 站点配置与证书说明
-├── compose.prod.yml  # 生产编排（不含 dev server）
-└── backup/           # 数据库与上传目录备份脚本
+├── docker/
+│   ├── server/Dockerfile     # 后端（Maven → JRE21）
+│   ├── admin/Dockerfile      # 后台（构建 → nginx 静态）
+│   ├── web/Dockerfile        # 前台（Nuxt build → node）
+│   └── gateway/              # 反向代理：nginx.conf.template + 自签名兜底 + Dockerfile
+├── systemd/                  # 备份 service/timer 模板
+└── mysql/                    # 仅开发用的种子脚本（生产由 Flyway 负责）
 ```
+
+要点：
+
+- 生产编排在仓库根目录的 `docker-compose.prod.yml`（6 个服务：mysql / redis / api / web / admin / gateway）。
+- 镜像走 GHCR，由 `.github/workflows/release.yml` 在**打 `v*` tag** 或手动触发时构建推送；服务器只 pull，不在机器上装 JDK/Node。
+- 表结构与初始数据由应用启动时的 Flyway 迁移负责，`deploy/mysql/*.sql` 不参与生产初始化。
+- 首次启动没有证书时 gateway 会生成自签名证书让服务先跑起来，随后用 `scripts/renew-cert.sh` 换正式证书。
