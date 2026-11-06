@@ -249,20 +249,37 @@ public class FileService {
 	public java.util.List<String> findReferences(FileInfo info) {
 		String key = info.getObjectKey();
 		java.util.List<String> refs = new java.util.ArrayList<>();
+		// 正文里的图片
 		for (String title : fileReferenceMapper.blogs(key)) {
-			refs.add("文章《" + title + "》");
+			refs.add("文章《" + title + "》正文");
 		}
 		for (String title : fileReferenceMapper.products(key)) {
-			refs.add("商品《" + title + "》");
+			refs.add("商品《" + title + "》详情");
 		}
 		for (String name : fileReferenceMapper.portfolios(key)) {
-			refs.add("项目「" + name + "」");
+			refs.add("项目「" + name + "」详情");
 		}
 		for (String name : fileReferenceMapper.aboutEntries(key)) {
 			refs.add("关于页「" + name + "」");
 		}
+		for (String name : fileReferenceMapper.moments(key)) {
+			refs.add(name);
+		}
+		// 独立图片字段：封面、头像、二维码
+		for (String title : fileReferenceMapper.blogCovers(key)) {
+			refs.add("文章《" + title + "》封面");
+		}
+		for (String title : fileReferenceMapper.productCovers(key)) {
+			refs.add("商品《" + title + "》封面");
+		}
+		for (String name : fileReferenceMapper.portfolioCovers(key)) {
+			refs.add("项目「" + name + "」封面");
+		}
+		for (String name : fileReferenceMapper.userAvatars(key)) {
+			refs.add("用户「" + name + "」头像");
+		}
 		for (String name : fileReferenceMapper.socialAccounts(key)) {
-			refs.add("社交账号「" + name + "」");
+			refs.add("社交账号「" + name + "」二维码");
 		}
 		for (String name : fileReferenceMapper.siteSettings(key)) {
 			refs.add("站点设置「" + name + "」");

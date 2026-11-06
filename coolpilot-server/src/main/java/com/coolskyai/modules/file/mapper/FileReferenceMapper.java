@@ -27,6 +27,8 @@ import java.util.List;
 @Mapper
 public interface FileReferenceMapper {
 
+	// ---------------- 正文里的图片 ----------------
+
 	@Select("SELECT title FROM blog WHERE content LIKE CONCAT('%', #{key}, '%') LIMIT 5")
 	List<String> blogs(@Param("key") String key);
 
@@ -38,6 +40,25 @@ public interface FileReferenceMapper {
 
 	@Select("SELECT name_zh FROM about WHERE value LIKE CONCAT('%', #{key}, '%') LIMIT 5")
 	List<String> aboutEntries(@Param("key") String key);
+
+	// ---------------- 独立图片字段（封面 / 头像 / 二维码） ----------------
+	// 这些字段不在正文里，必须单独查：漏掉就会「删掉正在当封面的图」，
+	// 前台列表直接变裂图，而且没人知道是哪一步弄坏的。
+
+	@Select("SELECT title FROM blog WHERE first_picture LIKE CONCAT('%', #{key}, '%') LIMIT 5")
+	List<String> blogCovers(@Param("key") String key);
+
+	@Select("SELECT title FROM product WHERE cover LIKE CONCAT('%', #{key}, '%') LIMIT 5")
+	List<String> productCovers(@Param("key") String key);
+
+	@Select("SELECT name FROM portfolio WHERE cover_url LIKE CONCAT('%', #{key}, '%') LIMIT 5")
+	List<String> portfolioCovers(@Param("key") String key);
+
+	@Select("SELECT nickname FROM user WHERE avatar LIKE CONCAT('%', #{key}, '%') LIMIT 5")
+	List<String> userAvatars(@Param("key") String key);
+
+	@Select("SELECT CONCAT('动态 #', id) FROM moment WHERE content LIKE CONCAT('%', #{key}, '%') LIMIT 5")
+	List<String> moments(@Param("key") String key);
 
 	@Select("SELECT account_name FROM social_account WHERE qr_url LIKE CONCAT('%', #{key}, '%') LIMIT 5")
 	List<String> socialAccounts(@Param("key") String key);
