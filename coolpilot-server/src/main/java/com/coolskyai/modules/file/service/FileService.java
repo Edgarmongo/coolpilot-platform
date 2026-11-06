@@ -44,9 +44,16 @@ public class FileService {
 	 * /file/download?token= 这条带权益校验的通道。
 	 */
 	public static final String PRIVATE_PREFIX = "_private/";
-	/** 允许上传的扩展名，避免上传可执行文件 */
+	/**
+	 * 允许上传的扩展名，避免上传可执行文件。
+	 *
+	 * 故意不含 svg：SVG 是 XML，可以内嵌 <script>，而公开文件走 /image/** 直链、
+	 * 与站点同源。任意访客上传一个恶意 SVG 再发给管理员，管理员点开就在本站源下
+	 * 执行脚本，能读到 localStorage 里的后台 token —— 一条完整的接管链路。
+	 * 项目里没有任何地方需要上传 SVG（平台图标是内置的 path），所以直接排除。
+	 */
 	private static final List<String> ALLOWED_EXT = Arrays.asList(
-			"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp",
+			"jpg", "jpeg", "png", "gif", "webp", "bmp",
 			"pdf", "md", "txt", "zip", "rar", "7z", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
 			"mp4", "mp3", "wav");
 	private static final long MAX_SIZE = 100L * 1024 * 1024;
