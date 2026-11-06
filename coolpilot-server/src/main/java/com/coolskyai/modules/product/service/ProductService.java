@@ -44,6 +44,12 @@ public class ProductService {
 	private static final Set<String> STATUSES = Set.of("DRAFT", "ON_SALE", "OFF_SALE", "ARCHIVED");
 	private static final Set<String> PRICE_MODES = Set.of("FIXED", "STARTING", "CUSTOM");
 
+	/**
+	 * 成交模式：直接下单 / 需求报价 / 两者都允许。
+	 * 留空表示按 price_mode 推导（规则见 DATA-MODEL 第十八节）。
+	 */
+	private static final Set<String> DEAL_MODES = Set.of("DIRECT", "QUOTE", "BOTH");
+
 	@Autowired
 	private ProductMapper productMapper;
 	@Autowired
@@ -312,6 +318,18 @@ public class ProductService {
 		if (!PRICE_MODES.contains(priceMode)) {
 			throw new BadRequestException("非法定价方式：" + priceMode);
 		}
+		String dealMode = dto.getDealMode() == null ? null : dto.getDealMode().trim();
+		if (dealMode != null && dealMode.isEmpty()) {
+			dealMode = null;
+		}
+		if (dealMode != null && !DEAL_MODES.contains(dealMode)) {
+			throw new BadRequestException("非法成交模式：" + dealMode);
+		}
+		// 非服务商品只能直接下单，存一个 deal_mode 只会让后台看着像可配（其实没用）
+		if (!"SERVICE".equals(dto.getProductType())) {
+			dealMode = null;
+		}
+
 		BigDecimal price = dto.getPrice() == null ? BigDecimal.ZERO : dto.getPrice();
 		if (price.compareTo(BigDecimal.ZERO) < 0) {
 			throw new BadRequestException("价格不能为负数");
@@ -332,6 +350,7 @@ public class ProductService {
 		product.setPrice(price);
 		product.setOriginalPrice(dto.getOriginalPrice());
 		product.setPriceMode(priceMode);
+		product.setDealMode(dealMode);
 		product.setSort(dto.getSort() == null ? 0 : dto.getSort());
 		product.setIsTop(dto.getIsTop() != null && dto.getIsTop());
 		return product;

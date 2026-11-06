@@ -27,6 +27,8 @@ public class ProductSaveDTO {
 	private BigDecimal price;
 	private BigDecimal originalPrice;
 	private String priceMode;
+	/** DIRECT / QUOTE / BOTH；留空走默认推导 */
+	private String dealMode;
 	private Integer sort;
 	private Boolean isTop;
 	/** 仅 COURSE 类型使用 */

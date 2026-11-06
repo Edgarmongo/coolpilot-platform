@@ -82,15 +82,16 @@ public interface ProductMapper {
 	               @Param("keyword") String keyword);
 
 	@Insert("INSERT INTO product (product_no, product_type, category_id, title, subtitle, cover, summary, detail, " +
-			"price, original_price, price_mode, sales_count, view_count, sort, status, is_top, owner_id, create_time, update_time) " +
+			"price, original_price, price_mode, deal_mode, sales_count, view_count, sort, status, is_top, owner_id, create_time, update_time) " +
 			"VALUES (#{productNo}, #{productType}, #{categoryId}, #{title}, #{subtitle}, #{cover}, #{summary}, #{detail}, " +
-			"#{price}, #{originalPrice}, #{priceMode}, 0, 0, #{sort}, #{status}, #{isTop}, #{ownerId}, NOW(), NOW())")
+			"#{price}, #{originalPrice}, #{priceMode}, #{dealMode}, 0, 0, #{sort}, #{status}, #{isTop}, #{ownerId}, NOW(), NOW())")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(Product product);
 
 	@Update("UPDATE product SET product_type = #{productType}, category_id = #{categoryId}, title = #{title}, " +
 			"subtitle = #{subtitle}, cover = #{cover}, summary = #{summary}, detail = #{detail}, price = #{price}, " +
-			"original_price = #{originalPrice}, price_mode = #{priceMode}, sort = #{sort}, is_top = #{isTop}, " +
+			"original_price = #{originalPrice}, price_mode = #{priceMode}, deal_mode = #{dealMode}, "
+			+ "sort = #{sort}, is_top = #{isTop}, " +
 			"update_time = NOW() WHERE id = #{id}")
 	int update(Product product);
 

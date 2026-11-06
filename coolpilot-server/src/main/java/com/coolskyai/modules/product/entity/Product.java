@@ -32,6 +32,8 @@ public class Product {
 	private BigDecimal originalPrice;
 	/** FIXED / STARTING / CUSTOM */
 	private String priceMode;
+	/** DIRECT / QUOTE / BOTH；为空表示按 price_mode 推导 */
+	private String dealMode;
 	private Integer salesCount;
 	private Integer viewCount;
 	private Integer sort;

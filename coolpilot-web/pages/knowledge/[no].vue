@@ -12,7 +12,8 @@
 			</div>
 			<div class="buy">
 				<div class="price">{{ priceLabel }}</div>
-				<template v-if="isService && !isFixed">
+				<!-- 成交模式由商品配置决定：DIRECT 直接下单 / QUOTE 需求报价 / BOTH 两者都允许 -->
+				<template v-if="dealMode === 'QUOTE'">
 					<button class="btn buy-btn" @click="goDemand">{{ t('knowledgeDetail.submitDemand') }}</button>
 					<p class="muted tip">{{ t('knowledgeDetail.quoteAfter') }}</p>
 				</template>
@@ -20,7 +21,7 @@
 					<button class="btn buy-btn" :disabled="buying" @click="onBuy">
 						{{ owned ? t('knowledgeDetail.owned') : (buying ? t('knowledgeDetail.processing') : t('knowledgeDetail.buyNow')) }}
 					</button>
-					<button v-if="isService" class="btn ghost buy-btn second" @click="goDemand">{{ t('knowledgeDetail.demandFirst') }}</button>
+					<button v-if="dealMode === 'BOTH'" class="btn ghost buy-btn second" @click="goDemand">{{ t('knowledgeDetail.demandFirst') }}</button>
 					<p class="muted tip">{{ isService ? t('knowledgeDetail.tipService') : t('knowledgeDetail.tipProduct') }}</p>
 				</template>
 			</div>
@@ -82,7 +83,24 @@ const detailHtml = computed(() => (data.value as any)?.data?.detailHtml || '')
 const resources = computed(() => (data.value as any)?.data?.resources || [])
 const serviceItem = computed(() => (data.value as any)?.data?.serviceItem || null)
 const isService = computed(() => product.value?.productType === 'SERVICE')
-const isFixed = computed(() => product.value?.priceMode === 'FIXED')
+/**
+ * 成交模式：优先用商品上显式配的 dealMode；没配就按规则推导 ——
+ * 非服务、或固定价服务 → 直接下单；其余服务 → 需求 → 报价 → 订单。
+ * 推导结果与升级前的行为一致（存量固定价服务已由迁移写成 BOTH）。
+ */
+const dealMode = computed(() => {
+	const item = product.value
+	if (!item) {
+		return 'DIRECT'
+	}
+	if (item.dealMode) {
+		return item.dealMode
+	}
+	if (item.productType !== 'SERVICE') {
+		return 'DIRECT'
+	}
+	return item.priceMode === 'FIXED' ? 'DIRECT' : 'QUOTE'
+})
 const priceModeText = computed(() => {
 	const mode = product.value?.priceMode
 	const key = `knowledgeDetail.modes.${mode}`

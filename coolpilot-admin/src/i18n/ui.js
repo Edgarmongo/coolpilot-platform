@@ -234,6 +234,14 @@ export const UI_EN = {
 	'验收': 'Acceptance',
 	// —— 第二批：页面正文 ——
 	// —— 第三批：状态与提示 ——
+	'成交': 'Deal',
+	'需求报价': 'Quote only',
+	'成交模式': 'Deal mode',
+	'留空则按定价方式推导': 'Blank follows the pricing mode',
+	'直接下单': 'Buy directly',
+	'需求 → 报价': 'Request → quote',
+	'两者都允许': 'Allow both',
+	'原则上只配一种；双入口会让订单来源变复杂': 'Pick one in principle — two entry points complicate order attribution',
 	// —— AI 模型配置与用量 ——
 	'{n} 次调用': '{n} calls',
 	'不重排': 'No rerank',

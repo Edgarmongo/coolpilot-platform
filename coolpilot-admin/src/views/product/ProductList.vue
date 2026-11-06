@@ -48,6 +48,12 @@
 					<span class="amount">{{ priceText(row) }}</span>
 				</template>
 			</el-table-column>
+			<el-table-column :label="t('成交')" width="104">
+				<template #default="{row}">
+					<span v-if="row.productType === 'SERVICE'">{{ dealModeText(row) }}</span>
+					<span v-else class="muted">—</span>
+				</template>
+			</el-table-column>
 			<el-table-column prop="salesCount" :label="t('销量')" width="76"/>
 			<el-table-column :label="t('状态')" width="96">
 				<template #default="{row}">
@@ -108,6 +114,16 @@
 									{{ m.label }}
 								</el-radio-button>
 							</el-radio-group>
+						</el-form-item>
+						<!-- 只有服务类才有「直接买 / 先报价」的选择；实物型商品固定直接下单 -->
+						<el-form-item v-if="form.productType === 'SERVICE'" :label="t('成交模式')">
+							<el-select v-model="form.dealMode" clearable class="deal-select"
+							           :placeholder="t('留空则按定价方式推导')">
+								<el-option :label="t('直接下单')" value="DIRECT"/>
+								<el-option :label="t('需求 → 报价')" value="QUOTE"/>
+								<el-option :label="t('两者都允许')" value="BOTH"/>
+							</el-select>
+							<span class="hint inline">{{ t('原则上只配一种；双入口会让订单来源变复杂') }}</span>
 						</el-form-item>
 						<el-form-item :label="t('价格')">
 							<el-input-number v-model="form.price" :min="0" :precision="2" :step="10"
@@ -308,6 +324,14 @@ const typeText = v => (typeOptions.find(i => i.value === v) || {}).label || v ||
 const statusText = v => (statusOptions.find(i => i.value === v) || {}).label || v || '—'
 const statusTag = v => ({DRAFT: 'info', ON_SALE: 'success', OFF_SALE: 'warning', ARCHIVED: 'info'}[v] || 'info')
 
+/**
+ * 列表里显示成交模式：没配就按规则推导，跟前台一致，避免「列表空着但前台有按钮」
+ */
+function dealModeText(row) {
+	const mode = row.dealMode || (row.priceMode === 'FIXED' ? 'DIRECT' : 'QUOTE')
+	return {DIRECT: t('直接下单'), QUOTE: t('需求报价'), BOTH: t('两者都允许')}[mode] || mode
+}
+
 function priceText(row) {
 	if (row.priceMode === 'CUSTOM') return t('面议')
 	const prefix = row.priceMode === 'STARTING' ? '¥' + (row.price || 0) + t(' 起') : '¥' + (row.price || 0)
@@ -393,6 +417,7 @@ const emptyForm = () => ({
 	price: 0,
 	originalPrice: null,
 	priceMode: 'FIXED',
+	dealMode: null,
 	sort: 0,
 	isTop: false,
 	courseDescription: ''
@@ -444,6 +469,7 @@ async function loadDetail(id) {
 		price: p.price ? Number(p.price) : 0,
 		originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
 		priceMode: p.priceMode || 'FIXED',
+		dealMode: p.dealMode || null,
 		sort: p.sort || 0,
 		isTop: !!p.isTop,
 		courseDescription: (res.data.course && res.data.course.description) || ''
@@ -514,6 +540,7 @@ async function save() {
 			price: form.price,
 			originalPrice: form.originalPrice,
 			priceMode: form.priceMode,
+			dealMode: form.dealMode || null,
 			sort: form.sort,
 			isTop: form.isTop,
 			courseDescription: form.courseDescription
@@ -706,6 +733,10 @@ onMounted(() => {
 	font-size: 12px;
 	line-height: 1.6;
 	margin-top: 4px;
+}
+
+.deal-select {
+	width: 200px;
 }
 
 .hint.inline {
