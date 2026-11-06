@@ -127,6 +127,7 @@ public class ScheduleJobController {
 	 */
 	@GetMapping("/job/logs")
 	public Result logs(@RequestParam(defaultValue = "") String[] date,
+	                   @RequestParam(required = false) Long jobId,
 	                   @RequestParam(defaultValue = "1") Integer pageNum,
 	                   @RequestParam(defaultValue = "10") Integer pageSize) {
 		String startDate = null;
@@ -137,7 +138,8 @@ public class ScheduleJobController {
 		}
 		String orderBy = "create_time desc";
 		PageHelper.startPage(pageNum, pageSize, orderBy);
-		PageInfo<ScheduleJobLog> pageInfo = new PageInfo<>(scheduleJobService.getJobLogListByDate(startDate, endDate));
+		PageInfo<ScheduleJobLog> pageInfo = new PageInfo<>(
+				scheduleJobService.getJobLogListByDate(startDate, endDate, jobId));
 		return Result.ok("请求成功", pageInfo);
 	}
 

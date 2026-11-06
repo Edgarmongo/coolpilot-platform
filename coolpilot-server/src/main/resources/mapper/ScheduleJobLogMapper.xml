@@ -18,8 +18,11 @@
         select log_id, job_id, bean_name, method_name, params, status, error, times, create_time
         from schedule_job_log
         <where>
+            <if test="jobId != null">
+                job_id = #{jobId}
+            </if>
             <if test="startDate!=null and startDate!='' and endDate!=null and endDate!=''">
-                create_time between #{startDate} and #{endDate}
+                and create_time between #{startDate} and #{endDate}
             </if>
         </where>
     </select>

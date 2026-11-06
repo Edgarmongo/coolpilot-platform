@@ -161,6 +161,12 @@ export const routes = [
 				name: 'Logs',
 				component: () => import('@/views/log/Logs.vue'),
 				meta: {title: 'menu.logs', icon: 'Document'}
+			},
+			{
+				path: 'jobs',
+				name: 'ScheduleJobs',
+				component: () => import('@/views/system/Jobs.vue'),
+				meta: {title: 'menu.jobs', icon: 'Timer'}
 			}
 		]
 	},

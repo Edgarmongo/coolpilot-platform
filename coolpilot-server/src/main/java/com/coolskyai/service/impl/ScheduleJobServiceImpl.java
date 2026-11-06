@@ -1,5 +1,6 @@
 package com.coolskyai.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import com.coolskyai.service.ScheduleJobService;
 import com.coolskyai.util.quartz.ScheduleUtils;
 
 import jakarta.annotation.PostConstruct;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -21,6 +23,7 @@ import java.util.List;
  * @Author: CoolSkyAI
  * @Date: 2020-11-01
  */
+@Slf4j
 @Service
 public class ScheduleJobServiceImpl implements ScheduleJobService {
 	@Autowired
@@ -49,7 +52,36 @@ public class ScheduleJobServiceImpl implements ScheduleJobService {
 
 	@Override
 	public List<ScheduleJob> getJobList() {
-		return schedulerJobMapper.getJobList();
+		List<ScheduleJob> jobs = schedulerJobMapper.getJobList();
+		for (ScheduleJob job : jobs) {
+			fillFireTimes(job);
+		}
+		return jobs;
+	}
+
+	/**
+	 * 从 Quartz 的 Trigger 取「上次 / 下次触发时间」。
+	 *
+	 * 这两个值属于调度器的运行时状态，不在表里。取不到（任务刚建、
+	 * 已暂停、调度器还没起来）就留空，前端显示「—」，不影响列表其它列。
+	 */
+	private void fillFireTimes(ScheduleJob job) {
+		try {
+			CronTrigger trigger = ScheduleUtils.getCronTrigger(scheduler, job.getJobId());
+			Date last = trigger == null ? null : trigger.getPreviousFireTime();
+			if (last == null) {
+				// 重启后 Quartz 的 previousFireTime 是空的，用日志里的最近一次兜底，
+				// 否则「上次执行」永远显示「—」，而日志里明明有记录
+				last = scheduleJobLogMapper.getLastExecuteTime(job.getJobId());
+			}
+			job.setLastFireTime(last);
+			// 暂停的 trigger 仍会算出「下次执行时间」，照搬会出现
+			// 「状态是禁用、下次执行却有值」的矛盾，这里按状态置空
+			job.setNextFireTime(trigger != null && Boolean.TRUE.equals(job.getStatus())
+					? trigger.getNextFireTime() : null);
+		} catch (Exception e) {
+			log.debug("读取任务 {} 的触发时间失败：{}", job.getJobId(), e.getMessage());
+		}
 	}
 
 	@Transactional(rollbackFor = Exception.class)
@@ -98,8 +130,8 @@ public class ScheduleJobServiceImpl implements ScheduleJobService {
 	}
 
 	@Override
-	public List<ScheduleJobLog> getJobLogListByDate(String startDate, String endDate) {
-		return scheduleJobLogMapper.getJobLogListByDate(startDate, endDate);
+	public List<ScheduleJobLog> getJobLogListByDate(String startDate, String endDate, Long jobId) {
+		return scheduleJobLogMapper.getJobLogListByDate(startDate, endDate, jobId);
 	}
 
 	@Transactional(rollbackFor = Exception.class)

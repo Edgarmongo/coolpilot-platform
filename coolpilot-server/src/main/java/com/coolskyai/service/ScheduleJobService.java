@@ -18,7 +18,7 @@ public interface ScheduleJobService {
 
 	void updateJobStatusById(Long jobId, Boolean status);
 
-	List<ScheduleJobLog> getJobLogListByDate(String startDate, String endDate);
+	List<ScheduleJobLog> getJobLogListByDate(String startDate, String endDate, Long jobId);
 
 	void saveJobLog(ScheduleJobLog log);
 

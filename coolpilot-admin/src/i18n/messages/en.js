@@ -23,6 +23,7 @@ export default {
 		system: 'System',
 		account: 'Account',
 		logs: 'Logs',
+		jobs: 'Scheduled jobs',
 		products: 'Products',
 		productList: 'Products',
 		trade: 'Trade',
