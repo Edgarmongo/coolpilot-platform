@@ -1,109 +1,122 @@
 package com.coolskyai.util;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.lionsoul.ip2region.xdb.Searcher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.FileCopyUtils;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Set;
 
 /**
- * @Description: ip记录
- * @Author: CoolSkyAI
- * @Date: 2020-08-18
+ * 客户端 IP 解析与归属地查询。
+ *
+ * <p>两件事分开看：{@link #getIpAddress} 只负责在代理链中找出真实客户端地址，
+ * {@link #getCityInfo} 把地址交给离线库换成「国家|区域|省份|城市|运营商」。
+ *
+ * <p>离线库在启动时整块读进内存，换取查询零 IO；代价是启动时多一次读盘。
  */
 @Slf4j
 @Component
 public class IpAddressUtils {
+
 	/**
-	 * 在Nginx等代理之后获取用户真实IP地址
+	 * 代理转发头的尝试顺序。
 	 *
-	 * @param request
-	 * @return
+	 * <p>顺序有意义：越靠前的头越接近真实客户端。nginx 会写 X-Real-IP，
+	 * 多级代理时 X-Forwarded-For 是逗号分隔的链路；不同厂商的网关用各自的头名，
+	 * 所以要把常见几种都试一遍。
+	 */
+	private static final List<String> PROXY_HEADERS = List.of(
+			"X-Real-IP",
+			"x-forwarded-for",
+			"Proxy-Client-IP",
+			"WL-Proxy-Client-IP",
+			"HTTP_CLIENT_IP",
+			"HTTP_X_FORWARDED_FOR");
+
+	/** 回环地址：出现在本地开发或未配置代理的场景，需要换成机器自身的出口地址 */
+	private static final Set<String> LOOPBACK = Set.of("127.0.0.1", "0:0:0:0:0:0:0:1");
+
+	private static final String DB_PATH = "/ipdb/ip2region.xdb";
+
+	/** 只读句柄，启动时赋值；为空说明离线库加载失败，查询直接返回空串 */
+	private static Searcher searcher;
+
+	@PostConstruct
+	void loadOfflineDatabase() {
+		try (InputStream in = new ClassPathResource(DB_PATH).getInputStream()) {
+			// 一次性读入内存，避免每次查询都触碰文件系统，也绕开了 jar 内资源无法随机读取的问题
+			searcher = new Searcher(null, null, in.readAllBytes());
+			log.info("IP 离线库已加载: {}", DB_PATH);
+		} catch (Exception e) {
+			// 归属地是展示信息，缺了不该让服务起不来
+			log.error("IP 离线库加载失败，归属地查询将返回空值: {}", DB_PATH, e);
+		}
+	}
+
+	/**
+	 * 取客户端真实 IP。
+	 *
+	 * @return 永不返回 null；代理链形如 {@code "1.2.3.4, 10.0.0.1"} 时只取第一段
 	 */
 	public static String getIpAddress(HttpServletRequest request) {
-		String ip = request.getHeader("X-Real-IP");
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("x-forwarded-for");
-		}
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("Proxy-Client-IP");
-		}
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("WL-Proxy-Client-IP");
-		}
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("HTTP_CLIENT_IP");
-		}
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-		}
-		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+		String ip = PROXY_HEADERS.stream()
+				.map(request::getHeader)
+				.filter(IpAddressUtils::hasValue)
+				.findFirst()
+				.orElse(null);
+
+		if (ip == null) {
 			ip = request.getRemoteAddr();
-			if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
-				//根据网卡取本机配置的IP
-				InetAddress inet = null;
-				try {
-					inet = InetAddress.getLocalHost();
-				} catch (UnknownHostException e) {
-					log.error("getIpAddress exception:", e);
-				}
-				ip = inet.getHostAddress();
+			if (LOOPBACK.contains(ip)) {
+				ip = resolveLocalHost(ip);
 			}
 		}
-		return StringUtils.substringBefore(ip, ",");
-	}
 
-	private static Searcher searcher;
-	private static Method method;
-
-	/**
-	 * 在服务启动时加载 ip2region.db 到内存中
-	 * 解决打包jar后找不到 ip2region.db 的问题
-	 *
-	 * @throws Exception 出现异常应该直接抛出终止程序启动，避免后续invoke时出现更多错误
-	 */
-	@PostConstruct
-	private void initIp2regionResource() throws Exception {
-		InputStream inputStream = new ClassPathResource("/ipdb/ip2region.xdb").getInputStream();
-		//将 ip2region.db 转为 ByteArray
-		byte[] dbBinStr = FileCopyUtils.copyToByteArray(inputStream);
-		// 2、使用上述的 dbBinStr 创建一个完全基于内存的查询对象。
-		searcher = new Searcher(null, null, dbBinStr);
-		//二进制方式初始化 DBSearcher，需要使用基于内存的查找算法 memorySearch
-		method = searcher.getClass().getMethod("search", String.class);
+		int comma = ip.indexOf(',');
+		return comma < 0 ? ip : ip.substring(0, comma).trim();
 	}
 
 	/**
-	 * 根据ip从 ip2region.db 中获取地理位置
+	 * 查离线库拿归属地。
 	 *
-	 * @param ip
-	 * @return
+	 * @return 形如 {@code "中国|广东省|深圳市|电信"}，未命中返回空串
 	 */
 	public static String getCityInfo(String ip) {
-		try {
-			String ipInfo = (String) method.invoke(searcher, ip);
-			if (!StringUtils.isEmpty(ipInfo)) {
-				ipInfo = ipInfo.replace("|0", "");
-				ipInfo = ipInfo.replace("0|", "");
-			}
-			return ipInfo;
-		} catch (Exception e) {
-			log.error("getCityInfo exception:", e);
+		if (searcher == null || ip == null || ip.isEmpty()) {
+			return "";
 		}
-		return "";
+		try {
+			String region = searcher.search(ip);
+			if (region == null || region.isEmpty()) {
+				return "";
+			}
+			// 库里用 0 表示该级未知，展示时把占位去掉，避免出现「中国|0|0|0|0」
+			return region.replace("|0", "").replace("0|", "");
+		} catch (Exception e) {
+			log.error("归属地查询失败: {}", ip, e);
+			return "";
+		}
 	}
-	public static void main(String[] args) throws Exception {
-		IpAddressUtils ipAddressUtils = new IpAddressUtils();
-		ipAddressUtils.initIp2regionResource();
-		String cityInfo = IpAddressUtils.getCityInfo("14.215.177.39");
-		System.out.println(cityInfo);
+
+	private static boolean hasValue(String v) {
+		return v != null && !v.isEmpty() && !"unknown".equalsIgnoreCase(v);
+	}
+
+	/**
+	 * 回环地址换成本机地址。取不到就保留原值 —— 丢掉整个请求比拿到 127.0.0.1 更糟。
+	 */
+	private static String resolveLocalHost(String loopback) {
+		try {
+			return InetAddress.getLocalHost().getHostAddress();
+		} catch (Exception e) {
+			log.warn("无法解析本机地址，保留 {}", loopback);
+			return loopback;
+		}
 	}
 }

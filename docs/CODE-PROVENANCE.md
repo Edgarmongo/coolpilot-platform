@@ -61,10 +61,10 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 
 | 分类 | 文件数 | 行数 | 占当前后端 |
 |---|---|---|---|
-| 逐字一致 | 159 | 9,946 | **31.3%** |
+| 逐字一致 | 157 | 9,774 | **30.8%** |
 | 小幅修改 | 102 | 5,788 | 18.2% |
 | 大幅改写 | 12 | 835 | 2.6% |
-| 独立重写 | 2 | 48 | 0.2% |
+| 独立重写 | 4 | 220 | 0.7% |
 | 基线之后新增 | 137 | ~15,131 | 47.6% |
 | **合计** | **412** | **31,748** | 100% |
 
@@ -284,3 +284,50 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
 4. 全部通过再合并 `main`，并更新 `THIRD-PARTY-NOTICES.md` 的边界表
 
 **不动的东西**：表结构、接口路径与参数、前端、CI。重写的是实现，不是契约。
+
+---
+
+## 十二、重写进度
+
+| 文件 | 原相似度 | 现相似度 | 最长连续相同 | 状态 |
+|---|---:|---:|---:|---|
+| `util/IpAddressUtils.java` | 1.00 | **0.17** | 3 行 | ✅ 已完成，7 个单测通过 |
+| `util/AopUtils.java` | 1.00 | **0.29** | 2 行 | ✅ 已完成，编译通过 |
+
+### 这两个文件改了什么（示范）
+
+**`IpAddressUtils`**
+
+| 项 | 改动 |
+|---|---|
+| 请求头探测 | 六段重复的 `if (ip == null \|\| ip.length() == 0 ...)` → 一个 `PROXY_HEADERS` 列表 + stream 管道 |
+| 归属地查询 | 启动时用反射缓存 `Method`，再 `method.invoke` → 直接调 `searcher.search(ip)`，删掉反射 |
+| 回环处理 | `InetAddress` 为 null 时会 NPE → 取不到就保留原值 |
+| 资源加载 | `FileCopyUtils.copyToByteArray` → `in.readAllBytes()`，顺便打开日志 |
+| 调试入口 | 删掉 `main` 方法 |
+
+**`AopUtils`**
+
+| 项 | 改动 |
+|---|---|
+| 敏感参数 | 匿名 `HashSet` 子类只忽略 `jwt` → `Set.of(jwt, password, token)` |
+| 参数遍历 | `for` + 下标 → `Math.min` 限界 + 跳过 null 名 |
+| 过滤对象 | 只判请求/响应/单文件 → 增加 `MultipartFile[]` 与 `byte[]` |
+| 新增 | `isSensitive()`、`describe()`，供切面直接使用 |
+
+**没动的**：类名、包名、public 方法签名、返回类型 —— 调用方零改动。
+
+### 剩余 64 个文件
+
+| 批次 | 文件数 | 行数 | 说明 |
+|---|---:|---:|---|
+| A `util/` 剩余 | ~30 | ~2,100 | Markdown 扩展（cover/heimu）结构受 commonmark 约束，改动空间有限 |
+| B `service/impl/` | 6 | 665 | 博客核心业务 |
+| C `controller/` | 16 | 1,558 | 需对照前端契约 |
+| D `modules/`（trade/community/product/entitlement） | 41 | ~2,300 | 风险最高，涉及订单与权益 |
+| E `aspect/` | 2 | 298 | 日志切面，有安全语义 |
+
+> Markdown 扩展那一组要特别注意：`CoverExtension`、`HeimuExtension` 的类结构由
+> commonmark 的 SPI 决定（Node / DelimiterProcessor / Renderer 三个角色固定），
+> 独立实现也只能长成那个样子。按「合并原则」（merger doctrine），
+> 表达方式受限于技术框架时，相似不构成侵权 —— 这组可以最后做，或不做。
