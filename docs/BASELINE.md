@@ -13,7 +13,7 @@
 | GitHub 仓库 | `coolpilot-platform` |
 | 中文名称 | CoolPilot 技术平台 |
 | 项目标识 | `coolpilot-platform` |
-| 基础项目 | 自建（历史沿革见文末） |
+| 基础项目 | 派生自 [Naccl/NBlog](https://github.com/Naccl/NBlog)（MIT），边界见 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) |
 | 产品定位 | 个人技术知识与服务平台 |
 | 核心品牌 | CoolPilot |
 
@@ -147,4 +147,4 @@ feat(trade): 人工确认收款后自动发放权益
 | 本地目录名 | 2026-11-05 已重命名为 `coolpilot-platform`；若 IDE 仍是旧路径，关闭后以新路径重新打开 |
 | 容器与前缀命名 | 2026-11-05 已统一为 `coolpilot`：compose 项目名、容器名、数据卷、数据库名全部迁移，旧 `nblog_*` 卷与旧库已删除 |
 | `package-lock.json` | 上游 `.gitignore` 忽略了 lock 文件。本次基线已取消该忽略并提交前端 lock，保证依赖可复现；后续升级依赖时请一并提交 lock 变更 |
-| 本项目许可证 | 未定，见 `docs/LICENSE-REVIEW.md` |
+| 本项目许可证 | 专有许可（保留所有权利），见根目录 `LICENSE`；第三方来源见 `THIRD-PARTY-NOTICES.md` |

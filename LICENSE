@@ -1,0 +1,100 @@
+COOLPILOT PLATFORM — PROPRIETARY LICENSE
+========================================
+
+Copyright (c) 2026 CoolSkyAI. All rights reserved.
+https://coolskyai.com
+
+This repository (the "Software") is proprietary. It is NOT open source.
+It is made available only for the copyright holder's own operation, and for
+persons whom the copyright holder has explicitly authorized in writing.
+
+--------------------------------------------------------------------------------
+1. OWNERSHIP
+--------------------------------------------------------------------------------
+
+Subject only to Section 4 (Third-Party Components), all copyright, title and
+interest in the Software — including its source code, database schema, user
+interface design, visual system, documentation and configuration — are owned
+exclusively by CoolSkyAI.
+
+The Software was independently developed by CoolSkyAI on top of a baseline that
+includes MIT-licensed code; the exact boundary is documented in
+THIRD-PARTY-NOTICES.md. Nothing in this license claims authorship of code that
+CoolSkyAI did not write.
+
+--------------------------------------------------------------------------------
+2. PERMITTED USE
+--------------------------------------------------------------------------------
+
+The copyright holder may use, modify, deploy and distribute the Software without
+restriction.
+
+Any other person or entity may use the Software only under a separate written
+agreement with the copyright holder.
+
+--------------------------------------------------------------------------------
+3. RESTRICTIONS
+--------------------------------------------------------------------------------
+
+Unless the copyright holder has granted prior written permission, you may NOT:
+
+  (a) copy, reproduce or redistribute the Software, in whole or in part;
+  (b) publish the Software or any derivative work, including publishing it on
+      any public code hosting service;
+  (c) sell, license, sublicense, rent, lease or otherwise commercially exploit
+      the Software;
+  (d) provide the Software to third parties as a hosted or managed service;
+  (e) remove, obscure or alter any copyright, trademark or attribution notice;
+  (f) reverse engineer, decompile or disassemble the Software, except to the
+      extent such restriction is prohibited by applicable law.
+
+--------------------------------------------------------------------------------
+4. THIRD-PARTY COMPONENTS
+--------------------------------------------------------------------------------
+
+The Software contains or is derived from third-party components that remain
+under their own licenses. Those licenses continue to govern those components and
+are not overridden by this file. See THIRD-PARTY-NOTICES.md.
+
+Notably, the server-side baseline is derived from NBlog by Naccl, licensed under
+the MIT License, whose copyright notice and permission notice are reproduced in
+THIRD-PARTY-NOTICES.md as required by that license.
+
+--------------------------------------------------------------------------------
+5. CONTENT
+--------------------------------------------------------------------------------
+
+Articles, images, research notes, assessment data, product materials and other
+content published through the Software are the property of CoolSkyAI and are not
+licensed under this file. All rights reserved.
+
+--------------------------------------------------------------------------------
+6. TRADEMARKS
+--------------------------------------------------------------------------------
+
+"CoolSkyAI" and "酷天AI" are marks of the copyright holder. This license grants
+no right to use them.
+
+--------------------------------------------------------------------------------
+7. NO WARRANTY
+--------------------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+中文摘要（仅供理解，以英文本为准）
+
+  本仓库为专有软件，不是开源项目。除 THIRD-PARTY-NOTICES.md 中列明的第三方组件外，
+  全部著作权归 CoolSkyAI 所有。未经书面许可，不得复制、分发、公开、商用、
+  转授权，也不得移除版权声明。
+
+  服务端基线派生自 Naccl 的 NBlog 项目（MIT 协议），该部分仍受 MIT 约束，
+  原版权声明与许可全文已按 MIT 要求保留在 THIRD-PARTY-NOTICES.md 中。
+
+如需将权利人改为个人真名或公司主体，修改本文件第 3 行的 "CoolSkyAI" 即可。

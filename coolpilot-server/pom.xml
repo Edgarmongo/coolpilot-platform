@@ -8,12 +8,20 @@
         <version>4.1.2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>top.naccl</groupId>
+    <groupId>com.coolskyai</groupId>
     <artifactId>coolpilot-server</artifactId>
     <version>0.0.1</version>
     <name>coolpilot-server</name>
-    <url>https://naccl.top/</url>
-    <description>Blog API</description>
+    <url>https://coolskyai.com</url>
+    <description>CoolPilot Platform Server</description>
+    <licenses>
+        <!-- 专有许可：本项目不是开源项目，见仓库根目录 LICENSE -->
+        <license>
+            <name>Proprietary</name>
+            <url>https://coolskyai.com</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <!-- 编译与运行目标：JDK 21 -->

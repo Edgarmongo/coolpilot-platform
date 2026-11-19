@@ -241,4 +241,12 @@ coolpilot-platform/
 
 ## 许可证
 
-具体授权方式尚未确定，正式对外分发前需补齐。
+**专有软件，保留所有权利**（见 [LICENSE](LICENSE)）。本项目不是开源项目，
+未经书面许可不得复制、分发、公开或商用。
+
+服务端基线派生自 [Naccl/NBlog](https://github.com/Naccl/NBlog)（MIT 协议），
+该部分仍受 MIT 约束，原版权声明与许可全文按 MIT 要求保留在
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+**这不是形式条款**：MIT 允许把衍生作品闭源，但要求保留原作者版权声明。
+删掉它既构成违约，也会让"全部自研"变成不实陈述。

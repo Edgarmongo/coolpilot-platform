@@ -18,6 +18,7 @@
 | 这个版本改了什么 | [CHANGELOG.md](CHANGELOG.md) |
 | 某个表为什么这么设计 | [DATA-MODEL.md](DATA-MODEL.md) / [DATA-MODEL-OSS.md](DATA-MODEL-OSS.md) |
 | 视觉规范是什么 | [UI-SYSTEM.md](UI-SYSTEM.md) |
+| 这份代码归谁、能不能对外 | 根目录 [LICENSE](../LICENSE) / [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) / [ADR-0005](ADR-0005-LICENSE.md) |
 
 ---
 
@@ -59,6 +60,7 @@
 | [ADR-0002-HYBRID-RETRIEVAL.md](ADR-0002-HYBRID-RETRIEVAL.md) | 混合检索（向量 + 关键词） | 已采纳 |
 | [ADR-0003-QUERY-REWRITE-RERANK.md](ADR-0003-QUERY-REWRITE-RERANK.md) | 追问改写与重排 | 已采纳 |
 | [ADR-0004-OPEN-SOURCE-MODEL.md](ADR-0004-OPEN-SOURCE-MODEL.md) | 开源观察的数据模型：新建三表而非复用 portfolio | 已落地 |
+| [ADR-0005-LICENSE.md](ADR-0005-LICENSE.md) | 授权方式：专有许可 + 保留 NBlog 的 MIT 声明 | 已采纳 |
 | [PRD-OSS-INSIGHTS.md](PRD-OSS-INSIGHTS.md) | 开源观察栏目需求（P0 范围） | 已实现 |
 | [FEATURE-OSS-INSIGHTS.md](FEATURE-OSS-INSIGHTS.md) | 栏目已实现功能清单 + 8 个待决项 + 未实现对照 | 已上线 |
 | [TASKS-OSS-INSIGHTS.md](TASKS-OSS-INSIGHTS.md) | 栏目任务卡、验收对照、与文档的三处偏离、发布记录 | 已上线 |
@@ -123,3 +125,5 @@
 | 6 份栏目文档 | 头部加状态标注，明确「设计记录 vs 现状」 |
 | 10 份历史文档 | 头部加「文档性质」标注，避免被当现状读 |
 | `docs/README.md` | **新增**：本文，四类划分 + 发版更新触发条件 |
+| `LICENSE` / `THIRD-PARTY-NOTICES.md` | **新增**：专有许可 + NBlog 的 MIT 声明与来源边界 |
+| `docs/ADR-0005-LICENSE.md` | **新增**：授权方式的决策记录 |
