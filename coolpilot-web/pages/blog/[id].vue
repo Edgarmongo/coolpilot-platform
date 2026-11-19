@@ -97,13 +97,6 @@
 							</li>
 						</ul>
 					</div>
-
-					<div class="side-block">
-						<div class="side-title">{{ t('nav.archives') }}</div>
-						<NuxtLink :to="localePath('/archives')" class="btn btn-ghost btn-sm side-btn">
-							{{ t('post.backToList') }}
-						</NuxtLink>
-					</div>
 				</aside>
 			</div>
 		</template>
@@ -562,10 +555,6 @@ if (blog.value) {
 .cnt {
 	font-size: 12px;
 	opacity: .8;
-}
-
-.side-btn {
-	width: 100%;
 }
 
 /* ============================================================
