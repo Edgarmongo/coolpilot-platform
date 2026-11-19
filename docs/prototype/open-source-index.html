@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>开源项目商业观察 · CoolSkyAI</title>
+<style>
+  :root{
+    --teal:#0F766E;
+    --teal-dark:#0B5F58;
+    --teal-050:#F2FAF8;
+    --teal-100:#E7F5EE;
+    --ink:#17212B;
+    --ink-2:#3F4A56;
+    --muted:#6B7280;
+    --line:rgba(15,118,110,.12);
+    --line-2:rgba(15,118,110,.22);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:#fff;
+    -webkit-font-smoothing:antialiased;
+    font-size:15px;
+    line-height:1.6;
+  }
+  a{color:inherit;text-decoration:none;}
+  .container{max-width:1200px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- 头部：双行，与现网一致 ---------- */
+  .topbar{border-bottom:1px solid var(--line);}
+  .topbar-inner{display:flex;align-items:center;gap:24px;height:64px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px;}
+  .brand-mark{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--teal);color:#fff;font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;letter-spacing:.5px;
+  }
+  .search{
+    flex:1;max-width:420px;margin-left:auto;
+    display:flex;align-items:center;height:38px;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--teal-050);overflow:hidden;
+  }
+  .search input{
+    flex:1;border:0;outline:0;background:transparent;
+    padding:0 16px;font-size:13.5px;color:var(--ink);font-family:inherit;
+  }
+  .search input::placeholder{color:#9AA5B1;}
+  .search button{
+    width:44px;height:100%;border:0;background:transparent;color:var(--teal);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .topbar-right{display:flex;align-items:center;gap:16px;font-size:13.5px;color:var(--ink-2);}
+  .langs{display:flex;gap:8px;color:var(--muted);}
+  .langs .on{color:var(--teal);font-weight:600;}
+  .login{display:flex;align-items:center;gap:6px;color:var(--teal);font-weight:600;}
+
+  .nav{border-bottom:1px solid var(--line);}
+  .nav-inner{display:flex;gap:30px;height:52px;align-items:center;}
+  .nav-item{
+    font-size:14.5px;color:var(--ink-2);padding:15px 0;position:relative;
+    transition:color .15s;
+  }
+  .nav-item:hover{color:var(--teal);}
+  .nav-item.is-active{color:var(--teal);font-weight:600;}
+  .nav-item.is-active::after{
+    content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+    background:var(--teal);border-radius:2px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{background:linear-gradient(180deg,var(--teal-050) 0%,#fff 82%);padding:52px 0 40px;}
+  .hero-grid{display:grid;grid-template-columns:1fr 460px;gap:40px;align-items:center;}
+  .eyebrow{
+    font-size:11.5px;letter-spacing:1.6px;color:var(--teal);font-weight:700;
+    text-transform:uppercase;margin:0 0 14px;
+  }
+  h1{font-size:40px;line-height:1.2;margin:0 0 14px;letter-spacing:-.5px;font-weight:700;}
+  .lead{font-size:18px;color:var(--ink-2);margin:0 0 12px;font-weight:500;}
+  .desc{font-size:14.5px;color:var(--muted);margin:0 0 24px;max-width:560px;}
+  .hero-search{
+    display:flex;align-items:center;height:48px;max-width:520px;
+    border:1px solid var(--line-2);border-radius:10px;background:#fff;overflow:hidden;
+  }
+  .hero-search input{
+    flex:1;border:0;outline:0;padding:0 18px;font-size:14px;
+    font-family:inherit;color:var(--ink);background:transparent;
+  }
+  .hero-search input::placeholder{color:#9AA5B1;}
+  .hero-search button{
+    height:36px;margin-right:6px;padding:0 22px;border:0;border-radius:7px;
+    background:var(--teal);color:#fff;font-size:14px;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:background .15s;
+  }
+  .hero-search button:hover{background:var(--teal-dark);}
+  .hero-note{
+    display:flex;gap:8px;align-items:center;margin-top:14px;
+    font-size:12.5px;color:var(--muted);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);display:inline-block;}
+  .hero-art{display:flex;justify-content:center;}
+
+  /* ---------- 筛选 ---------- */
+  .filters{padding:4px 0 8px;}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    height:36px;padding:0 16px;border-radius:8px;
+    border:1px solid var(--line);background:#fff;
+    font-size:13.5px;color:var(--ink-2);cursor:pointer;
+    transition:all .15s;
+  }
+  .chip:hover{border-color:var(--line-2);color:var(--teal);}
+  .chip.on{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600;}
+  .chip svg{opacity:.85;}
+
+  /* ---------- 区块通用 ---------- */
+  section{padding:36px 0;}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;}
+  .sec-title{font-size:22px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;}
+  .sec-title .bar{width:4px;height:18px;border-radius:2px;background:var(--teal);}
+  .more{font-size:13.5px;color:var(--teal);font-weight:600;display:flex;align-items:center;gap:4px;}
+
+  /* ---------- 精选 ---------- */
+  .feature{
+    display:grid;grid-template-columns:1.05fr .95fr;
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(120deg,#F4FBF9 0%,#EAF6F3 100%);
+    overflow:hidden;transition:transform .18s,border-color .18s;
+  }
+  .feature:hover{transform:translateY(-2px);border-color:var(--line-2);}
+  .feature-body{padding:32px 34px;}
+  .tagline{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#fff;border:1px solid var(--line-2);color:var(--teal);
+    font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;
+  }
+  .badge.soft{background:var(--teal-100);border-color:transparent;color:var(--teal-dark);}
+  .feature h2{font-size:25px;line-height:1.35;margin:0 0 12px;letter-spacing:-.2px;}
+  .feature p{margin:0 0 18px;color:var(--ink-2);font-size:14.5px;max-width:520px;}
+  .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .tag{
+    font-size:12px;padding:3px 9px;border-radius:5px;
+    background:#fff;border:1px solid var(--line);color:var(--ink-2);
+  }
+  .tag.field{background:var(--teal-100);border-color:transparent;color:var(--teal-dark);font-weight:600;}
+  .meta{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:22px;}
+  .cta{
+    display:inline-flex;align-items:center;gap:8px;
+    height:40px;padding:0 20px;border-radius:8px;
+    background:var(--teal);color:#fff;font-size:14px;font-weight:600;
+    transition:background .15s;
+  }
+  .cta:hover{background:var(--teal-dark);}
+  .feature-art{position:relative;display:flex;align-items:center;justify-content:center;padding:18px;}
+
+  /* ---------- 项目卡片 ---------- */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;display:flex;flex-direction:column;
+    transition:transform .18s,border-color .18s;
+  }
+  .card:hover{transform:translateY(-2px);border-color:var(--line-2);}
+  .cover{height:132px;background:var(--teal-050);position:relative;overflow:hidden;}
+  .cover svg{display:block;width:100%;height:100%;}
+  .state{
+    position:absolute;top:10px;right:10px;
+    font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;
+    background:rgba(255,255,255,.92);color:var(--ink-2);border:1px solid var(--line);
+  }
+  .state.todo{color:#8A6A00;border-color:#F0DDA6;background:#FFF8E6;}
+  .card-body{padding:16px 18px 18px;display:flex;flex-direction:column;flex:1;}
+  .card-body h3{font-size:16.5px;margin:0 0 6px;font-weight:700;}
+  .card-body p{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.55;flex:1;}
+  .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .card-tags .tag{font-size:11.5px;padding:2px 8px;}
+  .card-foot{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:12px;color:var(--muted);border-top:1px solid var(--line);
+    padding-top:11px;
+  }
+  .card-foot .live{color:var(--teal);font-weight:600;}
+
+  /* ---------- 研究方法 ---------- */
+  .method{background:var(--teal-050);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+  .m-item{padding:4px 2px;}
+  .m-icon{
+    width:40px;height:40px;border-radius:10px;background:#fff;
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    margin-bottom:14px;color:var(--teal);
+  }
+  .m-item h4{margin:0 0 8px;font-size:15px;font-weight:700;}
+  .m-item p{margin:0;font-size:13px;color:var(--muted);line-height:1.6;}
+
+  /* ---------- 页脚 ---------- */
+  footer{border-top:1px solid var(--line);padding:36px 0 44px;background:#fff;}
+  .foot-top{display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap;}
+  .foot-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;}
+  .foot-desc{font-size:13px;color:var(--muted);margin:10px 0 0;}
+  .foot-links{display:flex;gap:22px;font-size:13.5px;color:var(--ink-2);align-items:center;}
+  .foot-links a:hover{color:var(--teal);}
+  .foot-bottom{
+    margin-top:26px;padding-top:18px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);
+    flex-wrap:wrap;gap:10px;
+  }
+  .socials{display:flex;gap:14px;color:var(--muted);}
+  .socials a:hover{color:var(--teal);}
+
+  @media (max-width:1100px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-art{display:none;}
+    .feature{grid-template-columns:1fr;}
+    .feature-art{display:none;}
+  }
+  @media (max-width:900px){
+    .grid3{grid-template-columns:repeat(2,1fr);}
+    .grid4{grid-template-columns:repeat(2,1fr);gap:24px;}
+    .nav-inner{gap:20px;overflow-x:auto;}
+    .nav-item{white-space:nowrap;}
+    .search{max-width:240px;}
+  }
+  @media (max-width:600px){
+    .grid3{grid-template-columns:1fr;}
+    h1{font-size:30px;}
+    .topbar-inner{height:56px;gap:12px;}
+    .topbar-right .langs,.topbar-right .my{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark">CP</span>
+        <span>CoolSkyAI</span>
+      </a>
+      <form class="search" onsubmit="return false">
+        <input type="search" placeholder="搜索站内内容…"/>
+        <button aria-label="搜索">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      </form>
+      <div class="topbar-right">
+        <div class="langs"><span class="on">中</span><span>EN</span></div>
+        <span class="my">我的</span>
+        <a class="login" href="#">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+          登录
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="nav-item" href="#">首页</a>
+      <a class="nav-item" href="#">技术文章</a>
+      <a class="nav-item is-active" href="#">开源商业观察</a>
+      <a class="nav-item" href="#">技术专题</a>
+      <a class="nav-item" href="#">项目</a>
+      <a class="nav-item" href="#">知识产品</a>
+      <a class="nav-item" href="#">技术服务</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="eyebrow">Open Source Business Insights</p>
+        <h1>开源项目商业观察</h1>
+        <p class="lead">发现开源项目，研究技术价值，挖掘商业机会。</p>
+        <p class="desc">从技术架构、用户与场景、商业模式、成本与风险四个维度，用实际部署与测试得到的证据，判断一个开源项目能不能变成生意——以及什么条件下不能。</p>
+        <form class="hero-search" onsubmit="return false">
+          <input type="search" placeholder="搜索项目或技术，如 crawl4ai / 数据采集 / AI Agent"/>
+          <button>搜索</button>
+        </form>
+        <div class="hero-note">
+          <span class="dot"></span>
+          只发布跑过的结论 · 每条判断标注证据等级（F/S/T/M/A）
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <!-- 开源技术主题插画：终端 + 数据/许可节点 -->
+        <svg width="440" height="330" viewBox="0 0 440 330" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0F766E" stop-opacity=".10"/>
+              <stop offset="1" stop-color="#0F766E" stop-opacity=".02"/>
+            </linearGradient>
+            <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#115E59"/>
+              <stop offset="1" stop-color="#0B3F3A"/>
+            </linearGradient>
+          </defs>
+
+          <circle cx="220" cy="160" r="126" fill="url(#g1)"/>
+          <circle cx="220" cy="160" r="126" stroke="#0F766E" stroke-opacity=".14" stroke-dasharray="3 6"/>
+
+          <!-- 终端窗口 -->
+          <rect x="96" y="72" width="210" height="170" rx="12" fill="url(#g2)"/>
+          <path d="M96 84c0-6.6 5.4-12 12-12h186c6.6 0 12 5.4 12 12v16H96V84z" fill="#0A3733"/>
+          <circle cx="112" cy="86" r="4" fill="#F87171" fill-opacity=".9"/>
+          <circle cx="126" cy="86" r="4" fill="#FBBF24" fill-opacity=".9"/>
+          <circle cx="140" cy="86" r="4" fill="#34D399" fill-opacity=".9"/>
+
+          <rect x="112" y="118" width="46" height="7" rx="3.5" fill="#5EEAD4" fill-opacity=".55"/>
+          <rect x="166" y="118" width="78" height="7" rx="3.5" fill="#E2E8F0" fill-opacity=".30"/>
+          <rect x="126" y="136" width="104" height="7" rx="3.5" fill="#E2E8F0" fill-opacity=".18"/>
+          <rect x="126" y="154" width="54" height="7" rx="3.5" fill="#5EEAD4" fill-opacity=".45"/>
+          <rect x="188" y="154" width="66" height="7" rx="3.5" fill="#E2E8F0" fill-opacity=".18"/>
+          <rect x="112" y="172" width="90" height="7" rx="3.5" fill="#E2E8F0" fill-opacity=".18"/>
+          <rect x="210" y="172" width="42" height="7" rx="3.5" fill="#34D399" fill-opacity=".55"/>
+          <rect x="132" y="196" width="16" height="7" rx="3.5" fill="#FBBF24" fill-opacity=".7"/>
+          <rect x="156" y="196" width="72" height="7" rx="3.5" fill="#E2E8F0" fill-opacity=".22"/>
+          <rect x="132" y="216" width="158" height="2" rx="1" fill="#E2E8F0" fill-opacity=".10"/>
+
+          <!-- 右上浮层：数据结构化 -->
+          <rect x="318" y="48" width="96" height="60" rx="10" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+          <rect x="330" y="60" width="34" height="6" rx="3" fill="#0F766E" fill-opacity=".38"/>
+          <rect x="330" y="74" width="20" height="20" rx="4" fill="#0F766E" fill-opacity=".10"/>
+          <rect x="356" y="82" width="20" height="12" rx="4" fill="#0F766E" fill-opacity=".18"/>
+          <rect x="382" y="74" width="18" height="20" rx="4" fill="#0F766E" fill-opacity=".30"/>
+          <path d="M306 78h6" stroke="#0F766E" stroke-opacity=".3" stroke-dasharray="3 4"/>
+
+          <!-- 左下浮层：核验通过 -->
+          <rect x="20" y="198" width="98" height="58" rx="10" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+          <circle cx="42" cy="219" r="8" fill="#0F766E" fill-opacity=".16"/>
+          <path d="M38.4 219l2.6 2.6 4.6-4.8" stroke="#0F766E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="58" y="215" width="42" height="6" rx="3" fill="#0F766E" fill-opacity=".30"/>
+          <rect x="34" y="235" width="66" height="6" rx="3" fill="#0F766E" fill-opacity=".14"/>
+
+          <circle cx="72" cy="112" r="4" fill="#0F766E" fill-opacity=".30"/>
+          <circle cx="382" cy="268" r="5" fill="#0F766E" fill-opacity=".22"/>
+          <circle cx="346" cy="300" r="3" fill="#0F766E" fill-opacity=".30"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 筛选 -->
+  <section class="filters">
+    <div class="container chips">
+      <button class="chip on">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        全部项目
+      </button>
+      <button class="chip">AI 开源项目</button>
+      <button class="chip">AI Agent 与自动化</button>
+      <button class="chip">数据采集与搜索</button>
+      <button class="chip">开发者工具</button>
+      <button class="chip">企业级开源软件</button>
+    </div>
+  </section>
+
+  <!-- 精选研究 -->
+  <section>
+    <div class="container">
+      <div class="feature">
+        <div class="feature-body">
+          <div class="tagline">
+            <span class="badge">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2l2.6 6.3 6.8.6-5.2 4.5 1.6 6.7L12 16.8 6.2 20.1l1.6-6.7L2.6 8.9l6.8-.6L12 2z"/></svg>
+              精选研究
+            </span>
+            <span class="badge soft">12 篇专题 · 进行中</span>
+          </div>
+          <h2>Crawl4AI：从网页数据采集到 AI 数据基础设施</h2>
+          <p>实测网页渲染、Markdown 清洗、结构化提取与深度采集四类能力，分析它在数据采集工具链中的真实位置，以及哪些能力现在还不能对外承诺。</p>
+          <div class="tagrow">
+            <span class="tag field">数据采集与搜索</span>
+            <span class="tag">Python</span>
+            <span class="tag">Web Crawling</span>
+            <span class="tag">LLM</span>
+          </div>
+          <div class="meta">
+            <span>项目档案 · 12 个实验</span>
+            <span>·</span>
+            <span>已发布 0 篇，首篇 11 月上线</span>
+          </div>
+          <a class="cta" href="#">
+            查看研究专题
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+        <div class="feature-art">
+          <!-- Crawl4AI 视觉：网页 → 结构化数据 -->
+          <svg width="424" height="290" viewBox="0 0 380 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="28" y="30" width="150" height="196" rx="10" fill="#fff" stroke="#0F766E" stroke-opacity=".18"/>
+            <rect x="28" y="30" width="150" height="24" rx="10" fill="#0F766E" fill-opacity=".08"/>
+            <circle cx="42" cy="42" r="3" fill="#0F766E" fill-opacity=".35"/>
+            <circle cx="53" cy="42" r="3" fill="#0F766E" fill-opacity=".2"/>
+            <rect x="42" y="68" width="80" height="7" rx="3.5" fill="#0F766E" fill-opacity=".28"/>
+            <rect x="42" y="84" width="118" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="42" y="98" width="104" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="42" y="112" width="120" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="42" y="134" width="60" height="46" rx="6" fill="#0F766E" fill-opacity=".08"/>
+            <rect x="110" y="134" width="60" height="46" rx="6" fill="#0F766E" fill-opacity=".08"/>
+            <rect x="42" y="192" width="92" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+
+            <!-- 箭头 -->
+            <path d="M188 128h32" stroke="#0F766E" stroke-width="1.6" stroke-dasharray="4 4"/>
+            <path d="M214 122l7 6-7 6" stroke="#0F766E" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 结构化数据 -->
+            <rect x="230" y="46" width="122" height="164" rx="10" fill="#fff" stroke="#0F766E" stroke-opacity=".18"/>
+            <rect x="244" y="62" width="52" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+            <rect x="244" y="80" width="94" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="244" y="94" width="72" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="244" y="112" width="94" height="24" rx="5" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="252" y="121" width="40" height="6" rx="3" fill="#0F766E" fill-opacity=".35"/>
+            <rect x="300" y="121" width="30" height="6" rx="3" fill="#0F766E" fill-opacity=".18"/>
+            <rect x="244" y="144" width="94" height="24" rx="5" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="252" y="153" width="34" height="6" rx="3" fill="#0F766E" fill-opacity=".35"/>
+            <rect x="296" y="153" width="34" height="6" rx="3" fill="#0F766E" fill-opacity=".18"/>
+            <rect x="244" y="176" width="66" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="244" y="188" width="48" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 最新项目研究 -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="sec-title"><span class="bar"></span>最新项目研究</h2>
+        <a class="more" href="#">查看更多
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="grid3">
+        <!-- Hermes Agent -->
+        <article class="card">
+          <div class="cover">
+            <span class="state todo">待研究</span>
+            <svg viewBox="0 0 400 132" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="132" fill="#F2FAF8"/>
+              <g stroke="#0F766E" stroke-opacity=".18" stroke-dasharray="4 5">
+                <path d="M200 66L120 40M200 66L280 40M200 66L120 96M200 66L280 96"/>
+              </g>
+              <circle cx="200" cy="66" r="20" fill="#0F766E" fill-opacity=".14"/>
+              <circle cx="200" cy="66" r="9" fill="#0F766E" fill-opacity=".55"/>
+              <g fill="#fff" stroke="#0F766E" stroke-opacity=".22">
+                <rect x="96" y="26" width="48" height="28" rx="6"/>
+                <rect x="256" y="26" width="48" height="28" rx="6"/>
+                <rect x="96" y="82" width="48" height="28" rx="6"/>
+                <rect x="256" y="82" width="48" height="28" rx="6"/>
+              </g>
+            </svg>
+          </div>
+          <div class="card-body">
+            <h3>Hermes Agent</h3>
+            <p>面向个人与团队的可扩展智能体执行框架，研究其 Agent Loop、工具调用与长期任务能力。</p>
+            <div class="card-tags">
+              <span class="tag field">AI Agent</span>
+              <span class="tag">自动化</span>
+            </div>
+            <div class="card-foot">
+              <span>尚未发布分析</span>
+              <span>已调研生态</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Swirl Search -->
+        <article class="card">
+          <div class="cover">
+            <span class="state todo">待研究</span>
+            <svg viewBox="0 0 400 132" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="132" fill="#F2FAF8"/>
+              <circle cx="200" cy="66" r="42" fill="#0F766E" fill-opacity=".05"/>
+              <circle cx="200" cy="66" r="28" fill="#0F766E" fill-opacity=".08"/>
+              <circle cx="192" cy="60" r="13" fill="none" stroke="#0F766E" stroke-opacity=".55" stroke-width="2.4"/>
+              <path d="M201 70l11 11" stroke="#0F766E" stroke-opacity=".55" stroke-width="2.4" stroke-linecap="round"/>
+              <g fill="#0F766E" fill-opacity=".18">
+                <circle cx="96" cy="42" r="5"/><circle cx="308" cy="48" r="4"/>
+                <circle cx="104" cy="96" r="4"/><circle cx="300" cy="94" r="5"/>
+              </g>
+            </svg>
+          </div>
+          <div class="card-body">
+            <h3>Swirl Search</h3>
+            <p>连接多个数据源的开源企业搜索平台，研究其检索聚合方式与私有化部署成本。</p>
+            <div class="card-tags">
+              <span class="tag field">数据采集与搜索</span>
+              <span class="tag">RAG</span>
+            </div>
+            <div class="card-foot">
+              <span>尚未发布分析</span>
+              <span>已列入计划</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Milvus -->
+        <article class="card">
+          <div class="cover">
+            <span class="state todo">待研究</span>
+            <svg viewBox="0 0 400 132" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="132" fill="#F2FAF8"/>
+              <g stroke="#0F766E" stroke-opacity=".35" fill="#fff">
+                <ellipse cx="200" cy="40" rx="42" ry="14"/>
+                <path d="M158 40v22c0 8 19 14 42 14s42-6 42-14V40"/>
+                <path d="M158 62v22c0 8 19 14 42 14s42-6 42-14V62"/>
+              </g>
+              <g fill="#0F766E" fill-opacity=".10">
+                <ellipse cx="200" cy="40" rx="42" ry="14"/>
+              </g>
+              <g fill="#0F766E" fill-opacity=".12">
+                <circle cx="96" cy="66" r="6"/><circle cx="304" cy="66" r="6"/>
+              </g>
+            </svg>
+          </div>
+          <div class="card-body">
+            <h3>Milvus</h3>
+            <p>面向大规模向量检索的开源数据库，研究其在 RAG 与知识库场景下的部署与运维门槛。</p>
+            <div class="card-tags">
+              <span class="tag field">AI 开源项目</span>
+              <span class="tag">向量检索</span>
+            </div>
+            <div class="card-foot">
+              <span>尚未发布分析</span>
+              <span>已列入计划</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 研究方法 -->
+  <section class="method">
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="sec-title"><span class="bar"></span>研究方法</h2>
+      </div>
+      <div class="grid4">
+        <div class="m-item">
+          <div class="m-icon">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16.5l9 5 9-5"/></svg>
+          </div>
+          <h4>技术架构</h4>
+          <p>拆解项目的结构设计与核心机制，判断它的能力边界和扩展性。</p>
+        </div>
+        <div class="m-item">
+          <div class="m-icon">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M17 5.5a3 3 0 010 5.6"/><path d="M18 15c2 .8 3 2.4 3 5"/></svg>
+          </div>
+          <h4>用户与场景</h4>
+          <p>谁在用它、解决什么具体问题，真实需求与宣传话术的区别在哪。</p>
+        </div>
+        <div class="m-item">
+          <div class="m-icon">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8.5 7V5.5A1.5 1.5 0 0110 4h4a1.5 1.5 0 011.5 1.5V7"/><path d="M3 12h18"/></svg>
+          </div>
+          <h4>商业模式</h4>
+          <p>开源方怎么赚钱、模仿者能靠什么赚钱，以及替代品的定价参照。</p>
+        </div>
+        <div class="m-item">
+          <div class="m-icon">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3.4v5.3c0 4.4-3 7.8-7.5 9.3-4.5-1.5-7.5-4.9-7.5-9.3V6.4L12 3z"/><path d="M9 12l2 2 4-4.2"/></svg>
+          </div>
+          <h4>成本与风险</h4>
+          <p>服务器、模型、人力与维护成本，以及合规和稳定性上的隐性代价。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="foot-top">
+      <div>
+        <div class="foot-brand"><span class="brand-mark">CP</span> CoolSkyAI</div>
+        <p class="foot-desc">CoolSkyAI 技术平台 · 技术知识与服务</p>
+      </div>
+      <nav class="foot-links">
+        <a href="#">知识星球</a>
+        <a href="#">关注我</a>
+        <a href="#">关于</a>
+        <a href="#">友链</a>
+      </nav>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 CoolSkyAI · 开源项目商业观察</span>
+      <div class="socials">
+        <a href="#" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.3 9.3 0 015 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7 1 .7 1.9v2.9c0 .3.2.6.7.5 4-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"/></svg>
+        </a>
+        <a href="#" aria-label="邮箱">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg>
+        </a>
+        <a href="#" aria-label="RSS">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 11a9 9 0 019 9"/><path d="M4 4a16 16 0 0116 16"/><circle cx="5.5" cy="18.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
