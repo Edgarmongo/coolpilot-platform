@@ -9,9 +9,12 @@
 
 | # | 事项 | 阻塞 |
 | --- | --- | --- |
-| 1 | 导航方案 A / B / C（PRD §4.1） | OS-DEV-101（V28 里要不要插 `nav_menu`） |
+| 1 | ~~导航方案~~ **已定：加第 7 项，sort=25** | 无 |
 | 2 | `verdict` 五档中文文案 | OS-DEV-202 渲染 |
 | 3 | 是否把 `blog/11` 从「文章」迁「运维实录」 | 无阻塞，可后置 |
+| 4 | 首页列表按文章流还是项目列表（`UI` §7） | OS-DEV-108 |
+| 5 | 侧栏热门排序依据（建议：研究密度） | OS-DEV-108 |
+| 6 | 专题区是否首期建 1 个真实专题 | OS-DEV-201 |
 
 ---
 
@@ -39,7 +42,7 @@
 | --- | --- |
 | **目标** | 三张表 + 三个栏目分类就绪 |
 | **方式** | 写 `V28__open_source_insights.sql`，**不手工执行 DDL** |
-| **前置** | 导航决策（决定是否含 nav 插入） |
+| **前置** | 无（导航已定：加第 7 项，sort=25） |
 
 **验收**
 
@@ -47,6 +50,7 @@
 - [ ] `show tables like 'oss_%'` → 3 张
 - [ ] `desc oss_project` → 23 列，`publish_status` 默认 `draft`
 - [ ] `select category_name from category` 含 3 个新栏目
+- [ ] `nav_menu` 新增 1 行 `/open-source`，`sort=25`，其余各项 sort 未变
 - [ ] 重复启动幂等，不报错
 
 ### OS-DEV-102 · 项目 CRUD
@@ -107,6 +111,24 @@
 - [ ] 保存后前台刷新即生效（本期不加缓存）
 - [ ] 菜单出现在「内容管理」分组下
 
+### OS-DEV-108 · 文章流与精选接口
+
+> 视觉稿评审后新增：首页卡片是文章，不是项目。
+
+| 项 | 内容 |
+| --- | --- |
+| **目标** | 首页「最新项目分析」与「精选推荐」有对应接口 |
+| **新增** | `GET /open-source/articles`、`GET /open-source/featured`、`projects?sort=density` |
+
+**验收**
+
+- [ ] `/open-source/articles` 只返回「项目 published + 文章 is_published」的组合
+- [ ] 每条含 `relationType` 与所属项目（slug / name / verdict）
+- [ ] 支持 `pageNum` / `category` / `tag` / `q`
+- [ ] `/open-source/featured` 优先返回 `featured` 项目的 business 文章，无则退回项目
+- [ ] `projects?sort=density` 按站内分析篇数排序，star 不参与排序
+- [ ] 关联文章被下架后，文章流中立即消失
+
 ---
 
 ## Phase 2 · 前台（P0）
@@ -116,7 +138,9 @@
 **验收**
 
 - [ ] SSR 输出的 HTML 含项目名（`curl` 直接可见）
-- [ ] 精选 ≤ 6 条；领域入口 6 个；最新分析与深度研究各取对应栏目
+- [ ] 精选推荐取 `featured` 项目的 business 文章，卡片可点进文章
+- [ ] 「最新项目分析」取文章流（`/open-source/articles`），卡片显示类型/日期/阅读时长
+- [ ] 领域入口 5 个 + 全部；侧栏热门按研究密度排序
 - [ ] 三个区块空数据时显示占位文案
 - [ ] 375px 单列不溢出
 - [ ] 中英文切换正常（两份 i18n 都加了 key）

@@ -95,7 +95,7 @@
 
 | # | 路由 | 页面 | 数据来源 |
 | --- | --- | --- | --- |
-| P1 | `/open-source` | 栏目首页 | `open-source/projects` + `featured` + `categories` |
+| P1 | `/open-source` | 栏目首页 | `open-source/articles`（文章流）+ `featured` + `categories` |
 | P2 | `/open-source/projects` | 全部项目列表（分页 + 筛选） | `open-source/projects?pageNum=&category=` |
 | P3 | `/open-source/projects/[slug]` | 项目档案详情 | `open-source/projects/{slug}` |
 | P4 | `/open-source/category/[code]` | 领域列表 | `open-source/projects?category=` |
@@ -124,18 +124,18 @@
 
 > 这条与规划文档里 `/open-source/crawl4ai-business-analysis` 的设计不同，属于有意偏离。
 
-### 4.1 待决：导航入口（阻塞 V28）
+### 4.1 已确认：导航入口
 
 `nav_menu` 现有 6 个可见项（V26 `nav_final_six`）：首页 / 技术文章 / 技术专题 / 项目 / 知识产品 / 技术服务。
 
 | 方案 | 做法 | 优点 | 代价 |
 | --- | --- | --- | --- |
-| **A 加第 7 项**（建议） | 插入 `/open-source`，sort 45 | 栏目有一级入口；改动最小 | 打破 6 项整齐度；需确认移动端折叠 |
+| **A 加第 7 项**（已确认） | 插入 `/open-source`，**sort=25**（技术文章 20 与 技术专题 30 之间） | 栏目有一级入口；不改变其余各项相对顺序 | 导航由 6 项变 7 项 |
 | B 复用「项目」格 | `/projects` 页内两个 tab | 导航不变 | 两类内容语义不同；要改现有页面 |
 | C 挂在「技术专题」下 | `/topic` 页顶部加入口 | 不动导航 | 曝光最低 |
 
-**建议 A**：栏目要吸引创业者/独立开发者，藏二级等于没做。
-**未确认前，不写进 V28。**
+**已确认采用 A**（2026-11-20 视觉评审）。位置定在「技术文章」之后，因为它属于内容栏目，
+跟技术专题/项目同组；早前建议的 45（项目之后）已废弃。
 
 ### P1 栏目首页
 

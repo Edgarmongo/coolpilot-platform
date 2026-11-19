@@ -193,12 +193,19 @@ WHERE NOT EXISTS (SELECT 1 FROM `category` WHERE `category_name` = '开源项目
 
 ```sql
 -- V28：开源项目商业观察（CP-WEB-OS）
--- 新建三张表 + 三个栏目分类；不改任何现有表结构
+-- 新建三张表 + 三个栏目分类 + 一条导航；不改任何现有表结构
 
 -- 1) 建表：见 §2.1 / §2.2 / §2.3 三段 CREATE TABLE
 -- 2) 栏目分类：见 §3
--- 3) 导航：待 PRD §4.1 决策后追加，未定前不写
+
+-- 3) 导航：sort=25，落在「技术文章」20 与「技术专题」30 之间
+INSERT INTO `nav_menu` (`label`, `label_en`, `path`, `sort`, `visible`)
+SELECT '开源商业观察', 'Insights', '/open-source', 25, b'1' FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `nav_menu` WHERE `path` = '/open-source');
 ```
+
+> 插入 25 而不是 45：栏目属于内容类，跟技术文章/技术专题同组；且 25 不会改变
+> 其余各项的相对顺序，符合「不改其他菜单名称与顺序」的要求（2026-11-20 确认）。
 
 **幂等**：全部使用 `CREATE TABLE IF NOT EXISTS` 与 `INSERT ... WHERE NOT EXISTS`（与 V24 写法一致）。
 
@@ -226,14 +233,59 @@ DELETE FROM `category` WHERE `category_name` IN
 
 | # | 方法 | 路径 | 用途 |
 |---|---|---|---|
-| 1 | GET | `/open-source/projects` | 项目分页列表，支持 `category` / `tag` / `q` / `featured` / `pageNum` |
+| 1 | GET | `/open-source/projects` | 项目分页列表，支持 `category` / `tag` / `q` / `featured` / `sort` / `pageNum` |
 | 2 | GET | `/open-source/projects/{slug}` | 档案详情 |
 | 3 | GET | `/open-source/projects/{slug}/articles` | 关联文章（含 `relationType`） |
-| 4 | GET | `/open-source/categories` | 领域枚举 + 各自项目数 |
-| 5 | GET | `/open-source/tags` | 项目标签 + 计数 |
-| 6 | GET | `/open-source/featured` | 精选（≤ 6） |
-| 7 | GET | `/open-source/search?q=` | 栏目内搜索，返回 `{projects:[], articles:[]}` |
-| 8 | GET | `/open-source/blog/{blogId}/project` | 文章反查所属项目 |
+| 4 | GET | `/open-source/articles` | **文章流**：blog join 项目，供首页「最新项目分析」 |
+| 5 | GET | `/open-source/categories` | 领域枚举 + 各自项目数 |
+| 6 | GET | `/open-source/tags` | 项目标签 + 计数 |
+| 7 | GET | `/open-source/featured` | 精选：`featured` 项目的代表文章 |
+| 8 | GET | `/open-source/search?q=` | 栏目内搜索，返回 `{projects:[], articles:[]}` |
+| 9 | GET | `/open-source/blog/{blogId}/project` | 文章反查所属项目 |
+
+> **第 4 条是视觉稿评审后新增的**：首页卡片展示的是文章标题与阅读时长，不是项目名与篇数。
+> 按项目取数会让页面在只有 1 个项目时显得空；文章流同时带来更多可被收录的入口
+> （一个项目 4 篇 = 4 个 URL）。
+
+**`/open-source/articles` 响应**
+
+```json
+{
+  "code": 200,
+  "data": {
+    "list": [
+      { "id": 12, "title": "Crawl4AI 商业价值分析", "slug": "crawl4ai-business",
+        "description": "一句摘要", "coverUrl": "...", "readTime": 8,
+        "createTime": "2026-11-10", "relationType": "business",
+        "project": { "slug": "crawl4ai", "name": "Crawl4AI", "verdict": "deploy" } }
+    ],
+    "total": 4, "totalPage": 1
+  }
+}
+```
+
+筛选：`p.publish_status='published'` AND `b.is_published=b'1'`。
+
+**`/open-source/projects?sort=` 取值**
+
+| 值 | 排序 | 用途 |
+|---|---|---|
+| `default` | `featured DESC, sort ASC, update_time DESC` | 列表页 |
+| `density` | 站内分析篇数 DESC, `update_time` DESC | 侧栏「热门项目」 |
+
+> 侧栏刻意不按 star 排序：那等于把 star 当价值信号，与评估卡「star 不作判定依据」冲突。
+> 按「研究密度」排序传达的是「我们研究得多的项目」，任何导航站都能做前者。
+
+**精选推荐的取数（`/open-source/featured`）**
+
+```
+oss_project.featured=1
+  → 取该项目 relation_type='business' 的最新一篇已发布文章
+  → 无 business 文章时，退回项目本身（渲染简介，链接到档案）
+```
+
+不用 `blog.is_recommend`：该字段已被站内「随机推荐文章」占用（`BlogMapper.xml:172`），
+混用会让栏目文章出现在全站随机推荐里，语义不清。
 
 **`/open-source/projects/{slug}` 响应**
 
