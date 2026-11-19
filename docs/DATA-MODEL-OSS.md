@@ -111,10 +111,13 @@ CREATE TABLE IF NOT EXISTS `oss_project_tag`
 | `data-search` | 数据采集与搜索 |
 | `devtool` | 开发者工具 |
 | `enterprise` | 企业级开源软件 |
-| `business-model` | 开源商业模式 |
+
+> **2026-11-20 调整（由视觉稿发现）**：去掉了初稿的 `business-model`（开源商业模式）。
+> 它不是「项目属于哪个技术领域」，而是「从什么角度分析」——属于内容视角，不是分类维度。
+> 硬把两者放进一个下拉框，后台录入时会犹豫该选哪个。
 
 值域写在 `modules/opensource/enums/OssCategory.java`，前端按 i18n 映射显示中文。
-6 个值、单人运营、一年不变，建表 + 管理页 + 关联查询的成本大于收益。
+5 个值、单人运营、一年不变，建表 + 管理页 + 关联查询的成本大于收益。
 
 ### 2.5 结论档：五值
 

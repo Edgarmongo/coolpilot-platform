@@ -96,12 +96,16 @@
 | # | 路由 | 页面 | 数据来源 |
 | --- | --- | --- | --- |
 | P1 | `/open-source` | 栏目首页 | `open-source/projects` + `featured` + `categories` |
-| P2 | `/open-source/projects/[slug]` | 项目档案详情 | `open-source/projects/{slug}` |
-| P3 | `/open-source/category/[code]` | 领域列表 | `open-source/projects?category=` |
-| P4 | `/open-source/tag/[name]` | 标签列表 | `open-source/projects?tag=` |
-| P5 | `/open-source/search` | 栏目搜索 | `open-source/search?q=` |
-| P6 | `/blog/[id]` | 文章详情 | **复用现有**，加「所属项目」区块 |
-| P7 | `/admin/oss/projects` | 档案管理 | 新建后台页 |
+| P2 | `/open-source/projects` | 全部项目列表（分页 + 筛选） | `open-source/projects?pageNum=&category=` |
+| P3 | `/open-source/projects/[slug]` | 项目档案详情 | `open-source/projects/{slug}` |
+| P4 | `/open-source/category/[code]` | 领域列表 | `open-source/projects?category=` |
+| P5 | `/open-source/tag/[name]` | 标签列表 | `open-source/projects?tag=` |
+| P6 | `/open-source/search` | 栏目搜索 | `open-source/search?q=` |
+| P7 | `/blog/[id]` | 文章详情 | **复用现有**，加「所属项目」区块 |
+| P8 | `/admin/oss/projects` | 档案管理 | 新建后台页 |
+
+> P2 是视觉稿评审时补的：首页右上角「查看更多 →」需要一个落点，
+> 否则按钮无处可去。详见 `UI-OSS-INSIGHTS.md` §3.8。
 
 ### 4.0 一条硬规则：文章只有一个 URL
 
