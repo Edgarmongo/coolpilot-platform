@@ -3,8 +3,9 @@ export default defineNuxtConfig({
 	devtools: {enabled: false},
 	typescript: {strict: false},
 	css: [
-		// 新视觉令牌（--c-*）先加载，供新组件使用；旧令牌（--teal 等）仍在 main.css，
-		// 两套并存，页面按批迁移，避免一次性改掉全站 97 处引用
+		// ui-tokens.css 提供新组件用的 --c-* 令牌；main.css 是全站基础层
+		// （复位、排版、.card/.btn/.tag/.article 等旧类名也在这里，只改取值不改名字，
+		// 所以没逐页重构的页面也会跟着统一）。
 		'~/assets/css/ui-tokens.css',
 		'~/assets/css/main.css'
 	],

@@ -1,17 +1,24 @@
 <template>
 	<div>
-		<h1 class="page-title">{{ t('topics.title') }}</h1>
-		<p class="page-desc">{{ t('topics.desc') }}</p>
+		<div class="page-head">
+			<h1 class="page-title">{{ t('topics.title') }}</h1>
+			<p class="page-desc">{{ t('topics.desc') }}</p>
+		</div>
 
-		<div v-if="!topics.length" class="card muted">{{ t('topics.empty') }}</div>
+		<div v-if="!topics.length" class="empty">{{ t('topics.empty') }}</div>
 
-		<div v-else class="topic-grid">
-			<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)" class="topic-card">
-				<div v-if="item.cover" class="cover" :style="{backgroundImage: `url(${item.cover})`}"></div>
-				<div class="body">
-					<h2>{{ item.title }}</h2>
-					<p class="desc">{{ item.description || t('topics.noDesc') }}</p>
-					<span class="meta">{{ t('topics.meta', {n: item.articleCount || 0, date: formatDate(item.updateTime)}) }}</span>
+		<div v-else class="grid3 section">
+			<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)"
+			          class="card cover-card">
+				<img v-if="item.cover" class="cover-img" :src="item.cover" :alt="item.title" loading="lazy">
+				<AppCover v-else :seed="`topic-${item.id}-${item.title}`" :height="132" :variant="2"/>
+				<div class="card-pad">
+					<h2 class="topic-title">{{ item.title }}</h2>
+					<p class="topic-desc">{{ item.description || t('topics.noDesc') }}</p>
+					<div class="topic-meta">
+						<span>{{ t('home.articleCount', {n: item.articleCount || 0}) }}</span>
+						<span v-if="item.updateTime">{{ formatDate(item.updateTime, 'YYYY-MM-DD') }}</span>
+					</div>
 				</div>
 			</NuxtLink>
 		</div>
@@ -32,47 +39,45 @@ useHead({
 </script>
 
 <style scoped>
-.topic-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 14px;
+.section {
+	padding-top: 26px;
 }
 
-.topic-card {
+.cover-card {
+	padding: 0;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	background: #fff;
-	border: 1px solid rgba(15, 118, 110, .12);
-	border-radius: 12px;
-	overflow: hidden;
-	transition: transform .15s, box-shadow .15s;
+	transition: transform .18s ease, border-color .18s ease;
 }
 
-.topic-card:hover {
+.cover-card:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 12px 28px rgba(15, 118, 110, .1);
+	border-color: var(--line-2);
 }
 
-.cover {
-	height: 108px;
-	background-size: cover;
-	background-position: center;
+.cover-img {
+	width: 100%;
+	height: 132px;
+	object-fit: cover;
+	display: block;
 }
 
-.body {
-	padding: 14px 16px 16px;
+.topic-title {
+	font-size: 16.5px;
+	font-weight: 700;
+	line-height: 1.45;
+	margin-bottom: 8px;
 }
 
-.body h2 {
-	margin: 0 0 6px;
-	font-size: 16px;
-	font-weight: 650;
+.cover-card:hover .topic-title {
+	color: var(--teal);
 }
 
-.desc {
-	margin: 0 0 10px;
+.topic-desc {
+	flex: 1;
 	font-size: 13px;
-	line-height: 1.7;
+	line-height: 1.65;
 	color: var(--muted);
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
@@ -80,7 +85,14 @@ useHead({
 	overflow: hidden;
 }
 
-.meta {
+.topic-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 14px;
+	padding-top: 11px;
+	border-top: 1px solid var(--line);
 	font-size: 12px;
 	color: var(--muted);
 }

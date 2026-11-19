@@ -38,7 +38,7 @@
   "home": {
     "tag": "技术 · 知识 · 服务",
     "title": "把技术写成可以交付的东西",
-    "desc": "文章、课程、文档与代码资源，一套账号打通阅读、购买与下载。",
+    "desc": "这里记录我实际部署、测试、踩坑之后的技术结论——包括失败的实验、被推翻的判断，以及那些官方文档不会告诉你的边界。研究结果会变成文章、开源项目分析，以及可以直接用的产品与工具。",
     "ctaKnowledge": "看看知识付费",
     "ctaService": "技术服务",
     "ctaAsk": "智能问答",
@@ -46,7 +46,7 @@
     "blogUnit": "篇文章",
     "productUnit": "个知识商品",
     "latest": "最新文章",
-    "viewAll": "全部文章 →",
+    "viewAll": "全部文章",
     "empty": "还没有文章",
     "reads": "{n} 次阅读",
     "entryBlog": "技术文章",
@@ -74,14 +74,43 @@
     "entryTopicDesc": "按方向串成学习路径",
     "entryProject": "项目",
     "entryProjectDesc": "真实工程与技术选型",
-    "planetFallbackDesc": "系统化学习资料、项目实践与持续更新。"
+    "planetFallbackDesc": "系统化学习资料、项目实践与持续更新。",
+    "eyebrow": "CoolSkyAI · 技术知识与服务",
+    "titleA": "把技术研究做成",
+    "titleB": "能复用的东西",
+    "lead": "写跑过的，讲清楚的，做成能用的。",
+    "note": "结论标注证据等级 · 失败案例同样保留",
+    "browse": "开始阅读",
+    "latestSub": "部署、实验、源码与复盘，都是跑过之后写的",
+    "topicsSub": "把零散的文章串成一条阅读路径",
+    "productsSub": "把研究整理成可以直接上手的东西",
+    "servicesSub": "需求 → 报价 → 立项 → 里程碑 → 交付 → 验收",
+    "viewTopics": "全部专题",
+    "viewProducts": "全部产品",
+    "topicUnit": "个专题",
+    "topicEmpty": "专题还在整理",
+    "serviceNote": "先聊清楚问题再报价，不接受「先做出来看看」。",
+    "articleCount": "{n} 篇",
+    "minutes": "{n} 分钟"
   },
   "archives": {
     "title": "归档",
     "desc": "按时间倒序，共 {n} 篇",
     "empty": "还没有文章",
     "count": "（{n} 篇）",
-    "headTitle": "归档"
+    "headTitle": "归档",
+    "listTitle": "技术文章",
+    "listDesc": "部署、实验、源码与复盘。每篇都标注了运行环境与验证范围，失败的部分同样保留。",
+    "viewList": "列表",
+    "viewTimeline": "时间线",
+    "all": "全部",
+    "sideStats": "文章统计",
+    "sideTopics": "技术专题",
+    "sideArchive": "按时间归档",
+    "statPosts": "篇文章",
+    "statTopics": "个专题",
+    "countLabel": "共 {n} 篇",
+    "listEmpty": "还没有发布文章"
   },
   "moments": {
     "title": "动态",
@@ -159,7 +188,12 @@
       "COLUMN": "专栏",
       "CODE": "代码",
       "SERVICE": "服务"
-    }
+    },
+    "crumbHome": "首页",
+    "toc": "本文目录",
+    "backToList": "返回文章列表",
+    "notVerified": "未验证范围",
+    "relatedReads": "相关阅读"
   },
   "auth": {
     "loginTitle": "访客登录",

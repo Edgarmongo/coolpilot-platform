@@ -50,8 +50,10 @@
 				<div class="container nav-inner">
 					<template v-for="item in navItems" :key="item.id || item.path">
 						<a v-if="isExternal(item.path)" :href="item.path" class="nav-item"
+						   :class="{'is-active': isActive(item.path)}"
 						   :target="item.target || '_self'" rel="noopener noreferrer">{{ item.label }}</a>
-						<NuxtLink v-else :to="localePath(item.path)" class="nav-item" active-class="is-active"
+						<NuxtLink v-else :to="localePath(item.path)" class="nav-item"
+						          :class="{'is-active': isActive(item.path)}"
 						          :target="item.target === '_blank' ? '_blank' : undefined">{{ item.label }}</NuxtLink>
 					</template>
 				</div>
@@ -66,19 +68,32 @@
 
 		<footer class="footer">
 			<div class="container">
-				<nav class="footer-links">
-					<NuxtLink :to="localePath('/planet')">{{ t('footer.planet') }}</NuxtLink>
-					<NuxtLink :to="localePath('/follow')">{{ t('footer.follow') }}</NuxtLink>
-					<NuxtLink :to="localePath('/about')">{{ t('footer.about') }}</NuxtLink>
-					<NuxtLink :to="localePath('/friends')">{{ t('footer.friends') }}</NuxtLink>
-				</nav>
-				<div class="footer-info">
-					<span v-if="brand.footerText">{{ brand.footerText }}</span>
-					<span v-if="brand.footerText && brand.footerTagline" class="dot">·</span>
-					<span v-if="brand.footerTagline">{{ brand.footerTagline }}</span>
-					<span v-if="brand.beian && (brand.footerText || brand.footerTagline)" class="dot">·</span>
+				<div class="foot-top">
+					<div>
+						<NuxtLink :to="localePath('/')" class="foot-brand">
+							<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
+							<span>{{ brand.brandName }}</span>
+						</NuxtLink>
+						<p v-if="brand.footerText || brand.footerTagline" class="foot-desc">
+							{{ [brand.footerText, brand.footerTagline].filter(Boolean).join(' · ') }}
+						</p>
+					</div>
+					<nav class="foot-links">
+						<NuxtLink :to="localePath('/planet')">{{ t('footer.planet') }}</NuxtLink>
+						<NuxtLink :to="localePath('/follow')">{{ t('footer.follow') }}</NuxtLink>
+						<NuxtLink :to="localePath('/about')">{{ t('footer.about') }}</NuxtLink>
+						<NuxtLink :to="localePath('/friends')">{{ t('footer.friends') }}</NuxtLink>
+					</nav>
+				</div>
+				<div class="foot-bottom">
+					<span>© {{ year }} {{ brand.brandName }}</span>
 					<a v-if="brand.beian" class="beian" href="https://beian.miit.gov.cn/" target="_blank"
 					   rel="noopener noreferrer">{{ brand.beian }}</a>
+					<span class="foot-links-sm">
+						<NuxtLink :to="localePath('/archives')">{{ t('nav.archives') }}</NuxtLink>
+						<NuxtLink :to="localePath('/topic')">{{ t('nav.topics') }}</NuxtLink>
+						<NuxtLink :to="localePath('/knowledge')">{{ t('nav.knowledge') }}</NuxtLink>
+					</span>
 				</div>
 			</div>
 		</footer>
@@ -87,6 +102,7 @@
 
 <script setup lang="ts">
 const router = useRouter()
+const route = useRoute()
 const {call, isLogin, user, clearSession} = useApi()
 // 品牌名与页脚文案来自站点设置，接口失败时由 composable 回落到改造前的默认文案
 const brand = useBrand()
@@ -94,6 +110,8 @@ const brand = useBrand()
 const {t, locale} = useI18n()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
+
+const year = new Date().getFullYear()
 
 const langOptions = [
 	{code: 'zh-CN', short: '中'},
@@ -150,6 +168,19 @@ function isExternal(path: string) {
 	return /^https?:\/\//i.test(path || '')
 }
 
+/**
+ * 选中态要自己算，不能用 NuxtLink 的 active-class：
+ * 默认的 router-link-active 是前缀匹配，首页 "/" 会在所有页面都亮起来。
+ */
+function isActive(path: string) {
+	if (isExternal(path)) {
+		return false
+	}
+	const current = route.path.replace(/\/$/, '') || '/'
+	const target = (localePath(path) || '/').replace(/\/$/, '') || '/'
+	return current === target || (target !== '/' && current.startsWith(target + '/'))
+}
+
 async function logout() {
 	// 先让服务端吊销 token（递增版本号），失败也要清本地，不能卡住用户
 	await call('/me/logout', {method: 'POST'}).catch(() => null)
@@ -163,22 +194,25 @@ async function logout() {
 	display: flex;
 	flex-direction: column;
 	min-height: 100vh;
+	background: #fff;
 }
 
+/* ============================================================
+   头部：白底双行，滚动时吸顶
+   ============================================================ */
 .header {
 	position: sticky;
 	top: 0;
-	z-index: 20;
-	background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-deep) 100%);
-	box-shadow: 0 1px 6px rgba(0, 0, 0, .12);
+	z-index: 30;
+	background: #fff;
+	border-bottom: 1px solid var(--line);
 }
 
-/* ---------------- 第一行 ---------------- */
 .topbar-inner {
 	display: flex;
 	align-items: center;
-	gap: 18px;
-	height: 58px;
+	gap: 24px;
+	height: 64px;
 }
 
 .brand {
@@ -186,6 +220,10 @@ async function logout() {
 	align-items: center;
 	gap: 10px;
 	flex-shrink: 0;
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: -.2px;
+	color: var(--ink);
 }
 
 .brand-mark {
@@ -194,149 +232,153 @@ async function logout() {
 	justify-content: center;
 	width: 32px;
 	height: 32px;
-	border-radius: 8px;
-	background: rgba(255, 255, 255, .14);
+	border-radius: 9px;
+	background: var(--teal);
 	color: #fff;
-	font-weight: 700;
 	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: .5px;
 	overflow: hidden;
 	white-space: nowrap;
 }
 
 .brand-text {
-	font-size: 17px;
-	font-weight: 700;
-	letter-spacing: .3px;
-	color: #fff;
+	white-space: nowrap;
 }
 
+/* 搜索：浅青底胶囊，右侧对齐 */
 .search {
 	display: flex;
 	align-items: center;
 	flex: 1;
-	max-width: 340px;
-	height: 34px;
-	border-radius: 8px;
-	background: rgba(0, 0, 0, .18);
+	max-width: 400px;
+	height: 38px;
+	margin-left: auto;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: var(--teal-050);
 	overflow: hidden;
+	transition: border-color .15s, background .15s;
+}
+
+.search:focus-within {
+	border-color: var(--line-2);
+	background: #fff;
 }
 
 .search-input {
 	flex: 1;
 	min-width: 0;
 	height: 100%;
-	padding: 0 12px;
+	padding: 0 16px;
 	border: none;
 	background: transparent;
-	color: #fff;
+	color: var(--ink);
 	font-size: 13.5px;
 	outline: none;
 }
 
 .search-input::placeholder {
-	color: rgba(255, 255, 255, .6);
+	color: var(--faint);
 }
 
 .search-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 34px;
+	width: 44px;
 	height: 100%;
 	border: none;
 	background: transparent;
-	color: rgba(255, 255, 255, .8);
+	color: var(--teal);
 	cursor: pointer;
 }
 
 .search-btn:hover {
-	color: #fff;
+	color: var(--teal-dark);
 }
 
 .topbar-right {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 16px;
 	margin-left: auto;
 	flex-shrink: 0;
+	font-size: 13.5px;
+	color: var(--ink-2);
 }
 
 .langs {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 8px;
+	color: var(--muted);
 }
 
 .lang-item {
-	padding: 3px 7px;
-	border-radius: 6px;
-	font-size: 12.5px;
-	color: rgba(255, 255, 255, .75);
+	font-size: 13px;
+	color: var(--muted);
 }
 
 .lang-item:hover {
-	color: #fff;
+	color: var(--teal);
 }
 
 .lang-item.active {
-	color: #fff;
+	color: var(--teal);
 	font-weight: 600;
-	background: rgba(255, 255, 255, .16);
 }
 
 .topbar-my {
-	font-size: 13.5px;
-	color: rgba(255, 255, 255, .85);
+	color: var(--ink-2);
 }
 
 .topbar-my:hover {
-	color: #fff;
+	color: var(--teal);
 }
 
 .topbar-login {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	padding: 6px 14px;
-	border-radius: 8px;
-	background: #fff;
 	color: var(--teal);
-	font-size: 13.5px;
 	font-weight: 600;
 }
 
 .topbar-login:hover {
-	background: #eafff5;
+	color: var(--teal-dark);
 }
 
 .who {
 	font-size: 13px;
-	color: rgba(255, 255, 255, .85);
+	color: var(--muted);
+	max-width: 120px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .link {
 	border: none;
 	background: none;
-	color: rgba(255, 255, 255, .8);
+	padding: 0;
+	color: var(--muted);
 	font-size: 13px;
 	cursor: pointer;
 }
 
 .link:hover {
-	color: #fff;
+	color: var(--teal);
 }
 
-/* ---------------- 第二行：菜单 ---------------- */
-.nav {
-	background: rgba(0, 0, 0, .08);
-	border-top: 1px solid rgba(255, 255, 255, .08);
-}
-
+/* ============================================================
+   第二行：菜单（选中态用下划线，不用色块）
+   ============================================================ */
 .nav-inner {
 	display: flex;
 	align-items: center;
-	gap: 2px;
-	height: 44px;
+	gap: 30px;
+	height: 52px;
 	overflow-x: auto;
 	scrollbar-width: none;
 }
@@ -346,81 +388,135 @@ async function logout() {
 }
 
 .nav-item {
-	padding: 6px 13px;
-	border-radius: 7px;
-	font-size: 13.5px;
-	color: rgba(255, 255, 255, .85);
+	position: relative;
+	padding: 15px 0;
+	font-size: 14.5px;
+	color: var(--ink-2);
 	white-space: nowrap;
+	transition: color .15s;
 }
 
 .nav-item:hover {
-	background: rgba(255, 255, 255, .14);
-	color: #fff;
-}
-
-.nav-item.is-active {
-	color: #fff;
-	font-weight: 600;
-	background: rgba(255, 255, 255, .18);
-}
-
-.main {
-	flex: 1;
-	padding: 26px 0 40px;
-}
-
-.footer {
-	border-top: 1px solid var(--line);
-	padding: 22px 0 20px;
-	color: var(--muted);
-	font-size: 12.5px;
-	text-align: center;
-}
-
-.footer-links {
-	display: flex;
-	justify-content: center;
-	flex-wrap: wrap;
-	gap: 22px;
-	margin-bottom: 12px;
-}
-
-.footer-links a {
-	color: var(--muted);
-	font-size: 13px;
-}
-
-.footer-links a:hover {
 	color: var(--teal);
 }
 
-.footer-info {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 4px;
+.nav-item.is-active {
+	color: var(--teal);
+	font-weight: 600;
 }
 
-.dot {
-	margin: 0 6px;
+.nav-item.is-active::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -1px;
+	height: 2px;
+	border-radius: 2px;
+	background: var(--teal);
+}
+
+/* ============================================================
+   主体
+   ============================================================ */
+.main {
+	flex: 1;
+	/* 22px 顶距留给没有自带标题区的页面（关于、服务、动态…），
+	   有 .page-head 的页面在里面再补一段，合计约 40px。
+	   首页首屏用负 margin 抵消这段距离，让浅色背景贴住头部。 */
+	padding: 22px 0 56px;
+	/* 页面里的通栏区块用 100vw 拉宽度，这里统一收掉横向溢出。
+	   放在 main 上而不是 body 上：body 一旦成为裁剪容器，头部吸顶会失效。 */
+	overflow-x: clip;
+}
+
+/* ============================================================
+   页脚
+   ============================================================ */
+.footer {
+	border-top: 1px solid var(--line);
+	padding: 36px 0 40px;
+	margin-top: 8px;
+}
+
+.foot-top {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 32px;
+	flex-wrap: wrap;
+}
+
+.foot-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.foot-desc {
+	margin-top: 10px;
+	font-size: 13px;
+	color: var(--muted);
+}
+
+.foot-links {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 22px;
+	font-size: 13.5px;
+	color: var(--ink-2);
+}
+
+.foot-links a:hover {
+	color: var(--teal);
+}
+
+.foot-bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-top: 26px;
+	padding-top: 18px;
+	border-top: 1px solid var(--line);
+	font-size: 12.5px;
+	color: var(--muted);
 }
 
 .beian {
 	color: var(--muted);
-	text-decoration: none;
 }
 
 .beian:hover {
 	color: var(--teal);
 }
 
-/* 移动端：顶栏换行，搜索框占满，菜单横向可滚动 */
-@media (max-width: 720px) {
+.foot-links-sm {
+	display: flex;
+	gap: 16px;
+}
+
+.foot-links-sm a {
+	color: var(--muted);
+}
+
+.foot-links-sm a:hover {
+	color: var(--teal);
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 860px) {
 	.topbar-inner {
 		flex-wrap: wrap;
 		height: auto;
-		padding: 10px 0;
+		padding: 12px 0 10px;
 		gap: 10px;
 	}
 
@@ -428,10 +524,26 @@ async function logout() {
 		order: 3;
 		flex-basis: 100%;
 		max-width: none;
+		margin-left: 0;
+	}
+
+	.topbar-right {
+		margin-left: auto;
 	}
 
 	.nav-inner {
-		height: 42px;
+		gap: 22px;
+		height: 48px;
+	}
+}
+
+@media (max-width: 520px) {
+	.langs, .topbar-my {
+		display: none;
+	}
+
+	.foot-bottom {
+		justify-content: flex-start;
 	}
 }
 </style>

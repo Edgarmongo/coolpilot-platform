@@ -1,72 +1,129 @@
 <template>
-	<div>
-		<div class="card">
-			<!--已解锁 / 无密码-->
-			<template v-if="blog">
-				<h1 class="page-title">{{ blog.title }}</h1>
-				<div class="post-meta meta">
-					<span>{{ formatDate(blog.createTime, 'YYYY-MM-DD') }}</span>
-					<span v-if="blog.category">· {{ blog.category.name }}</span>
-					<span>· {{ t('post.reads', {n: blog.views || 0}) }}</span>
-				</div>
-				<div class="article" v-html="blog.content"></div>
+	<div class="post-page">
+		<!-- 已解锁 / 无密码 -->
+		<template v-if="blog">
+			<div class="with-side">
+				<article class="article-main">
+					<nav class="crumb">
+						<NuxtLink :to="localePath('/')">{{ t('post.crumbHome') }}</NuxtLink>
+						<span class="crumb-sep">/</span>
+						<NuxtLink :to="localePath('/archives')">{{ t('archives.listTitle') }}</NuxtLink>
+						<template v-if="blog.category">
+							<span class="crumb-sep">/</span>
+							<NuxtLink :to="localePath(`/category/${blog.category.name}`)">{{ blog.category.name }}</NuxtLink>
+						</template>
+					</nav>
 
-				<!-- 本篇所属专题：从单篇回到系列阅读路径 -->
-				<div v-if="topics.length" class="topic-tip">
-					<span class="muted">{{ t('post.inTopic') }}</span>
-					<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)" class="tag">
-						{{ item.title }}
-					</NuxtLink>
-					<span class="muted" v-if="topics[0].articleCount">{{ t('post.topicCount', {n: topics[0].articleCount}) }}</span>
-				</div>
+					<div class="tags article-tags">
+						<span v-if="blog.category" class="tag field">{{ blog.category.name }}</span>
+						<NuxtLink v-for="tag in (blog.tags || [])" :key="tag.id" :to="localePath(`/tag/${tag.name}`)"
+						          class="tag">{{ tag.name }}</NuxtLink>
+					</div>
 
-				<!-- 关联付费内容：内容底部导流到商品 -->
-				<div v-if="relatedProducts.length" class="related">
-					<h3>{{ t('post.related') }}</h3>
-					<div class="related-grid">
-						<NuxtLink v-for="item in relatedProducts" :key="item.id"
-						          :to="localePath(`/knowledge/${item.productNo}`)" class="related-item">
-							<div class="ri-head">
-								<span class="tag">{{ typeText(item.productType) }}</span>
-								<span v-if="item.owned" class="owned">{{ t('post.owned') }}</span>
-							</div>
-							<strong>{{ item.title }}</strong>
-							<p class="muted ri-summary">{{ item.summary }}</p>
-							<span class="amount">{{ priceLabel(item) }}</span>
+					<h1 class="article-title">{{ blog.title }}</h1>
+					<p v-if="plainText(blog.description)" class="article-sub">{{ plainText(blog.description) }}</p>
+
+					<div class="meta article-meta">
+						<span>{{ formatDate(blog.createTime, 'YYYY-MM-DD') }}</span>
+						<template v-if="blog.readTime">
+							<span class="sep">·</span><span>{{ t('home.minutes', {n: blog.readTime}) }}</span>
+						</template>
+						<span class="sep">·</span>
+						<span>{{ t('post.reads', {n: blog.views || 0}) }}</span>
+					</div>
+
+					<div class="article-cover">
+						<AppCover :seed="`${blog.id}-${blog.title}`" :height="220"/>
+					</div>
+
+					<!-- 正文：标题锚点由 rendered 统一注入，正文原文不改 -->
+					<div class="article" v-html="rendered.html"></div>
+
+					<!-- 本篇所属专题：从单篇回到系列阅读路径 -->
+					<div v-if="topics.length" class="topic-tip">
+						<span class="muted">{{ t('post.inTopic') }}</span>
+						<NuxtLink v-for="item in topics" :key="item.id" :to="localePath(`/topic/${item.slug}`)" class="tag">
+							{{ item.title }}
+						</NuxtLink>
+						<span v-if="topics[0].articleCount" class="muted">{{ t('post.topicCount', {n: topics[0].articleCount}) }}</span>
+					</div>
+
+					<!-- 关联付费内容 -->
+					<div v-if="relatedProducts.length" class="related">
+						<h3 class="block-title">{{ t('post.related') }}</h3>
+						<div class="related-grid">
+							<NuxtLink v-for="item in relatedProducts" :key="item.id"
+							          :to="localePath(`/knowledge/${item.productNo}`)" class="related-item">
+								<div class="ri-head">
+									<span class="tag">{{ typeText(item.productType) }}</span>
+									<span v-if="item.owned" class="owned">{{ t('post.owned') }}</span>
+								</div>
+								<strong>{{ item.title }}</strong>
+								<p class="muted ri-summary">{{ item.summary }}</p>
+								<span class="amount">{{ priceLabel(item) }}</span>
+							</NuxtLink>
+						</div>
+					</div>
+
+					<!-- 收藏与点赞：未登录时点击跳转登录 -->
+					<div class="actions">
+						<button :class="['act', {active: favorited}]" @click="toggleFavorite">
+							{{ favorited ? t('post.favorited') : t('post.favorite') }}
+						</button>
+						<button :class="['act', {active: liked}]" @click="toggleLike">
+							{{ liked ? t('post.liked') : t('post.like') }}<span v-if="likeCount" class="cnt">{{ likeCount }}</span>
+						</button>
+						<NuxtLink :to="localePath('/archives')" class="act act-link">{{ t('post.backToList') }}</NuxtLink>
+					</div>
+
+					<CommentSection :blog-id="blogId"/>
+				</article>
+
+				<aside class="side">
+					<div v-if="rendered.toc.length > 1" class="side-block">
+						<div class="side-title">{{ t('post.toc') }}</div>
+						<ul class="toc">
+							<li v-for="item in rendered.toc" :key="item.id" :class="{lv3: item.lv === 3}">
+								<a :href="`#${item.id}`">{{ item.text }}</a>
+							</li>
+						</ul>
+					</div>
+
+					<div v-if="relatedPosts.length" class="side-block">
+						<div class="side-title">{{ t('post.relatedReads') }}</div>
+						<ul class="side-list">
+							<li v-for="item in relatedPosts" :key="item.id">
+								<NuxtLink :to="localePath(`/blog/${item.slug || item.id}`)">{{ item.title }}</NuxtLink>
+							</li>
+						</ul>
+					</div>
+
+					<div class="side-block">
+						<div class="side-title">{{ t('nav.archives') }}</div>
+						<NuxtLink :to="localePath('/archives')" class="btn btn-ghost btn-sm side-btn">
+							{{ t('post.backToList') }}
 						</NuxtLink>
 					</div>
-				</div>
+				</aside>
+			</div>
+		</template>
 
-				<!--收藏与点赞：未登录时点击跳转登录-->
-				<div class="actions">
-					<button :class="['act', {active: favorited}]" @click="toggleFavorite">
-						{{ favorited ? t('post.favorited') : t('post.favorite') }}
+		<!-- 需要密码 -->
+		<div v-else-if="locked" class="locked-wrap">
+			<div class="card locked">
+				<h1 class="page-title">{{ t('post.lockedTitle') }}</h1>
+				<p class="page-desc">{{ message || t('post.lockedDesc') }}</p>
+				<div class="lock-form">
+					<input v-model="password" type="password" :placeholder="t('post.pwdPlaceholder')" @keyup.enter="unlock">
+					<button class="btn" :disabled="unlocking" @click="unlock">
+						{{ unlocking ? t('post.verifying') : t('post.unlock') }}
 					</button>
-					<button :class="['act', {active: liked}]" @click="toggleLike">
-						{{ liked ? t('post.liked') : t('post.like') }}<span v-if="likeCount" class="cnt">{{ likeCount }}</span>
-					</button>
 				</div>
-			</template>
-
-			<!--需要密码-->
-			<template v-else-if="locked">
-				<div class="lock">
-					<h1 class="page-title">{{ t('post.lockedTitle') }}</h1>
-					<p class="page-desc">{{ message || t('post.lockedDesc') }}</p>
-					<div class="lock-form">
-						<input v-model="password" type="password" :placeholder="t('post.pwdPlaceholder')" @keyup.enter="unlock">
-						<button class="btn" :disabled="unlocking" @click="unlock">
-							{{ unlocking ? t('post.verifying') : t('post.unlock') }}
-						</button>
-					</div>
-					<p class="muted">{{ t('post.unlockHint') }}</p>
-				</div>
-			</template>
-
-			<div v-else class="empty">{{ message || t('post.notFound') }}</div>
+				<p class="muted">{{ t('post.unlockHint') }}</p>
+			</div>
 		</div>
 
-		<CommentSection v-if="blog" :blog-id="blogId"/>
+		<div v-else class="empty">{{ message || t('post.notFound') }}</div>
 	</div>
 </template>
 
@@ -116,8 +173,37 @@ const liked = ref(false)
 const likeCount = ref(0)
 const relatedProducts = ref<any[]>([])
 const topics = ref<any[]>([])
+const relatedPosts = ref<any[]>([])
 // 密码凭证按文章维度存，30 天有效
 const pwdToken = useCookie<string | null>(`cp_blog_pwd_${param}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
+
+/**
+ * 正文里给 h2/h3 补 id，供右侧目录跳转。
+ *
+ * 为什么不改后端：Markdown 转 HTML 是 CMS 契约的一部分（5 处共用），
+ * 在这里按渲染结果加锚点，比给整条链路加参数影响面小得多。
+ * 原文不落库、不改写，每次渲染重新生成，规则简单可预测。
+ */
+const rendered = computed<{html: string, toc: {id: string, text: string, lv: number}[]}>(() => {
+	const toc: {id: string, text: string, lv: number}[] = []
+	let index = 0
+	const html = String(blog.value?.content || '').replace(
+		/<h([23])([^>]*)>([\s\S]*?)<\/h\1>/g,
+		(match, level, attrs, inner) => {
+			const text = String(inner).replace(/<[^>]+>/g, '').trim()
+			if (!text) {
+				return match
+			}
+			index += 1
+			const id = `sec-${index}`
+			toc.push({id, text, lv: Number(level)})
+			// 正文里如果已经有 id，先去掉，避免同一元素出现两个 id
+			const cleanAttrs = String(attrs).replace(/\sid="[^"]*"/g, '')
+			return `<h${level}${cleanAttrs} id="${id}">${inner}</h${level}>`
+		}
+	)
+	return {html, toc}
+})
 
 async function fetchBlog() {
 	const headers: Record<string, string> = {}
@@ -130,7 +216,7 @@ async function fetchBlog() {
 		blog.value = res.data
 		if (res.data && res.data.id) {
 			blogId.value = res.data.id
-			await Promise.all([loadRelated(), loadTopics()])
+			await Promise.all([loadRelated(), loadTopics(), loadRelatedPosts()])
 		}
 		locked.value = false
 		message.value = ''
@@ -230,6 +316,20 @@ async function loadRelated() {
 	relatedProducts.value = (res && res.code === 200 && res.data) ? res.data : []
 }
 
+/**
+ * 侧栏「相关阅读」：优先同分类，没有分类就退回最新文章。
+ * 一律排除当前这篇，否则会出现「相关阅读：本文」。
+ */
+async function loadRelatedPosts() {
+	const current = blog.value || {}
+	const url = current.category?.name
+		? `/category?categoryName=${encodeURIComponent(current.category.name)}&pageNum=1`
+		: '/blogs?pageNum=1'
+	const res: any = await call(url).catch(() => null)
+	const list = (res && res.data && res.data.list) || []
+	relatedPosts.value = list.filter((item: any) => item.id !== current.id).slice(0, 5)
+}
+
 function typeText(type: string) {
 	const key = `post.types.${type}`
 	return te(key) ? t(key) : type
@@ -273,107 +373,112 @@ if (blog.value) {
 </script>
 
 <style scoped>
-.meta {
-	margin: 0 0 18px;
-	padding-bottom: 14px;
+/* ============================================================
+   标题区
+   ============================================================ */
+.crumb {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	font-size: 12.5px;
+	color: var(--muted);
+	margin: 26px 0 18px;
+}
+
+.crumb a:hover {
+	color: var(--teal);
+}
+
+.crumb-sep {
+	color: var(--faint);
+}
+
+.article-tags {
+	margin-bottom: 14px;
+}
+
+.article-title {
+	font-size: 34px;
+	font-weight: 800;
+	line-height: 1.35;
+	letter-spacing: -.8px;
+	margin-bottom: 14px;
+}
+
+.article-sub {
+	font-size: 15.5px;
+	line-height: 1.75;
+	color: var(--muted);
+	margin-bottom: 18px;
+	max-width: 760px;
+}
+
+.article-meta {
+	padding-bottom: 18px;
 	border-bottom: 1px solid var(--line);
 }
 
-.lock {
-	padding: 40px 0 30px;
-	text-align: center;
-}
-
-.lock .page-desc {
-	margin-bottom: 20px;
-}
-
-.lock-form {
-	display: flex;
-	gap: 10px;
-	justify-content: center;
-	max-width: 340px;
-	margin: 0 auto 12px;
-}
-
-.lock-form input {
-	flex: 1;
-	padding: 9px 12px;
+.article-cover {
+	margin: 26px 0 0;
+	border-radius: var(--radius);
+	overflow: hidden;
 	border: 1px solid var(--line);
-	border-radius: 8px;
-	font-size: 14px;
-	outline-color: var(--teal);
 }
 
-.actions {
-	display: flex;
-	gap: 10px;
-	margin-top: 26px;
-	padding-top: 18px;
-	border-top: 1px solid var(--line);
+/* ============================================================
+   正文
+   ============================================================ */
+.article {
+	margin-top: 30px;
 }
 
-.act {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 7px 18px;
-	border: 1px solid var(--line);
-	border-radius: 999px;
-	background: #fff;
-	color: var(--muted);
-	font-size: 13.5px;
-	cursor: pointer;
-	transition: all .15s;
-}
-
-.act:hover {
-	border-color: var(--teal);
-	color: var(--teal);
-}
-
-.act.active {
-	border-color: var(--teal);
-	background: #eef7f5;
-	color: var(--teal);
-	font-weight: 600;
-}
-
-.cnt {
-	font-size: 12px;
-	opacity: .8;
-}
-
-.related {
-	margin: 18px 0 4px;
-	padding-top: 14px;
-	border-top: 1px dashed var(--line);
-}
-
-.related h3 {
-	margin: 0 0 10px;
+.block-title {
 	font-size: 15px;
+	font-weight: 700;
+	margin-bottom: 12px;
+}
+
+.topic-tip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 30px;
+	padding: 14px 16px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--teal-050);
+}
+
+/* ============================================================
+   关联产品 / 操作
+   ============================================================ */
+.related {
+	margin-top: 34px;
+	padding-top: 20px;
+	border-top: 1px solid var(--line);
 }
 
 .related-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-	gap: 10px;
+	gap: 12px;
 }
 
 .related-item {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+	padding: 14px 16px;
 	border: 1px solid var(--line);
 	border-radius: 10px;
-	padding: 10px 12px;
-	transition: box-shadow .15s, transform .15s;
+	transition: transform .18s, border-color .18s;
 }
 
 .related-item:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 20px rgba(15, 118, 110, .08);
+	border-color: var(--line-2);
 }
 
 .ri-head {
@@ -382,9 +487,18 @@ if (blog.value) {
 	justify-content: space-between;
 }
 
+.ri-head .tag {
+	padding: 3px 7px;
+}
+
 .owned {
 	font-size: 12px;
 	color: var(--teal);
+}
+
+.related-item strong {
+	font-size: 14.5px;
+	line-height: 1.5;
 }
 
 .ri-summary {
@@ -397,15 +511,108 @@ if (blog.value) {
 	overflow: hidden;
 }
 
-.topic-tip {
+.amount {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--teal);
+}
+
+.actions {
 	display: flex;
 	align-items: center;
-	gap: 8px;
 	flex-wrap: wrap;
-	margin: 18px 0 0;
-	padding: 10px 12px;
-	border-radius: 10px;
-	background: #f4faf8;
-	border: 1px solid rgba(15, 118, 110, .12);
+	gap: 10px;
+	margin-top: 30px;
+	padding-top: 20px;
+	border-top: 1px solid var(--line);
+}
+
+.act {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 18px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--muted);
+	font-size: 13.5px;
+	cursor: pointer;
+	transition: border-color .15s, color .15s, background .15s;
+}
+
+.act:hover {
+	border-color: var(--teal);
+	color: var(--teal);
+}
+
+.act.active {
+	border-color: var(--teal);
+	background: var(--teal-050);
+	color: var(--teal);
+	font-weight: 600;
+}
+
+.act-link {
+	margin-left: auto;
+	color: var(--ink-2);
+}
+
+.cnt {
+	font-size: 12px;
+	opacity: .8;
+}
+
+.side-btn {
+	width: 100%;
+}
+
+/* ============================================================
+   密码文章
+   ============================================================ */
+.locked-wrap {
+	max-width: 520px;
+	margin: 60px auto;
+}
+
+.locked {
+	text-align: center;
+	padding: 40px 32px;
+}
+
+.locked .page-desc {
+	margin: 0 auto 22px;
+}
+
+.lock-form {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 14px;
+}
+
+.lock-form input {
+	flex: 1;
+	min-width: 0;
+	height: 42px;
+	padding: 0 14px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	font-size: 14px;
+	outline: none;
+}
+
+.lock-form input:focus {
+	border-color: var(--teal);
+}
+
+@media (max-width: 900px) {
+	.article-title {
+		font-size: 27px;
+	}
+
+	.article-cover {
+		margin-top: 20px;
+	}
 }
 </style>
