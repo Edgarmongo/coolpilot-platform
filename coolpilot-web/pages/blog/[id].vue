@@ -183,7 +183,8 @@ const rendered = computed<{html: string, toc: {id: string, text: string, lv: num
 	const html = String(blog.value?.content || '').replace(
 		/<h([23])([^>]*)>([\s\S]*?)<\/h\1>/g,
 		(match, level, attrs, inner) => {
-			const text = String(inner).replace(/<[^>]+>/g, '').trim()
+			// 标题里可能有行内 code、引号转义，目录要的是纯文本
+			const text = decodeEntities(String(inner).replace(/<[^>]+>/g, '')).trim()
 			if (!text) {
 				return match
 			}
@@ -197,6 +198,19 @@ const rendered = computed<{html: string, toc: {id: string, text: string, lv: num
 	)
 	return {html, toc}
 })
+
+/** 正文由 Markdown 渲染时会带实体（&quot; 之类），目录里不能原样显示 */
+function decodeEntities(text: string) {
+	return text
+		.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+		.replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+		.replace(/&quot;/g, '"')
+		.replace(/&apos;|&#39;/g, "'")
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+}
 
 async function fetchBlog() {
 	const headers: Record<string, string> = {}
