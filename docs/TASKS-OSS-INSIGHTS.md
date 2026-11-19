@@ -1,22 +1,33 @@
 # 任务卡：开源项目商业观察
 
-> 配套 `PRD-OSS-INSIGHTS.md` 与 `DATA-MODEL-OSS.md`。
+> 配套 `PRD-OSS-INSIGHTS.md`（v1.1）与 `DATA-MODEL-OSS.md`。
+> **已按 `CP-WEB-OS-01-现状审计与改造方案.md` 修订**：迁移方式改为 V28、补白名单、接口形状、卡片组件、sitemap 缺口。
 > 治理规则沿用 `ED-05-TASKS.md` §1：不得 `DROP TABLE` / 无 `WHERE` 的 `DELETE` / `UPDATE`；破坏性变更须先出迁移与回滚脚本。
+
+---
+
+## 〇、开工前必须确认
+
+| # | 事项 | 阻塞什么 |
+| --- | --- | --- |
+| 1 | 导航方案 A / B / C（PRD §4.1） | OSS-01（V28 里要不要插 `nav_menu`） |
+| 2 | 是否把 `blog/11` 从「文章」迁到「运维实录」 | 无阻塞，可后置 |
+| 3 | `verdict` 五档中文文案 | OSS-05 渲染 |
 
 ---
 
 ## 一、依赖与顺序
 
 ```
-OSS-01 数据模型
-   │
-   ├──→ OSS-02 后端接口 ──→ OSS-03 后台管理
-   │            │
-   │            └──→ OSS-04 栏目首页 ──→ OSS-05 档案详情
-   │                        │
-   │                        └──→ OSS-06 文章页关联
-   │
-   └──→ OSS-08 内容生产（可与开发并行，但上线前必须完成）
+导航决策 ──→ OSS-01 数据模型（V28）
+                   │
+                   ├──→ OSS-02 后端接口 ──→ OSS-03 后台管理
+                   │            │
+                   │            └──→ OSS-04 栏目首页 ──→ OSS-05 档案详情
+                   │                        │
+                   │                        └──→ OSS-06 文章页关联
+                   │
+                   └──→ OSS-08 内容生产（可与开发并行，但上线前必须完成）
 
 OSS-07 SEO  ← 依赖 OSS-04 / OSS-05
 OSS-09 上线验收 ← 全部
@@ -31,33 +42,34 @@ OSS-09 上线验收 ← 全部
 | 项 | 内容 |
 | --- | --- |
 | **目标** | `portfolio` 支持双类型与评估卡，新增文章关联表，新增 4 个栏目分类 |
-| **前置** | 本文件评审通过 |
-| **范围** | 生产库 `coolpilot`；同步补一个 Flyway migration 文件 |
+| **前置** | 本文件评审通过 + **导航方案已定**（§4.1，决定 V28 里要不要插 nav_menu） |
+| **方式** | **只写迁移文件 `V28__open_source_insights.sql`，不手工执行生产 DDL** |
 | **改动** | `DATA-MODEL-OSS.md` §3 的 3 组语句 |
 | **不做** | 不改现有列类型、不删列、不动 `project` 表 |
 
 **步骤**
 
 ```
-1. 备份 portfolio / category
-2. ALTER TABLE portfolio ADD COLUMN ×7 + idx_portfolio_kind
-3. CREATE TABLE portfolio_article
-4. INSERT category ×4
-5. 校验（见下）
-6. 补 Flyway migration 文件并提交
+1. 写 V28__open_source_insights.sql（内容 = DATA-MODEL-OSS §3）
+2. 本地起服务，看启动日志 Flyway 执行 V28
+3. 本地校验（见下）
+4. 提交，随下一个版本部署
 ```
+
+**为什么不手工执行**：`spring.flyway.validate-on-migrate=true` + `out-of-order=false`。
+手工 DDL 会让 schema 领先于迁移历史，下次部署要么「列已存在」报错，要么校验失败直接阻止启动。
+V27 的注释专门记录过这个坑。
 
 **验收**
 
-- [ ] `desc portfolio` 显示 7 个新列，`kind` 默认值为 `own`
-- [ ] `portfolio` 现有 1 条记录 `kind='own'`
+- [ ] 本地启动日志出现 `Migrating schema ... to version 28`
+- [ ] `desc portfolio` 显示 7 个新列，`kind` 默认 `own`
+- [ ] `select kind, count(*) from portfolio group by kind` → `own: 3`（3 条存量，不是 1 条）
 - [ ] `portfolio_article` 存在且为空
-- [ ] `category` 共 9 行，新增 4 行 id 未与现有冲突
-- [ ] Flyway 启动无校验失败
+- [ ] `category` 共 9 行
+- [ ] 重复启动一次不报错（幂等）
 
-**回滚**：`DATA-MODEL-OSS.md` §3 各变更下的回滚语句，逆序执行。
-
-**风险**：Flyway 与手工 DDL 不一致会导致下次启动报 checksum 错。**必须先补 migration 再重启后端。**
+**回滚**：`DATA-MODEL-OSS.md` §7 末尾的 `V28-down.sql`，另存于 `docs/rollback/`。
 
 ---
 
@@ -67,7 +79,7 @@ OSS-09 上线验收 ← 全部
 | --- | --- |
 | **目标** | 前台能按 kind 取档案、取档案详情（含文章）、文章反查项目；后台能带新字段读写 |
 | **前置** | OSS-01 |
-| **改动** | `Portfolio.java`、`PortfolioSaveDTO.java`、新建 `PortfolioDetailVO`、`PortfolioMapper`、`PortfolioService`、`PortfolioController`、`PortfolioAdminController` |
+| **改动** | `Portfolio.java`、`PortfolioSaveDTO.java`、`PortfolioMapper`、`PortfolioService`（在现有 Map 上加 `articles`，不新建 VO 改结构）、`PortfolioController`、`PortfolioAdminController`、**`SecurityPaths.java`** |
 | **不动** | `project` 模块（服务订单） |
 
 **验收**
@@ -76,18 +88,23 @@ OSS-09 上线验收 ← 全部
 GET /api/portfolios                  → 返回全部（含 kind 字段），行为与改前一致
 GET /api/portfolios?kind=oss         → 只返回 oss
 GET /api/portfolios?kind=own         → 只返回 own
-GET /api/portfolio/{oss-slug}        → 含 assessment（字符串）+ articles[]
-GET /api/portfolio/{own-slug}        → 含 articles[]（空数组）
-GET /api/portfolio/by-blog/{blogId}  → 命中返回项目，未关联返回 data=null
+GET /api/portfolio/{oss-slug}        → data 含 portfolio（内含 assessmentJson）+ contentHtml + articles[]
+GET /api/portfolio/{own-slug}        → 同上，articles 为空数组
+GET /api/blog/{blogId}/portfolio     → 命中返回项目，未关联返回 data=null
 POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessmentJson
 ```
 
+- [ ] 详情接口保持 `{portfolio, contentHtml}` 结构，**只增 `articles` 键**，不改形状
 - [ ] `kind` 非法值（如 `foo`）返回 400 而非入库
-- [ ] `assessment_json` 非法 JSON 在保存时被拒绝（后端做一次 `JSON.parse` 校验）
-- [ ] 匿名访问上述前台接口均为 200
+- [ ] `assessment_json` 非法 JSON 在保存时被拒绝
+- [ ] 匿名访问 `/portfolio/{slug}`、`/portfolio/{slug}/articles`、`/blog/{id}/portfolio` 均为 200
+- [ ] `SecurityPaths.PUBLIC` 已加 `/portfolio/*/articles` 与 `/blog/*/portfolio`
 - [ ] 后台接口无 token 为 401/403
 
-**风险**：`assessment_json` 存坏数据会让前端整卡失败。**后端保存时校验，前端解析再加 try/catch，两道防线。**
+**风险**
+
+1. `assessment_json` 存坏数据会让前端整卡失败。后端保存时校验 + 前端 try/catch，两道防线。
+2. **白名单漏配 = 403**。`/portfolio/*` 是单段通配，两段路径不通——这是本项目最容易漏的一步（`SecurityPaths` 注释：「默认拒绝 + 显式放行」）。
 
 ---
 
@@ -118,18 +135,23 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 | --- | --- |
 | **目标** | `/open-source` 可访问，呈现精选档案、最新分析、进行中专题 |
 | **前置** | OSS-02 |
-| **新建** | `coolpilot-web/pages/open-source/index.vue` |
-| **复用** | `components/` 里现有卡片样式、`useApi`、`useFormat` |
+| **新建** | `coolpilot-web/pages/open-source/index.vue` + 卡片组件 |
+| **复用** | `useApi`、`useFormat`；`projects/index.vue` 的卡片**样式**（复制后改，现有仅为内联样式） |
+
+> 审计更正：`components/` 下只有 `CommentSection`、`PostList`、`SocialIcon` 三个，
+> **没有可复用的卡片组件**。卡片样式内联在 `projects/index.vue` 等页面里。
+> 本期顺手抽一个 `OssProjectCard.vue`，两个页面共用。
 
 **验收**
 
 - [ ] SSR 输出 HTML 中含档案名称（`curl` 直接可见，非客户端渲染）
 - [ ] 精选档案 ≤ 6 条，显示 name / verdict / license / techStack / 篇数
-- [ ] 最新分析取 `categoryId` 对应文章，显示标题 + 栏目 + 阅读时长
+- [ ] 最新分析走 **`/category?categoryName=开源项目商业观察`**（`/blogs` 不支持分类筛选）
 - [ ] 专题区取 `/topics`，显示标题 + 篇数 + 更新时间
 - [ ] 三个区块各自空数据时显示占位文案，页面不报错
 - [ ] 375px 宽度下卡片单列不溢出
 - [ ] `kind=oss` 无数据时不显示空白卡片框
+- [ ] 中英文切换正常（`zh-CN.json` 与 `en.json` 都加了 key）
 
 ---
 
@@ -140,11 +162,12 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 | **目标** | `/open-source/{slug}` 展示评估卡、结论、正文、关联文章、相关项目 |
 | **前置** | OSS-02 |
 | **新建** | `coolpilot-web/pages/open-source/[slug].vue` |
-| **复用** | `pages/projects/[slug].vue` 的正文渲染逻辑（抽成共享组件，两处引用） |
+| **复用** | `pages/projects/[slug].vue` 的正文区块（`contentHtml` + `v-html`），抽成共享组件两处引用 |
 
 **验收**
 
-- [ ] 评估卡七项按 `assessment_json` 渲染；`level` 为 null 显示「待验证」灰标
+- [ ] 用 `contentHtml` 渲染正文（**不是** `portfolio.content` 的 Markdown 原文）
+- [ ] 评估卡七项按 `assessmentJson` 渲染；`level` 为 null 显示「待验证」灰标
 - [ ] 每项显示证据标记 `[V]/[S]/[D]/[?]`
 - [ ] 结论档位映射为中文：`watch→值得持续关注`、`deploy→值得部署使用`、`extend→值得二次开发`、`commercial→值得商业化探索`、`hold→暂不建议投入`
 - [ ] `assessment_json` 解析失败时显示「评估数据异常」，其余区块正常
@@ -152,6 +175,7 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 - [ ] 正文为空时不渲染空 `<article>`
 - [ ] 档案页固定声明：「结论基于特定版本与环境，不构成交付承诺」
 - [ ] `/projects` 仍只显示 `kind=own`（回归检查）
+- [ ] `kind=own` 的 slug 走 `/open-source/{slug}` 时不得展示（404 或跳转 `/projects/{slug}`）
 
 ---
 
@@ -162,6 +186,7 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 | **目标** | 文章底部显示所属项目卡，形成双向内链 |
 | **前置** | OSS-02、OSS-05 |
 | **改动** | `coolpilot-web/pages/blog/[id].vue` |
+| **接口** | `GET /blog/{id}/portfolio`（与已有 `/blog/{id}/topics` 同形） |
 
 **验收**
 
@@ -187,6 +212,10 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 - [ ] 每个新页面有独立 `title` / `description` / `canonical`
 - [ ] 档案页输出 `TechArticle` + `BreadcrumbList`，用 Google Rich Results 测试无误
 - [ ] `robots.txt` 未误屏蔽 `/open-source`
+
+> 审计发现：现有 `sitemap.xml.ts` 的 `staticPaths` 有 `/projects`，但**从未把 portfolio 详情
+> 写进 sitemap**（它只遍历了 blogs / topics / products）。这次要一并补上，
+> 顺带解决「作品集详情页一直没被收录」的旧问题。
 
 **不做**：不加 `Review` / `AggregateRating`（无真实用户评分，属滥用）。
 
@@ -217,7 +246,10 @@ POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessme
 - [ ] 移动端 375 / 768 / 1440 三档检查
 - [ ] 后台建一条测试档案 → 前台可见 → 删除测试档案 → 前台消失
 - [ ] `/projects` 作品集无 oss 混入
-- [ ] 首页导航出现「开源商业观察」入口（导航配置在 `nav_menu` 表）
+- [ ] 导航入口按要求出现（方案见 PRD §4.1）
+- [ ] `enabled=0` 的档案不泄漏（列表与详情都取不到）
+- [ ] **分类改名演练**：改「开源项目商业观察」的分类名后，确认栏目页空态有提示而不是白屏
+- [ ] 新接口在白名单内（未登录访问 200，不是 403）
 - [ ] 记录改动文件清单与验证结果（ED-05 §1 第 6 条）
 
 ---

@@ -15,7 +15,7 @@
 | `category` | 5 | 分类 | 加 4 行 |
 | `tag` / `blog_tag` | 0 / 0 | 标签 | 直接用 |
 | `topic` / `topic_article` | 0 / 0 | 专题聚合 | 直接用 |
-| `portfolio` | 1 | 项目档案 | **加列复用** |
+| `portfolio` | 3 | 项目档案 | **加列复用** |
 | `project` | 0 | **服务订单**（有 amount/order_no，不是作品集） | 不用 |
 
 > ⚠️ 注意：`project` 表是交易类业务表，与「项目展示」无关。名字易混，实现时不要动它。
@@ -33,9 +33,14 @@ sort int · enabled bit(1) · create_time · update_time
 
 ### 1.3 现有数据
 
-| id | slug | name | 说明 |
-| --- | --- | --- | --- |
-| 1 | `coolpilot-platform` | CoolPilot Platform | 自有产品（kind 应为 `own`） |
+| id | slug | name | status | enabled | 迁移后 kind |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `coolpilot-platform` | CoolPilot Platform | ACTIVE | 1 | own |
+| 2 | `coolpilot-business` | CoolPilot Business | WIP | 0 | own |
+| 3 | `ai-service` | AI Service | WIP | 0 | own |
+
+> 共 3 条。`/portfolios` 只返回 `enabled=1`，所以从接口看只有 1 条——**不要按接口结果估数据量**。
+> 3 条都会拿到 `kind` 默认值 `own`，无需 UPDATE。
 
 ---
 
@@ -56,6 +61,20 @@ sort int · enabled bit(1) · create_time · update_time
 ## 三、变更清单
 
 全部为**加列 / 加行 / 加表**，无改类型、无删列，可安全回滚。
+
+### ⚠️ 执行方式（2026-11-20 审计后更正）
+
+**不要手工在生产库执行下面的 SQL。** 改为：
+
+1. 把全部语句写进 `src/main/resources/db/migration/V28__open_source_insights.sql`
+2. 本地起服务验证 Flyway 执行成功
+3. 随下一个版本部署，启动时自动应用
+
+理由：`spring.flyway.validate-on-migrate=true` + `out-of-order=false`。手工 DDL 会让
+schema 与迁移历史漂移，下次启动校验失败直接起不来——V27 的注释专门解释过这个坑
+（「改文件内容会让 Flyway checksum 校验失败，服务直接起不来」）。
+
+下面的语句即 V28 文件的内容，供审阅。
 
 ### 变更 1：`portfolio` 加 7 列
 
@@ -161,13 +180,21 @@ WHERE `category_name` IN ('开源项目商业观察','开源技术研究','AI �
 
 ### 4.1 前台
 
-| # | 方法 | 路径 | 变更 | 说明 |
+| # | 方法 | 路径 | 变更 | 白名单 |
 | --- | --- | --- | --- | --- |
-| 1 | GET | `/portfolios` | **加参数** `kind` | 不传 = 全部（保持原行为） |
-| 2 | GET | `/portfolio/{slug}` | **加返回字段** | 附 `articles[]`、`assessment`（原文串） |
-| 3 | GET | `/portfolio/{slug}/articles` | **新增** | 单独取文章列表，供分页 |
-| 4 | GET | `/portfolio/by-blog/{blogId}` | **新增** | 文章页反查所属项目 |
-| 5 | GET | `/topics` | 不变 | 栏目首页复用 |
+| 1 | GET | `/portfolios?kind=oss` | **加参数** `kind`，不传 = 全部 | ✅ 已有 `/portfolios` |
+| 2 | GET | `/portfolio/{slug}` | **加返回字段** `articles[]` | ✅ 已有 `/portfolio/*` |
+| 3 | GET | `/portfolio/{slug}/articles` | **新增**，单独取文章列表 | ❌ **需加 `/portfolio/*/articles`** |
+| 4 | GET | `/blog/{blogId}/portfolio` | **新增**，文章反查所属项目 | ❌ **需加 `/blog/*/portfolio`** |
+| 5 | GET | `/topics` | 不变 | ✅ 已有 |
+| 6 | GET | `/category?categoryName=` | 不变，栏目页复用 | ✅ 已有 |
+
+> **两个坑（审计发现）**
+>
+> 1. `SecurityPaths.PUBLIC` 里是 `/portfolio/*`——**单段通配**。`/portfolio/crawl4ai` 能过，
+>    `/portfolio/crawl4ai/articles`（两段）过不了，会 403。必须显式加白名单。
+> 2. 反查接口做成 `/blog/{id}/portfolio` 而不是 `/portfolio/by-blog/{id}`，
+>    是为了和已有的 `/blog/{blogId}/topics` 同形（`TopicController:38` 已有先例）。
 
 **`/portfolios` 参数**
 
@@ -176,30 +203,37 @@ kind   own | oss   可选，不传返回全部
 tag    标签名      可选，第二期实现
 ```
 
-**`/portfolio/{slug}` 响应增量**
+**`/portfolio/{slug}` 响应**（结构沿用现有，只加 `articles`）
+
+现有返回是 `{portfolio: {...}, contentHtml: "..."}`，**不是扁平对象**。改动只加一层同级字段：
 
 ```json
 {
   "code": 200,
   "data": {
-    "slug": "crawl4ai",
-    "name": "Crawl4AI",
-    "kind": "oss",
-    "license": "MIT",
-    "language": "Python",
-    "verdict": "deploy",
-    "assessment": "{\"techMaturity\":{...}}",
-    "techStack": "Python, Playwright, FastAPI",
-    "repoUrl": "https://github.com/unclecode/crawl4ai",
-    "content": "...",
+    "portfolio": {
+      "slug": "crawl4ai",
+      "name": "Crawl4AI",
+      "kind": "oss",
+      "license": "MIT",
+      "language": "Python",
+      "verdict": "deploy",
+      "assessmentJson": "{\"techMaturity\":{...}}",
+      "techStack": "Python, Playwright, FastAPI",
+      "repoUrl": "https://github.com/unclecode/crawl4ai",
+      "content": "## 项目背景 ...（Markdown 原文）"
+    },
+    "contentHtml": "<h2>项目背景</h2> ...",
     "articles": [
-      { "id": 12, "title": "Crawl4AI 商业价值分析", "slug": "crawl4ai-business", "categoryName": "开源项目商业观察" }
+      { "id": 12, "title": "Crawl4AI 商业价值分析", "slug": "crawl4ai-business", "sort": 0 }
     ]
   }
 }
 ```
 
-`assessment` 保持字符串，前端解析。解析失败时整卡降级为「评估数据异常」，不白屏。
+`articles` 的装配方式照抄 `TopicService:57`（`data.put("articles", mapper.listArticles(...))`）。
+
+`assessmentJson` 保持字符串，前端解析。解析失败时整卡降级为「评估数据异常」，不白屏。
 
 ### 4.2 后台
 
@@ -218,19 +252,22 @@ tag    标签名      可选，第二期实现
 | --- | --- | --- |
 | Entity | `modules/portfolio/entity/Portfolio.java` | +7 字段（`assessmentJson` 映射 `assessment_json`） |
 | DTO | `modules/portfolio/dto/PortfolioSaveDTO.java` | +7 字段，`kind` 校验枚举 |
-| VO | 新建 `PortfolioDetailVO` | 含 `articles`、`assessment` |
-| Mapper | `modules/portfolio/mapper/PortfolioMapper.java` | `listByKind`、`listArticles`、`findByBlogId` |
+| VO | 现有 `getBySlug` 返回的 Map | 加 `articles` 键，**不要新建 VO 改结构** |
+| Mapper | `modules/portfolio/mapper/PortfolioMapper.java` | `listEnabledByKind`、`listArticles`、`findPortfolioByBlogId` |
 | Service | `modules/portfolio/service/PortfolioService.java` | 装配 articles、按 kind 过滤 |
-| Controller | `PortfolioController` | 加参数与 2 个新接口 |
+| Controller | `PortfolioController` | 加 `kind` 参数与 2 个新接口 |
+| **常量** | **`constant/SecurityPaths.java`** | **PUBLIC 加 `/portfolio/*/articles`、`/blog/*/portfolio`** |
 | Controller | `PortfolioAdminController` | 筛选、关联维护 |
 | 前端 | `pages/projects/index.vue` | 请求加 `kind=own`（**必须改，否则作品集会混入 oss**） |
-| 前端 | `pages/projects/[slug].vue` | 复用为共享详情组件 |
+| 前端 | `pages/projects/[slug].vue` | 抽出共享详情区块（现有样式是内联的） |
 | 前端 | 新建 `pages/open-source/index.vue` | 栏目首页 |
 | 前端 | 新建 `pages/open-source/[slug].vue` | 档案详情 |
-| 前端 | `server/routes/sitemap.xml.ts` | 加 `/open-source` 与档案 URL |
+| 前端 | `i18n/locales/zh-CN.json` + `en.json` | **两份**同步加 key |
+| 前端 | `server/routes/sitemap.xml.ts` | 加 `/open-source` 与 oss 档案 URL |
 | 后台 | `views/page/PortfolioList.vue`（现有） | 加 kind 筛选 + 新字段表单 |
 
 > 后台 portfolio 管理页已存在（`src/views/page/` 下，路由 `/portfolio`），是扩展而非新建。
+> 后台正文编辑器已是 Markdown textarea + Ctrl+V 贴图，**不需要新建编辑器**。
 
 ---
 
@@ -251,31 +288,49 @@ tag    标签名      可选，第二期实现
 
 ## 七、迁移步骤（生产）
 
-按顺序执行，每步可独立回滚：
+**不由人执行 SQL。** 流程是：
 
 ```
-1. 备份
-   mysqldump --single-transaction coolpilot portfolio category > backup_before_oss.sql
+1. 写迁移文件
+   src/main/resources/db/migration/V28__open_source_insights.sql
+   内容 = §3 的全部语句（含 portfolio_article 与 category 插入）
 
-2. 加列（变更 1）
-   执行 ALTER ... ADD COLUMN（7 条 + 索引）
+2. 本地验证
+   起本地服务 → 看启动日志 Flyway 执行 V28 → desc portfolio 确认 7 列
+   → select count(*) from portfolio_article 返回 0
+   → select id, category_name from category 确认 9 行
 
-3. 建表（变更 2）
-   CREATE TABLE IF NOT EXISTS portfolio_article ...
+3. 部署
+   随下一个版本发布；容器启动时 Flyway 自动执行
 
-4. 加分类（变更 3）
-   INSERT INTO category ...
-
-5. 校验
-   - desc portfolio 确认 7 列存在
-   - select count(*) from portfolio_article 返回 0
-   - select id, category_name from category 确认 9 行
-
-6. 把现有作品标记为 own
-   UPDATE portfolio SET kind='own' WHERE kind='own';   -- 默认值已是 own，仅作确认
+4. 生产校验（只读）
+   - select max(installed_rank) from flyway_schema_history  （应为 28）
+   - desc portfolio
+   - select kind, count(*) from portfolio group by kind  （应为 own:3）
 ```
 
-> ⚠️ 执行前确认 `flyway_schema_history` 状态。项目用 Flyway 管理迁移，**手写 DDL 后要同步补一个 migration 文件**，否则下次自动迁移会与实体不一致。
+**为什么不能手工执行**
+
+`spring.flyway.validate-on-migrate=true`、`out-of-order=false`。手工 DDL 之后，
+数据库的 schema 会领先于迁移历史，而历史里又没有 V28 的记录；下次部署时
+Flyway 要么执行 V28 报「列已存在」，要么校验失败直接阻止启动。
+
+**回滚**：Flyway 社区版无自动回滚。另存 `docs/rollback/V28-down.sql` 备查：
+
+```sql
+DROP TABLE IF EXISTS `portfolio_article`;
+ALTER TABLE `portfolio` DROP INDEX `idx_kind_enabled_sort`;
+ALTER TABLE `portfolio`
+  DROP COLUMN `assessment_json`, DROP COLUMN `verdict`, DROP COLUMN `stars_at`,
+  DROP COLUMN `stars`, DROP COLUMN `language`, DROP COLUMN `license`, DROP COLUMN `kind`;
+DELETE FROM `category` WHERE `category_name` IN
+  ('开源项目商业观察','开源技术研究','AI 应用实践','商业实践与案例')
+  AND `id` NOT IN (SELECT DISTINCT `category_id` FROM `blog`);
+DELETE FROM `nav_menu` WHERE `path` = '/open-source';
+```
+
+> 回滚后 `flyway_schema_history` 里的 V28 记录要一并删除，否则再次部署不会重跑。
+> 这一步本身有风险，**非必要不执行**。
 
 ---
 
