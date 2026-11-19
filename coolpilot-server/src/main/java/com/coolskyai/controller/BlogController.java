@@ -81,7 +81,9 @@ public class BlogController {
 			return Result.create(404, "文章不存在或未公开");
 		}
 		//对密码保护的文章校验Token
-		if (!"".equals(blog.getPassword())) {
+		// 注意：password 为 null 表示"未设置密码"，必须与"空串"同样按无密码处理，
+		// 否则历史数据（password 为 NULL）会被误判为受保护文章，正文不可见
+		if (!StringUtils.isEmpty(blog.getPassword())) {
 			if (JwtUtils.judgeTokenIsExist(jwt)) {
 				try {
 					Claims claims = JwtUtils.getTokenBody(jwt);

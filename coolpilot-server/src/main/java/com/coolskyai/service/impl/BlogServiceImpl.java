@@ -23,6 +23,7 @@ import com.coolskyai.model.vo.SearchBlog;
 import com.coolskyai.service.BlogService;
 import com.coolskyai.service.RedisService;
 import com.coolskyai.service.TagService;
+import com.coolskyai.util.StringUtils;
 import com.coolskyai.util.JacksonUtils;
 import com.coolskyai.util.markdown.MarkdownUtils;
 
@@ -107,7 +108,7 @@ public class BlogServiceImpl implements BlogService {
 		PageHelper.startPage(1, newBlogPageSize);
 		List<NewBlog> newBlogList = blogMapper.getNewBlogListByIsPublished();
 		for (NewBlog newBlog : newBlogList) {
-			if (!"".equals(newBlog.getPassword())) {
+			if (!StringUtils.isEmpty(newBlog.getPassword())) {
 				newBlog.setPrivacy(true);
 				newBlog.setPassword("");
 			} else {
@@ -189,7 +190,7 @@ public class BlogServiceImpl implements BlogService {
 
 	private List<BlogInfo> processBlogInfosPassword(List<BlogInfo> blogInfos) {
 		for (BlogInfo blogInfo : blogInfos) {
-			if (!"".equals(blogInfo.getPassword())) {
+			if (!StringUtils.isEmpty(blogInfo.getPassword())) {
 				blogInfo.setPrivacy(true);
 				blogInfo.setPassword("");
 				blogInfo.setDescription(PRIVATE_BLOG_DESCRIPTION);
@@ -214,7 +215,7 @@ public class BlogServiceImpl implements BlogService {
 		for (String s : groupYearMonth) {
 			List<ArchiveBlog> archiveBlogs = blogMapper.getArchiveBlogListByYearMonthAndIsPublished(s);
 			for (ArchiveBlog archiveBlog : archiveBlogs) {
-				if (!"".equals(archiveBlog.getPassword())) {
+				if (!StringUtils.isEmpty(archiveBlog.getPassword())) {
 					archiveBlog.setPrivacy(true);
 					archiveBlog.setPassword("");
 				} else {
@@ -235,7 +236,7 @@ public class BlogServiceImpl implements BlogService {
 	public List<RandomBlog> getRandomBlogListByLimitNumAndIsPublishedAndIsRecommend() {
 		List<RandomBlog> randomBlogs = blogMapper.getRandomBlogListByLimitNumAndIsPublishedAndIsRecommend(randomBlogLimitNum);
 		for (RandomBlog randomBlog : randomBlogs) {
-			if (!"".equals(randomBlog.getPassword())) {
+			if (!StringUtils.isEmpty(randomBlog.getPassword())) {
 				randomBlog.setPrivacy(true);
 				randomBlog.setPassword("");
 			} else {
@@ -275,6 +276,14 @@ public class BlogServiceImpl implements BlogService {
 	}
 
 	/**
+	 * 归一化文章密码：null / 空白 → 空串。
+	 * 公开端用「空串」表示不需要密码，写 NULL 会被判成受保护文章。
+	 */
+	private String normalizePassword(String password) {
+		return StringUtils.isEmpty(password) ? "" : password;
+	}
+
+	/**
 	 * slug 规范化与唯一性校验。
 	 *
 	 * 只允许字母、数字、连字符和下划线 —— 这些字符在 URL 里不需要转义，
@@ -297,6 +306,8 @@ public class BlogServiceImpl implements BlogService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveBlog(com.coolskyai.model.dto.Blog blog) {
+		// 统一把"未设置密码"归一化为空串，避免库里出现 NULL 导致公开端误判为加密文章
+		blog.setPassword(normalizePassword(blog.getPassword()));
 		checkSlug(blog.getSlug(), null);
 		if (blogMapper.saveBlog(blog) != 1) {
 			throw new PersistenceException("添加博客失败");
@@ -420,6 +431,8 @@ public class BlogServiceImpl implements BlogService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateBlog(com.coolskyai.model.dto.Blog blog) {
+		// 同 saveBlog：空密码统一写成空串，历史 NULL 数据在下次编辑时自动修正
+		blog.setPassword(normalizePassword(blog.getPassword()));
 		checkSlug(blog.getSlug(), blog.getId());
 		if (blogMapper.updateBlog(blog) != 1) {
 			throw new PersistenceException("更新博客失败");
