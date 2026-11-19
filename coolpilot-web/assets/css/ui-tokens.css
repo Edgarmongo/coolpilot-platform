@@ -1,0 +1,69 @@
+/**
+ * CoolSkyAI 新一代视觉令牌
+ *
+ * 与 assets/css/main.css 里的旧令牌（--teal / --line / --bg …）**并存但不互相覆盖**。
+ * 旧令牌服务现有页面，这里的 --c-* 服务新组件与新页面，迁移是分批进行的：
+ * 改一个页面 → 用新组件 → 视觉一致，没改的页面继续用旧值，不会出现半新半旧。
+ *
+ * 为什么加 --c- 前缀：main.css 已有 --teal / --line / --ink / --muted / --bg，
+ * 直接改会被全站 97 处引用一次性改掉，没法单独评审，也不可控。
+ *
+ * 取值来源：2026-11-20 对线上站点做的计算样式实测。
+ * 主色取 #00875A（不是设计稿初稿的 #0F766E）——因为新组件要紧挨着顶部那条
+ * 深绿导航，两个不同的绿放在一屏里会显得没做完。实测值见 UI-SYSTEM.md §7。
+ */
+
+:root {
+  /* 品牌色：与线上 var(--teal) 一致 */
+  --c-brand: #00875A;
+  --c-brand-strong: #006A46;
+  --c-brand-deep: #006B47;
+  --c-brand-soft: #F4FAF7;
+  --c-brand-soft-2: #E7F5EE;
+
+  /* 文字 */
+  --c-ink: #1F2937;
+  --c-ink-2: #3F4A56;
+  --c-muted: #6B7280;
+  --c-faint: #9AA5B1;
+
+  /* 线条：与线上 .card 的 rgba(0,135,90,.14) 对齐 */
+  --c-line: rgba(0, 135, 90, .14);
+  --c-line-strong: rgba(0, 135, 90, .32);
+  --c-line-soft: rgba(0, 135, 90, .45);
+
+  /* 形状与间距 */
+  --c-radius: 12px;
+  --c-radius-sm: 8px;
+  --c-radius-xs: 5px;
+  --c-wrap: 1200px;
+  --c-gutter: 24px;
+  --c-section: 48px;
+
+  /* 状态 */
+  --c-warn-bg: #FFF8E6;
+  --c-warn-line: #F0DDA6;
+  --c-warn-text: #8A6A00;
+
+  /* 阴影：全站只有这一处，且极淡；卡片默认不带 */
+  --c-shadow-soft: 0 1px 3px rgba(16, 24, 40, .04);
+}
+
+/*
+ * 备选：更深一档的青（设计稿初稿用的值）。
+ * 切过去要同时改顶部导航，否则会和深绿导航并排撞色：
+ *
+ *   --c-brand: #0F766E;
+ *   --c-brand-strong: #0B5F58;
+ *   --c-line: rgba(15, 118, 110, .12);
+ *   --c-line-strong: rgba(15, 118, 110, .22);
+ *
+ * 若只改这里不改导航，就是「两个绿」，不建议。
+ */
+
+/* 新页面容器：比旧 .container（1080）更宽，避免改旧类影响现有页面 */
+.cp-container {
+  max-width: var(--c-wrap);
+  margin: 0 auto;
+  padding: 0 var(--c-gutter);
+}

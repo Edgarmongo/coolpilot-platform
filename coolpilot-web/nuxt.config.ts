@@ -2,7 +2,12 @@ export default defineNuxtConfig({
 	compatibilityDate: '2025-01-01',
 	devtools: {enabled: false},
 	typescript: {strict: false},
-	css: ['~/assets/css/main.css'],
+	css: [
+		// 新视觉令牌（--c-*）先加载，供新组件使用；旧令牌（--teal 等）仍在 main.css，
+		// 两套并存，页面按批迁移，避免一次性改掉全站 97 处引用
+		'~/assets/css/ui-tokens.css',
+		'~/assets/css/main.css'
+	],
 	modules: ['@nuxtjs/i18n'],
 	/*
 	 * 中文在 /，英文在 /en/（prefix_except_default）。
