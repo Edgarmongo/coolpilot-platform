@@ -1,8 +1,5 @@
 package com.coolskyai.service.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.constant.RedisKeyConstants;
 import com.coolskyai.entity.Tag;
 import com.coolskyai.exception.NotFoundException;
@@ -10,36 +7,43 @@ import com.coolskyai.exception.PersistenceException;
 import com.coolskyai.mapper.TagMapper;
 import com.coolskyai.service.RedisService;
 import com.coolskyai.service.TagService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * @Description: 博客标签业务层实现
- * @Author: CoolSkyAI
- * @Date: 2020-07-30
+ * 标签业务。
+ *
+ * <p>标签云是纯展示数据，命中率高，因此单独缓存 {@code TAG_CLOUD_LIST}；
+ * 文章详情页按 blogId 取标签则直接回源，不值得为它维护一份缓存。
+ *
+ * @author CoolSkyAI
  */
 @Service
 public class TagServiceImpl implements TagService {
-	@Autowired
-	TagMapper tagMapper;
-	@Autowired
-	RedisService redisService;
+
+	private final TagMapper tagMapper;
+	private final RedisService redisService;
+
+	public TagServiceImpl(TagMapper tagMapper, RedisService redisService) {
+		this.tagMapper = tagMapper;
+		this.redisService = redisService;
+	}
 
 	@Override
 	public List<Tag> getTagList() {
 		return tagMapper.getTagList();
 	}
 
+	/**
+	 * 标签云数据。缓存未命中时回源并写回。
+	 */
 	@Override
 	public List<Tag> getTagListNotId() {
-		String redisKey = RedisKeyConstants.TAG_CLOUD_LIST;
-		List<Tag> tagListFromRedis = redisService.getListByValue(redisKey);
-		if (tagListFromRedis != null) {
-			return tagListFromRedis;
-		}
-		List<Tag> tagList = tagMapper.getTagListNotId();
-		redisService.saveListToValue(redisKey, tagList);
-		return tagList;
+		return redisService.cacheThrough(
+				RedisKeyConstants.TAG_CLOUD_LIST,
+				tagMapper::getTagListNotId);
 	}
 
 	@Override
@@ -50,10 +54,8 @@ public class TagServiceImpl implements TagService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveTag(Tag tag) {
-		if (tagMapper.saveTag(tag) != 1) {
-			throw new PersistenceException("标签添加失败");
-		}
-		redisService.deleteCacheByKey(RedisKeyConstants.TAG_CLOUD_LIST);
+		requireAffected(tagMapper.saveTag(tag), "标签添加失败");
+		evict(RedisKeyConstants.TAG_CLOUD_LIST);
 	}
 
 	@Override
@@ -73,20 +75,32 @@ public class TagServiceImpl implements TagService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void deleteTagById(Long id) {
-		if (tagMapper.deleteTagById(id) != 1) {
-			throw new PersistenceException("标签删除失败");
-		}
-		redisService.deleteCacheByKey(RedisKeyConstants.TAG_CLOUD_LIST);
+		requireAffected(tagMapper.deleteTagById(id), "标签删除失败");
+		// 删标签会影响首页文章卡上的标签展示，首页缓存一并清掉
+		evict(RedisKeyConstants.TAG_CLOUD_LIST, RedisKeyConstants.HOME_BLOG_INFO_LIST);
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateTag(Tag tag) {
-		if (tagMapper.updateTag(tag) != 1) {
-			throw new PersistenceException("标签更新失败");
+		requireAffected(tagMapper.updateTag(tag), "标签更新失败");
+		// 标签名与颜色都会出现在首页，两个缓存都要失效
+		evict(RedisKeyConstants.TAG_CLOUD_LIST, RedisKeyConstants.HOME_BLOG_INFO_LIST);
+	}
+
+	/**
+	 * 影响行数不为 1 时视为失败并回滚。0 行通常意味着目标记录已不存在，
+	 * 静默返回成功会让后台以为改成功了。
+	 */
+	private void requireAffected(int rows, String message) {
+		if (rows != 1) {
+			throw new PersistenceException(message);
 		}
-		redisService.deleteCacheByKey(RedisKeyConstants.TAG_CLOUD_LIST);
-		//修改了标签名或颜色，可能有首页文章关联了标签，也要更新首页缓存
-		redisService.deleteCacheByKey(RedisKeyConstants.HOME_BLOG_INFO_LIST);
+	}
+
+	private void evict(String... keys) {
+		for (String key : keys) {
+			redisService.deleteCacheByKey(key);
+		}
 	}
 }

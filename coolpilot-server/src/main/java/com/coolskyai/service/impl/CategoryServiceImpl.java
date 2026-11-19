@@ -1,8 +1,5 @@
 package com.coolskyai.service.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.constant.RedisKeyConstants;
 import com.coolskyai.entity.Category;
 import com.coolskyai.exception.NotFoundException;
@@ -11,47 +8,52 @@ import com.coolskyai.mapper.CategoryMapper;
 import com.coolskyai.service.CategoryService;
 import com.coolskyai.service.RedisService;
 import com.coolskyai.service.TagService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * @Description: 博客分类业务层实现
- * @Author: CoolSkyAI
- * @Date: 2020-07-29
+ * 分类业务。
+ *
+ * <p>写操作统一走 {@link #evict(String...)}：分类变了，分类名列表缓存必然过期，
+ * 首页文章卡上的分类标签也会跟着错，所以这两个 key 一起清。
+ *
+ * @author CoolSkyAI
  */
 @Service
 public class CategoryServiceImpl implements CategoryService {
-	@Autowired
-	CategoryMapper categoryMapper;
-	@Autowired
-	TagService tagService;
-	@Autowired
-	RedisService redisService;
+
+	private final CategoryMapper categoryMapper;
+	private final TagService tagService;
+	private final RedisService redisService;
+
+	public CategoryServiceImpl(CategoryMapper categoryMapper, TagService tagService, RedisService redisService) {
+		this.categoryMapper = categoryMapper;
+		this.tagService = tagService;
+		this.redisService = redisService;
+	}
 
 	@Override
 	public List<Category> getCategoryList() {
 		return categoryMapper.getCategoryList();
 	}
 
+	/**
+	 * 分类名列表读多写少，走缓存。缓存未命中才回源，回源结果立即写回。
+	 */
 	@Override
 	public List<Category> getCategoryNameList() {
-		String redisKey = RedisKeyConstants.CATEGORY_NAME_LIST;
-		List<Category> categoryListFromRedis = redisService.getListByValue(redisKey);
-		if (categoryListFromRedis != null) {
-			return categoryListFromRedis;
-		}
-		List<Category> categoryList = categoryMapper.getCategoryNameList();
-		redisService.saveListToValue(redisKey, categoryList);
-		return categoryList;
+		return redisService.cacheThrough(
+				RedisKeyConstants.CATEGORY_NAME_LIST,
+				categoryMapper::getCategoryNameList);
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveCategory(Category category) {
-		if (categoryMapper.saveCategory(category) != 1) {
-			throw new PersistenceException("分类添加失败");
-		}
-		redisService.deleteCacheByKey(RedisKeyConstants.CATEGORY_NAME_LIST);
+		requireAffected(categoryMapper.saveCategory(category), "分类添加失败");
+		evict(RedisKeyConstants.CATEGORY_NAME_LIST);
 	}
 
 	@Override
@@ -71,20 +73,31 @@ public class CategoryServiceImpl implements CategoryService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void deleteCategoryById(Long id) {
-		if (categoryMapper.deleteCategoryById(id) != 1) {
-			throw new PersistenceException("删除分类失败");
-		}
-		redisService.deleteCacheByKey(RedisKeyConstants.CATEGORY_NAME_LIST);
+		requireAffected(categoryMapper.deleteCategoryById(id), "删除分类失败");
+		// 删除同样会影响首页展示，两个 key 都要清；只清名字列表会让首页残留已删分类
+		evict(RedisKeyConstants.CATEGORY_NAME_LIST, RedisKeyConstants.HOME_BLOG_INFO_LIST);
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateCategory(Category category) {
-		if (categoryMapper.updateCategory(category) != 1) {
-			throw new PersistenceException("分类更新失败");
+		requireAffected(categoryMapper.updateCategory(category), "分类更新失败");
+		evict(RedisKeyConstants.CATEGORY_NAME_LIST, RedisKeyConstants.HOME_BLOG_INFO_LIST);
+	}
+
+	/**
+	 * MyBatis 的写方法返回影响行数。0 行说明目标记录不存在或条件没命中，
+	 * 视为失败并回滚 —— 静默成功比报错更难排查。
+	 */
+	private void requireAffected(int rows, String message) {
+		if (rows != 1) {
+			throw new PersistenceException(message);
 		}
-		redisService.deleteCacheByKey(RedisKeyConstants.CATEGORY_NAME_LIST);
-		//修改了分类名，可能有首页文章关联了分类，也要更新首页缓存
-		redisService.deleteCacheByKey(RedisKeyConstants.HOME_BLOG_INFO_LIST);
+	}
+
+	private void evict(String... keys) {
+		for (String key : keys) {
+			redisService.deleteCacheByKey(key);
+		}
 	}
 }
