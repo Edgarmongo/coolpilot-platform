@@ -323,3 +323,21 @@ redis-cli DEL '"navMenuList:zh-CN"' '"navMenuList:en"'
 ```
 
 键名外的双引号属于 key 序列化结果，删的时候不能省，否则 DEL 返回 0。
+
+## 发布记录（v1.1.0，2026-11-20）
+
+| 项 | 结果 |
+| --- | --- |
+| 代码 | `021ab69` 推送 GitHub；tag `v1.1.0` |
+| CI | 约 5 分钟出齐 4 个镜像（server / admin / web / gateway） |
+| 数据库 | api 启动时自动迁移：`Successfully applied 1 migration ... now at version v28`（0.109s） |
+| 备份 | 部署前 `mysqldump` 全库 8.3MB 至 `/opt/backup/`，`.env` 备份为 `.env.bak-v1.0.4-*` |
+| 导航缓存 | 已执行 `DEL '"navMenuList:zh-CN"' '"navMenuList:en"'`，返回 2；导航第 7 项生效 |
+| 生产档案 | 录入 Crawl4AI（`oss_project.id=1`），关联分析文章 `blog_id=11`（调研关系） |
+| 线上验证 | `/open-source`、`/open-source/projects`、`/open-source/projects/crawl4ai`、领域页、标签页、文章页全部 200；文章页「所属项目」卡渲染正常 |
+| sitemap | 已含 `/open-source`、`/open-source/projects`、`/open-source/projects/crawl4ai`、`/open-source/category/data-search` |
+
+容器状态：api / web / admin / gateway 全部 healthy，mysql（13 天）与 redis 未重启，数据卷未动。
+
+**回滚**：`.env` 改回 `TAG=v1.0.4` 后 `pull` + `up -d`；数据库已由 Flyway 迁移到 V28，
+回滚应用不会自动回滚表结构，V28 建的三张表保持存在但不被旧代码使用（无破坏性影响）。
