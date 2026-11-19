@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>技术文章 · CoolSkyAI</title>
+<link rel="stylesheet" href="assets/site.css"/>
+<style>
+  .filters{padding:22px 0 6px;}
+  .list-wrap{border-top:1px solid var(--line);}
+  .list-wrap .article-row:first-child{padding-top:26px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">CP</span><span>CoolSkyAI</span></a>
+      <form class="search" onsubmit="return false">
+        <input type="search" placeholder="搜索站内内容…"/>
+        <button aria-label="搜索"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      </form>
+      <div class="topbar-right">
+        <div class="langs"><span class="on">中</span><span>EN</span></div>
+        <span class="my">我的</span>
+        <a class="login" href="#"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>登录</a>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="nav-item" href="index.html">首页</a>
+      <a class="nav-item is-active" href="archives.html">技术文章</a>
+      <a class="nav-item" href="open-source-index.html">开源商业观察</a>
+      <a class="nav-item" href="#">技术专题</a>
+      <a class="nav-item" href="#">项目</a>
+      <a class="nav-item" href="knowledge.html">知识产品</a>
+      <a class="nav-item" href="#">技术服务</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <div class="container page-head">
+    <h1>技术文章</h1>
+    <p class="desc">部署、实验、源码与复盘。每篇都标注了运行环境与验证范围，失败的部分同样保留。</p>
+  </div>
+
+  <div class="container filters">
+    <div class="chips">
+      <button class="chip on">全部</button>
+      <button class="chip">运维实录</button>
+      <button class="chip">开源观察</button>
+      <button class="chip">技术研究</button>
+      <button class="chip">AI 应用</button>
+    </div>
+  </div>
+
+  <section style="padding-top:14px;">
+    <div class="container with-side">
+      <div class="list-wrap">
+
+        <article class="article-row">
+          <div class="article-thumb">
+            <svg viewBox="0 0 200 124" preserveAspectRatio="xMidYMid slice">
+              <rect width="200" height="124" fill="#F2FAF8"/>
+              <rect x="26" y="30" width="148" height="64" rx="6" fill="#0B3F3A"/>
+              <rect x="38" y="44" width="60" height="5" rx="2.5" fill="#5EEAD4" fill-opacity=".6"/>
+              <rect x="38" y="58" width="110" height="5" rx="2.5" fill="#E2E8F0" fill-opacity=".22"/>
+              <rect x="38" y="72" width="40" height="5" rx="2.5" fill="#F87171" fill-opacity=".6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="tags"><span class="tag field">运维实录</span></div>
+            <h3><a href="blog.html">44,256 次失败登录之后：一次真实的 VPS 加固实录</a></h3>
+            <p class="excerpt">一台跑了 53 天的 VPS，日志里躺着四万多次失败登录。加固只花了十分钟，但我中途三次把自己锁在门外——包括两个看起来很蠢、但很多人会犯的错误。</p>
+            <div class="meta"><span>2026-11-19</span><span class="sep">·</span><span>12 分钟</span><span class="sep">·</span><span>1,842 次阅读</span></div>
+          </div>
+        </article>
+
+        <article class="article-row">
+          <div class="article-thumb">
+            <svg viewBox="0 0 200 124" preserveAspectRatio="xMidYMid slice">
+              <rect width="200" height="124" fill="#F2FAF8"/>
+              <rect x="30" y="26" width="64" height="72" rx="6" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+              <rect x="40" y="38" width="34" height="5" rx="2.5" fill="#0F766E" fill-opacity=".28"/>
+              <rect x="40" y="50" width="44" height="4" rx="2" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="40" y="60" width="36" height="4" rx="2" fill="#0F766E" fill-opacity=".12"/>
+              <path d="M98 62h14" stroke="#0F766E" stroke-opacity=".35" stroke-dasharray="3 3"/>
+              <rect x="116" y="32" width="56" height="60" rx="6" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+              <rect x="126" y="44" width="20" height="4" rx="2" fill="#0F766E" fill-opacity=".3"/>
+              <rect x="126" y="54" width="36" height="14" rx="3" fill="#0F766E" fill-opacity=".08"/>
+              <rect x="126" y="74" width="28" height="4" rx="2" fill="#0F766E" fill-opacity=".12"/>
+            </svg>
+          </div>
+          <div>
+            <div class="tags"><span class="tag field">开源观察</span><span class="tag">数据采集</span></div>
+            <h3><a href="#">从网页到 AI 可用的数据：抓下来只是开始</a></h3>
+            <p class="excerpt">一个中文资讯站抓下 6.3 万字符，真正能用的只有 4 千。本文拆解这 15 倍差距发生在哪一步，以及官方推荐的「智能过滤」为什么在中文站上反而更差。</p>
+            <div class="meta"><span>2026-11-12</span><span class="sep">·</span><span>9 分钟</span><span class="sep">·</span><span>1,203 次阅读</span></div>
+          </div>
+        </article>
+
+        <article class="article-row">
+          <div class="article-thumb">
+            <svg viewBox="0 0 200 124" preserveAspectRatio="xMidYMid slice">
+              <rect width="200" height="124" fill="#F2FAF8"/>
+              <circle cx="100" cy="62" r="30" fill="#0F766E" fill-opacity=".07"/>
+              <circle cx="100" cy="62" r="16" fill="#0F766E" fill-opacity=".12"/>
+              <circle cx="100" cy="62" r="6" fill="#0F766E" fill-opacity=".5"/>
+              <g stroke="#0F766E" stroke-opacity=".2" stroke-dasharray="3 4"><path d="M100 62L62 40M100 62L138 40M100 62L62 84M100 62L138 84"/></g>
+              <g fill="#fff" stroke="#0F766E" stroke-opacity=".18"><rect x="46" y="30" width="32" height="20" rx="5"/><rect x="122" y="30" width="32" height="20" rx="5"/><rect x="46" y="74" width="32" height="20" rx="5"/><rect x="122" y="74" width="32" height="20" rx="5"/></g>
+            </svg>
+          </div>
+          <div>
+            <div class="tags"><span class="tag field">AI 应用</span><span class="tag">架构</span></div>
+            <h3><a href="#">给产品补一条可替换的采集通道：一次选型记录</a></h3>
+            <p class="excerpt">为什么先定接口再选工具，怎么让「换掉引擎」不影响上层业务代码，以及我们最终没有选某些方案的原因。</p>
+            <div class="meta"><span>2026-11-05</span><span class="sep">·</span><span>15 分钟</span><span class="sep">·</span><span>968 次阅读</span></div>
+          </div>
+        </article>
+
+        <article class="article-row">
+          <div class="article-thumb">
+            <svg viewBox="0 0 200 124" preserveAspectRatio="xMidYMid slice">
+              <rect width="200" height="124" fill="#F2FAF8"/>
+              <rect x="34" y="34" width="132" height="14" rx="4" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="34" y="56" width="132" height="10" rx="4" fill="#0F766E" fill-opacity=".07"/>
+              <rect x="34" y="72" width="96" height="10" rx="4" fill="#0F766E" fill-opacity=".07"/>
+              <rect x="34" y="88" width="112" height="10" rx="4" fill="#0F766E" fill-opacity=".07"/>
+            </svg>
+          </div>
+          <div>
+            <div class="tags"><span class="tag field">技术研究</span><span class="tag">源码</span></div>
+            <h3><a href="#">一次 arun 到底经过哪些层：采集框架的内部执行链</a></h3>
+            <p class="excerpt">跟着源码走一遍从配置解析、浏览器调度到内容清洗的完整链路，并标出三个最容易产生误解的位置。</p>
+            <div class="meta"><span>2026-10-28</span><span class="sep">·</span><span>18 分钟</span><span class="sep">·</span><span>2,417 次阅读</span></div>
+          </div>
+        </article>
+
+        <div class="pager">
+          <span class="on">1</span>
+          <a href="#">2</a>
+          <a href="#">3</a>
+          <a href="#">下一页 →</a>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="side-block">
+          <div class="side-title">分类</div>
+          <ul class="side-list">
+            <li><a href="#">运维实录 <span class="n">6</span></a></li>
+            <li><a href="#">开源观察 <span class="n">4</span></a></li>
+            <li><a href="#">技术研究 <span class="n">9</span></a></li>
+            <li><a href="#">AI 应用 <span class="n">7</span></a></li>
+            <li><a href="#">Java AI <span class="n">3</span></a></li>
+          </ul>
+        </div>
+
+        <div class="side-block">
+          <div class="side-title">热门标签</div>
+          <div class="tags" style="margin:0;">
+            <span class="tag">Crawl4AI</span><span class="tag">Docker</span><span class="tag">SSH</span>
+            <span class="tag">Agent</span><span class="tag">RAG</span><span class="tag">Spring Boot</span>
+            <span class="tag">Nginx</span><span class="tag">MySQL</span>
+          </div>
+        </div>
+
+        <div class="side-block">
+          <div class="side-title">关于</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">写跑过的，讲清楚的。研究结果会整理成文章、开源项目分析与可用的产品。</p>
+          <a class="btn btn-ghost btn-sm" href="#">了解更多</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="foot-top">
+      <div>
+        <div class="foot-brand"><span class="brand-mark">CP</span> CoolSkyAI</div>
+        <p class="foot-desc">CoolSkyAI 技术平台 · 技术知识与服务</p>
+      </div>
+      <nav class="foot-links"><a href="#">知识星球</a><a href="#">关注我</a><a href="#">关于</a><a href="#">友链</a></nav>
+    </div>
+    <div class="foot-bottom"><span>© 2026 CoolSkyAI</span><span>技术文章</span></div>
+  </div>
+</footer>
+
+</body>
+</html>

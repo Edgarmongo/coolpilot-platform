@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CoolSkyAI · 技术知识与服务</title>
+<link rel="stylesheet" href="assets/site.css"/>
+<style>
+  .teaser{
+    display:grid;grid-template-columns:1.1fr .9fr;gap:0;
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:linear-gradient(120deg,#F4FBF9,#EAF6F3);transition:transform .18s,border-color .18s;
+  }
+  .teaser:hover{transform:translateY(-2px);border-color:var(--line-2);}
+  .teaser-body{padding:30px 34px;}
+  .teaser-art{display:flex;align-items:center;justify-content:center;padding:16px;}
+  @media (max-width:900px){.teaser{grid-template-columns:1fr;}.teaser-art{display:none;}}
+  .svc{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:18px 20px;background:#fff;}
+  .svc-ico{width:38px;height:38px;border-radius:9px;background:var(--teal-050);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--teal);flex:0 0 auto;}
+  .svc h4{font-size:15px;margin-bottom:6px;}
+  .svc p{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">CP</span><span>CoolSkyAI</span></a>
+      <form class="search" onsubmit="return false">
+        <input type="search" placeholder="搜索站内内容…"/>
+        <button aria-label="搜索"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      </form>
+      <div class="topbar-right">
+        <div class="langs"><span class="on">中</span><span>EN</span></div>
+        <span class="my">我的</span>
+        <a class="login" href="#"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>登录</a>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="nav-item is-active" href="index.html">首页</a>
+      <a class="nav-item" href="archives.html">技术文章</a>
+      <a class="nav-item" href="open-source-index.html">开源商业观察</a>
+      <a class="nav-item" href="#">技术专题</a>
+      <a class="nav-item" href="#">项目</a>
+      <a class="nav-item" href="knowledge.html">知识产品</a>
+      <a class="nav-item" href="#">技术服务</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="eyebrow">CoolSkyAI · 技术知识与服务</p>
+        <h1>把技术研究做成<br/>能复用的东西</h1>
+        <p class="lead">写跑过的，讲清楚的，做成能用的。</p>
+        <p class="desc">这里记录我实际部署、测试、踩坑之后的技术结论——包括失败的实验、被推翻的判断，以及那些官方文档不会告诉你的边界。研究结果会变成文章、开源项目分析，以及可以直接用的产品与工具。</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="archives.html">开始阅读
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="open-source-index.html">开源商业观察</a>
+        </div>
+        <div class="hero-note"><span class="dot"></span>结论标注证据等级 · 失败案例同样保留</div>
+      </div>
+
+      <div class="hero-art">
+        <svg width="430" height="330" viewBox="0 0 430 330" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hb" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0F766E" stop-opacity=".09"/>
+              <stop offset="1" stop-color="#0F766E" stop-opacity=".01"/>
+            </linearGradient>
+          </defs>
+          <circle cx="215" cy="160" r="128" fill="url(#hb)"/>
+          <circle cx="215" cy="160" r="128" stroke="#0F766E" stroke-opacity=".13" stroke-dasharray="3 6"/>
+
+          <!-- 浏览器窗口 -->
+          <rect x="52" y="66" width="286" height="190" rx="12" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+          <path d="M52 78c0-6.6 5.4-12 12-12h262c6.6 0 12 5.4 12 12v14H52V78z" fill="#F2FAF8"/>
+          <circle cx="70" cy="79" r="3.5" fill="#0F766E" fill-opacity=".22"/>
+          <circle cx="82" cy="79" r="3.5" fill="#0F766E" fill-opacity=".14"/>
+          <rect x="100" y="75" width="150" height="8" rx="4" fill="#0F766E" fill-opacity=".08"/>
+
+          <!-- 左侧列表 -->
+          <rect x="70" y="106" width="60" height="10" rx="5" fill="#0F766E" fill-opacity=".30"/>
+          <rect x="70" y="128" width="128" height="7" rx="3.5" fill="#0F766E" fill-opacity=".16"/>
+          <rect x="70" y="146" width="150" height="7" rx="3.5" fill="#0F766E" fill-opacity=".10"/>
+          <rect x="70" y="164" width="112" height="7" rx="3.5" fill="#0F766E" fill-opacity=".10"/>
+          <rect x="70" y="186" width="46" height="6" rx="3" fill="#0F766E" fill-opacity=".18"/>
+          <rect x="124" y="186" width="34" height="6" rx="3" fill="#0F766E" fill-opacity=".10"/>
+          <rect x="70" y="206" width="90" height="7" rx="3.5" fill="#0F766E" fill-opacity=".10"/>
+          <rect x="70" y="224" width="64" height="7" rx="3.5" fill="#0F766E" fill-opacity=".10"/>
+
+          <!-- 右侧图表 -->
+          <rect x="216" y="106" width="102" height="122" rx="9" fill="#F2FAF8" stroke="#0F766E" stroke-opacity=".12"/>
+          <rect x="230" y="196" width="12" height="20" rx="3" fill="#0F766E" fill-opacity=".22"/>
+          <rect x="248" y="180" width="12" height="36" rx="3" fill="#0F766E" fill-opacity=".35"/>
+          <rect x="266" y="164" width="12" height="52" rx="3" fill="#0F766E" fill-opacity=".5"/>
+          <rect x="284" y="148" width="12" height="68" rx="3" fill="#0F766E" fill-opacity=".7"/>
+          <rect x="230" y="120" width="44" height="6" rx="3" fill="#0F766E" fill-opacity=".18"/>
+
+          <!-- 浮层：文章卡 -->
+          <g>
+            <rect x="300" y="42" width="104" height="70" rx="10" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+            <rect x="312" y="54" width="38" height="26" rx="5" fill="#0F766E" fill-opacity=".10"/>
+            <rect x="358" y="56" width="34" height="6" rx="3" fill="#0F766E" fill-opacity=".28"/>
+            <rect x="358" y="70" width="26" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="312" y="90" width="80" height="6" rx="3" fill="#0F766E" fill-opacity=".12"/>
+          </g>
+
+          <!-- 浮层：标签 -->
+          <g>
+            <rect x="28" y="188" width="86" height="30" rx="8" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+            <circle cx="44" cy="203" r="5" fill="#0F766E" fill-opacity=".25"/>
+            <rect x="56" y="199" width="42" height="7" rx="3.5" fill="#0F766E" fill-opacity=".22"/>
+          </g>
+          <g>
+            <rect x="44" y="232" width="72" height="26" rx="8" fill="#0F766E" fill-opacity=".9"/>
+            <rect x="56" y="241" width="46" height="7" rx="3.5" fill="#fff" fill-opacity=".85"/>
+          </g>
+
+          <circle cx="372" cy="150" r="4" fill="#0F766E" fill-opacity=".28"/>
+          <circle cx="60" cy="128" r="3.5" fill="#0F766E" fill-opacity=".2"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 最新文章 -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <h2 class="sec-title"><span class="bar"></span>最新文章</h2>
+          <p class="sec-sub">部署、实验、源码与复盘，都是跑过之后写的</p>
+        </div>
+        <a class="more" href="archives.html">全部文章
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="grid3">
+        <article class="card">
+          <div class="cover">
+            <svg viewBox="0 0 400 148" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="148" fill="#F2FAF8"/>
+              <rect x="52" y="34" width="296" height="80" rx="7" fill="#0B3F3A"/>
+              <rect x="66" y="50" width="120" height="6" rx="3" fill="#5EEAD4" fill-opacity=".55"/>
+              <rect x="66" y="66" width="200" height="6" rx="3" fill="#E2E8F0" fill-opacity=".22"/>
+              <rect x="66" y="82" width="150" height="6" rx="3" fill="#E2E8F0" fill-opacity=".16"/>
+              <rect x="66" y="98" width="90" height="6" rx="3" fill="#F87171" fill-opacity=".6"/>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <div class="tags"><span class="tag field">运维实录</span></div>
+            <h3>44,256 次失败登录之后：一次真实的 VPS 加固实录</h3>
+            <p class="desc">加固只花了十分钟，但我中途三次把自己锁在门外。完整过程、两个看起来蠢但很多人会犯的错误。</p>
+            <div class="foot"><span>2026-11-19</span><span>12 分钟</span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="cover">
+            <svg viewBox="0 0 400 148" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="148" fill="#F2FAF8"/>
+              <rect x="60" y="30" width="128" height="88" rx="8" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+              <rect x="74" y="46" width="70" height="6" rx="3" fill="#0F766E" fill-opacity=".25"/>
+              <rect x="74" y="62" width="96" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="74" y="76" width="82" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="74" y="94" width="56" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+              <path d="M196 74h26" stroke="#0F766E" stroke-opacity=".35" stroke-dasharray="4 4"/>
+              <path d="M216 68l7 6-7 6" stroke="#0F766E" stroke-opacity=".35" fill="none" stroke-width="1.6"/>
+              <rect x="232" y="38" width="110" height="72" rx="8" fill="#fff" stroke="#0F766E" stroke-opacity=".2"/>
+              <rect x="246" y="54" width="40" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+              <rect x="246" y="70" width="80" height="16" rx="4" fill="#0F766E" fill-opacity=".08"/>
+              <rect x="246" y="92" width="60" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <div class="tags"><span class="tag field">开源观察</span></div>
+            <h3>从网页到 AI 可用的数据：抓下来只是开始</h3>
+            <p class="desc">一个中文资讯站抓下 6.3 万字符，真正能用的只有 4 千。这 15 倍差距发生在哪一步。</p>
+            <div class="foot"><span>2026-11-12</span><span>9 分钟</span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="cover">
+            <svg viewBox="0 0 400 148" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="148" fill="#F2FAF8"/>
+              <circle cx="200" cy="74" r="38" fill="#0F766E" fill-opacity=".08"/>
+              <circle cx="200" cy="74" r="20" fill="#0F766E" fill-opacity=".14"/>
+              <circle cx="200" cy="74" r="7" fill="#0F766E" fill-opacity=".55"/>
+              <g stroke="#0F766E" stroke-opacity=".2" stroke-dasharray="4 5">
+                <path d="M200 74L136 40M200 74L264 40M200 74L136 108M200 74L264 108"/>
+              </g>
+              <g fill="#fff" stroke="#0F766E" stroke-opacity=".2">
+                <rect x="112" y="26" width="48" height="26" rx="6"/>
+                <rect x="240" y="26" width="48" height="26" rx="6"/>
+                <rect x="112" y="96" width="48" height="26" rx="6"/>
+                <rect x="240" y="96" width="48" height="26" rx="6"/>
+              </g>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <div class="tags"><span class="tag field">AI 应用</span></div>
+            <h3>给产品补一条可替换的采集通道：一次选型记录</h3>
+            <p class="desc">为什么先定接口再选工具，以及怎么让「换掉引擎」不影响上层业务代码。</p>
+            <div class="foot"><span>2026-11-05</span><span>15 分钟</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 开源商业观察 -->
+  <section style="padding-top:8px;">
+    <div class="container">
+      <div class="teaser">
+        <div class="teaser-body">
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <span class="badge">栏目推荐</span>
+            <span class="badge soft">12 篇专题 · 进行中</span>
+          </div>
+          <h2 style="font-size:25px;margin-bottom:12px;">开源项目商业观察</h2>
+          <p style="color:var(--ink-2);font-size:14.5px;max-width:520px;margin-bottom:18px;">用实际部署与测试得到的证据，判断一个开源项目能不能变成生意——以及什么条件下不能。目前已对 Crawl4AI 完成 12 个实验。</p>
+          <div class="tags"><span class="tag field">数据采集</span><span class="tag">AI Agent</span><span class="tag">RAG</span></div>
+          <a class="btn btn-primary btn-sm" href="open-source-index.html" style="margin-top:18px;">进入栏目
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+        <div class="teaser-art">
+          <svg width="330" height="220" viewBox="0 0 330 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="26" width="112" height="168" rx="9" fill="#fff" stroke="#0F766E" stroke-opacity=".18"/>
+            <rect x="30" y="26" width="112" height="22" rx="9" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="44" y="62" width="56" height="7" rx="3.5" fill="#0F766E" fill-opacity=".28"/>
+            <rect x="44" y="80" width="84" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="44" y="94" width="72" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="44" y="114" width="40" height="34" rx="5" fill="#0F766E" fill-opacity=".08"/>
+            <rect x="90" y="114" width="38" height="34" rx="5" fill="#0F766E" fill-opacity=".08"/>
+            <rect x="44" y="162" width="64" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <path d="M150 110h22" stroke="#0F766E" stroke-opacity=".3" stroke-dasharray="4 4"/>
+            <path d="M166 104l6 6-6 6" stroke="#0F766E" stroke-opacity=".3" fill="none" stroke-width="1.6"/>
+            <rect x="182" y="42" width="118" height="152" rx="9" fill="#fff" stroke="#0F766E" stroke-opacity=".18"/>
+            <rect x="196" y="58" width="46" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+            <rect x="196" y="76" width="88" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            <rect x="196" y="92" width="88" height="20" rx="4" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="204" y="99" width="38" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+            <rect x="196" y="118" width="88" height="20" rx="4" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="204" y="125" width="30" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+            <rect x="196" y="144" width="88" height="20" rx="4" fill="#0F766E" fill-opacity=".07"/>
+            <rect x="204" y="151" width="44" height="6" rx="3" fill="#0F766E" fill-opacity=".3"/>
+            <rect x="196" y="172" width="60" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 知识产品 -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <h2 class="sec-title"><span class="bar"></span>知识产品</h2>
+          <p class="sec-sub">把研究整理成可以直接上手的东西</p>
+        </div>
+        <a class="more" href="knowledge.html">全部产品
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="grid3">
+        <article class="card">
+          <div class="cover" style="height:120px;">
+            <svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="120" fill="#F2FAF8"/>
+              <rect x="150" y="24" width="72" height="72" rx="6" fill="#fff" stroke="#0F766E" stroke-opacity=".25"/>
+              <rect x="176" y="24" width="8" height="72" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="162" y="42" width="26" height="5" rx="2.5" fill="#0F766E" fill-opacity=".3"/>
+              <rect x="162" y="54" width="20" height="4" rx="2" fill="#0F766E" fill-opacity=".15"/>
+              <rect x="230" y="40" width="90" height="8" rx="4" fill="#0F766E" fill-opacity=".14"/>
+              <rect x="230" y="58" width="60" height="8" rx="4" fill="#0F766E" fill-opacity=".10"/>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <h3>Java AI 应用开发实战</h3>
+            <p class="desc">从 Spring Boot 接入模型、编排 Agent、到把 RAG 落进业务系统的完整路径。</p>
+            <div class="tags"><span class="tag">电子书</span><span class="tag">源码</span></div>
+            <div class="foot"><span class="price">¥199</span><span>已上线</span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="cover" style="height:120px;">
+            <svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="120" fill="#F2FAF8"/>
+              <circle cx="200" cy="60" r="30" fill="none" stroke="#0F766E" stroke-opacity=".25"/>
+              <circle cx="200" cy="60" r="16" fill="#0F766E" fill-opacity=".10"/>
+              <circle cx="200" cy="60" r="6" fill="#0F766E" fill-opacity=".5"/>
+              <g stroke="#0F766E" stroke-opacity=".2" stroke-dasharray="3 4"><path d="M200 60L150 34M200 60L250 34M200 60L150 86M200 60L250 86"/></g>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <h3>AI Agent 工程化笔记</h3>
+            <p class="desc">Agent Loop、工具设计、记忆与成本控制，以及哪些任务根本不该交给 Agent。</p>
+            <div class="tags"><span class="tag">笔记</span><span class="tag">持续更新</span></div>
+            <div class="foot"><span class="price">¥129</span><span>更新中</span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="cover" style="height:120px;">
+            <svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice">
+              <rect width="400" height="120" fill="#F2FAF8"/>
+              <rect x="140" y="28" width="120" height="64" rx="6" fill="#fff" stroke="#0F766E" stroke-opacity=".22"/>
+              <rect x="154" y="42" width="44" height="6" rx="3" fill="#0F766E" fill-opacity=".28"/>
+              <rect x="154" y="56" width="90" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+              <rect x="154" y="70" width="70" height="5" rx="2.5" fill="#0F766E" fill-opacity=".12"/>
+            </svg>
+          </div>
+          <div class="card-pad">
+            <h3>开源项目商业分析模板包</h3>
+            <p class="desc">十维度分析框架、评估卡、证据分级表，和一个可以直接填的研究文档模板。</p>
+            <div class="tags"><span class="tag">模板</span><span class="tag">方法论</span></div>
+            <div class="foot"><span class="price">¥69</span><span>已上线</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 技术服务 -->
+  <section style="background:var(--teal-050);border-top:1px solid var(--line);border-bottom:1px solid var(--line);">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <h2 class="sec-title"><span class="bar"></span>技术服务</h2>
+          <p class="sec-sub">需求 → 报价 → 立项 → 里程碑 → 交付 → 验收</p>
+        </div>
+        <a class="more" href="#">了解流程
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="grid3">
+        <div class="svc">
+          <div class="svc-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/></svg></div>
+          <div><h4>开源项目私有化部署</h4><p>内网环境搭建、配置调优、备份与监控，交付可运维的部署方案。</p></div>
+        </div>
+        <div class="svc">
+          <div class="svc-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="M8 21h8M12 18v3"/><path d="M8 9h3M8 13h6"/></svg></div>
+          <div><h4>AI 应用与 Agent 开发</h4><p>从模型接入、工具编排到业务流程集成，交付可运行的应用。</p></div>
+        </div>
+        <div class="svc">
+          <div class="svc-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg></div>
+          <div><h4>数据采集与分析系统</h4><p>多平台采集、清洗标准化、内容洞察，接手从数据到结论的整段流程。</p></div>
+        </div>
+      </div>
+
+      <div style="margin-top:26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="#">提交需求</a>
+        <span style="font-size:13px;color:var(--muted);">先聊清楚问题再报价，不接受「先做出来看看」。</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="foot-top">
+      <div>
+        <div class="foot-brand"><span class="brand-mark">CP</span> CoolSkyAI</div>
+        <p class="foot-desc">CoolSkyAI 技术平台 · 技术知识与服务</p>
+      </div>
+      <nav class="foot-links">
+        <a href="#">知识星球</a><a href="#">关注我</a><a href="#">关于</a><a href="#">友链</a>
+      </nav>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 CoolSkyAI</span>
+      <div class="socials">
+        <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.3 9.3 0 015 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7 1 .7 1.9v2.9c0 .3.2.6.7.5 4-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"/></svg></a>
+        <a href="#" aria-label="邮箱"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg></a>
+        <a href="#" aria-label="RSS"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 11a9 9 0 019 9"/><path d="M4 4a16 16 0 0116 16"/><circle cx="5.5" cy="18.5" r="1.6" fill="currentColor" stroke="none"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
