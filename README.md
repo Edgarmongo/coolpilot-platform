@@ -1,6 +1,6 @@
 # 酷天AI · CoolSkyAI Platform
 
-> 一个个人技术品牌站点的完整底座：文章、知识产品、技术服务、付费社群引流，用一套账号打通「看内容 → 买内容 → 交付 → 售后」。
+> 一个个人技术品牌站点的完整底座：文章、开源项目研究、知识产品、技术服务，用一套账号打通「看内容 → 买内容 → 交付 → 售后」。
 >
 > 面向中文用户叫 **酷天AI**，英文站叫 **CoolSkyAI** —— 品牌名按语言区分，配置在 `site_setting.blogName`。
 
@@ -19,24 +19,34 @@
 不是博客，是「内容获客 + 知识变现 + 技术服务」的闭环：
 
 - **内容**：文章、动态、分类、标签、专题、归档、友链、评论，Markdown 写作支持截图直粘
+- **开源观察**：第三方开源项目的商业价值研究——项目档案 + 七维评估卡（每维带证据等级）+ 关联分析文章，与作品集完全独立
 - **知识产品**：文档 / 课程 / 专栏 / 代码 / 服务五类商品，含目录、课时、试看与配套资源
 - **交易**：下单 → 扫码支付 → 后台确认 → 发权益 → 下载/学习 → 退款，全链路幂等
 - **技术服务**：需求提交 → 报价 → 立项 → 里程碑 → 交付 → 验收，客户可在站内跟踪进度
-- **AI 服务**：知识库索引、混合检索（向量 + 关键词）、多轮问答、追问改写、重排；模型与密钥可在后台配置
-- **引流**：知识星球介绍页（站外成交）、社交媒体聚合页（`/follow`）、开源项目展示（`/projects`）
+- **AI 问答**：知识库索引、混合检索（向量 + 关键词）、多轮问答、追问改写、重排；模型与密钥可在后台配置
+- **引流**：知识星球介绍页（站外成交）、社交媒体聚合页（`/follow`）、作品集（`/projects`，我做过什么）
 - **运营**：导航 / 品牌 / 页脚 / 站点设置全部后台可配；附件管理带引用检查；定时任务可视化管理
 
 支付目前走「扫码转账 + 后台人工确认」，不需要微信支付/支付宝商户资质。将来接官方渠道只需实现一个渠道接口。
+
+> 三个「项目」不要混：前台 `/projects` 是**作品集**（我做过什么，数据取自 `portfolio`），
+> `/project/{no}` 是**服务项目进度**（客户委托），`/open-source/projects` 是**第三方开源项目研究**。
+>
+> 尤其注意：**API 里的 `GET /projects` 返回的是服务项目**，与前台 `/projects` 不是一回事 —— 这是本仓库最容易踩的命名坑。
 
 ## 版本
 
 | 版本 | 内容 | 状态 |
 |---|---|---|
 | `v0.1.0-baseline` | 上游 Vue 2 版本基线（保留在 tag 中，用于对照迁移） | 已归档 |
-| `v1.0.0` | 首个正式版：内容 + 商品 + 交易 + 技术服务 + AI 问答 + 知识星球 + 社交引流 + 项目展示 + 附件管理 + 找回密码 + 中英双语 | 已上线 |
+| `v1.0.0` | 首个正式版：内容 + 商品 + 交易 + 技术服务 + AI 问答 + 知识星球 + 社交引流 + 作品集 + 附件管理 + 找回密码 + 中英双语 | 已上线 |
 | `v1.0.1` | 品牌名按语言区分（酷天AI / CoolSkyAI），修英文站标题回落中文的问题 | 已上线 |
+| `v1.0.2` | 修后台文章保存：`password` 为 NULL 被误判为加密、列表页未脱敏 | 已上线 |
+| `v1.0.3` | 前端按视觉稿重构：白色双行头部、统一卡片与正文排版、文章目录侧栏、列表/时间线双视图 | 已上线 |
+| `v1.0.4` | 正文渲染对 HTML / Markdown 双格式都安全，修代码块被二次解析 | 已上线 |
+| `v1.1.0` | **开源项目商业观察栏目**：V28 三张表、9 个公开接口、前后台各一套页面 | 已上线 |
 
-变更明细见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
+线上运行版本以服务器 `.env` 的 `TAG` 为准。变更明细见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
 ## 架构一览
 
@@ -48,7 +58,7 @@
                   ┌───▼───┐  ┌───▼────┐  ┌───▼────┐
                   │  web  │  │ admin  │  │  api   │
                   │ Nuxt3 │  │ Vue3   │  │Spring  │
-                  │ :8081 │  │ :80    │  │ :8091  │
+                  │ :3000 │  │ :80    │  │ :8091  │
                   └───────┘  └────────┘  └───┬────┘
                                              │
                                   ┌──────────┴──────────┐
@@ -63,13 +73,13 @@
 
 | 域 | 管什么 |
 |---|---|
-| 内容管理 | 文章、分类、标签、专题、动态、评论、友链、反馈 |
+| 内容管理 | 文章、分类、标签、专题、**开源观察**、动态、评论、友链、反馈 |
 | 商品管理 | 知识商品（文档/课程/专栏/代码/服务）、目录、课时、资源 |
 | 技术服务 | 服务项目、客户需求、报价、项目、里程碑、交付 |
 | 交易管理 | 订单、支付确认、退款、用户权益 |
 | 用户管理 | 访客账号、禁用、重置密码 |
 | AI 服务 | 模型管理（密钥掩码、热生效）、知识库索引、问答记录、用量统计 |
-| 页面管理 | 站点设置（含知识星球）、导航菜单、社交媒体、项目展示、关于页 |
+| 页面管理 | 站点设置（含知识星球）、导航菜单、社交媒体、作品集、关于页 |
 | 系统管理 | 管理员、操作日志、附件管理、定时任务 |
 
 ## 多语言
@@ -94,7 +104,7 @@
 | 层 | 选型 |
 |---|---|
 | 后端 | Java 21、Spring Boot 4.1、Spring Security + JWT、MyBatis、PageHelper、Quartz |
-| 数据 | MySQL 8（Flyway 版本化迁移，59 张表 / V27）、Redis 7 |
+| 数据 | MySQL 8（Flyway 版本化迁移，62 张表 / V28）、Redis 7 |
 | 前台 | Nuxt 3 + Vue 3.5 + TypeScript（SSR，自带 sitemap / robots） |
 | 后台 | Vue 3.5 + Vite + Element Plus + Pinia |
 | 部署 | Docker Compose、nginx gateway、GHCR 镜像、GitHub Actions |
@@ -115,7 +125,7 @@ docker compose up -d --build
 | 服务 | 地址 | 说明 |
 |---|---|---|
 | 前台 | http://localhost:8081 | 访客侧，可注册登录 |
-| 后台 | http://localhost:8079/cms/ | 站长侧，初始账号 `admin` / `123456` |
+| 后台 | http://localhost:8079/cms/ | 站长侧，种子账号 `Admin`（首字母大写） |
 | 接口 | http://localhost:8091 | Spring Boot API |
 | MySQL | localhost:13306 | 映射到容器 3306，避免与本机冲突 |
 | Redis | localhost:16379 | 同上 |
@@ -124,25 +134,40 @@ docker compose up -d --build
 - 改前端：`coolpilot-web` / `coolpilot-admin` 是 bind mount，自动热更新（i18n 词条除外）
 - 进数据库：`./scripts/db-shell.sh`
 
-> 初始密码 `123456` **仅用于本地**。生产部署后必须立即修改，见 [docs/DEPLOY.md](docs/DEPLOY.md)。
+> 种子密码**仅用于本地**（`V2__init_seed.sql` 里的 bcrypt 值）。生产部署后必须立即通过后台「系统管理 → 账号设置」改掉，见 [docs/DEPLOY.md](docs/DEPLOY.md)。
+>
+> 用户名是 `Admin`，不是 `admin` —— 登录大小写敏感，小写连续失败会触发锁定。
 
 ## 生产部署
 
 一套流程，不手工装环境：
 
 ```bash
-git tag -a v1.0.2 -m "v1.0.2" && git push origin v1.0.2   # 触发 CI 构建四个镜像
+git tag -a v1.1.0 -m "v1.1.0" && git push origin v1.1.0   # 触发 CI 构建四个镜像
 ```
 
 服务器上：
 
 ```bash
 cd /opt/coolpilot-platform
-sed -i 's/^TAG=.*/TAG=v1.0.2/' .env
-docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+cp .env .env.bak-$(date +%Y%m%d%H%M)            # 出问题可原样退回
+sed -i 's/^TAG=.*/TAG=v1.1.0/' .env
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-数据库迁移由 Flyway 在应用启动时自动执行，不需要手工建表。
+数据库迁移由 Flyway 在应用启动时自动执行，不需要手工建表。**只要这次包含迁移，发版前先备份库**：
+
+```bash
+docker exec coolpilot-mysql sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" \
+  --single-transaction --quick --routines coolpilot' > /opt/backup/pre-$(date +%Y%m%d%H%M).sql
+```
+
+迁移不可回退：应用可以退回旧 tag，但已执行到 V28 的表结构会保留。真正的数据回滚要用上面那份 dump。
+
+> **导航菜单走 Redis 缓存**：迁移里插入的菜单项不会自动生效，部署后需要清一次：
+> `redis-cli DEL '"navMenuList:zh-CN"' '"navMenuList:en"'`（键名外的双引号不能省）。
+
 
 **反向代理 / CDN 有一个必踩的坑**：如果域名走 Cloudflare，SSL 模式必须是 **Full（完整）**。选 Flexible 或「自动」都会和 gateway 的 80→443 跳转形成无限重定向（因为源站是自签名证书，自动模式验不过会退回 Flexible）。详见 [docs/DEPLOY.md](docs/DEPLOY.md) 的「Cloudflare 配置」一节。
 
@@ -177,10 +202,11 @@ coolpilot-platform/
 ├── coolpilot-server/                 # Spring Boot 后端
 │   └── src/main/
 │       ├── java/com/coolskyai/
-│       │   ├── modules/              # 业务模块：nav / brand / social / portfolio / planet /
-│       │   │                         #            account / product / trade / service / ai / file …
-│       │   └── ...                   # 早期遗留包，只修 bug 不新增业务
-│       └── resources/db/migration/   # Flyway 迁移 V1–V27（唯一的建表来源）
+│       │   ├── modules/              # 17 个业务模块：account / ai / auth / brand / community /
+│       │   │                         #   entitlement / file / nav / notify / opensource /
+│       │   │                         #   planet / portfolio / product / service / social / topic / trade
+│       │   └── ...                   # 早期遗留包（文章/分类/标签/评论…），只修 bug 不新增业务
+│       └── resources/db/migration/   # Flyway 迁移 V1–V28（唯一的建表来源）
 ├── coolpilot-admin/                  # 管理后台（Vue 3 + Vite + Element Plus）
 ├── coolpilot-web/                    # 用户前台（Nuxt 3 + TS，SSR）
 ├── deploy/                           # Dockerfile、gateway nginx 模板、systemd 单元
@@ -194,19 +220,16 @@ coolpilot-platform/
 
 ## 文档
 
+全部文档的索引与阅读顺序见 **[docs/README.md](docs/README.md)**。最常看的几份：
+
 | 文档 | 内容 |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 三端架构、模块边界、技术选型理由 |
-| [docs/DATA-MODEL.md](docs/DATA-MODEL.md) | 59 张表的设计与取舍 |
-| [docs/ED-04-API-DESIGN.md](docs/ED-04-API-DESIGN.md) | 接口约定、错误码、幂等设计 |
-| [docs/ED-05-TASKS.md](docs/ED-05-TASKS.md) | 任务卡与验收标准 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 三端架构、17 个模块、路由、数据流、技术债 |
+| [docs/FEATURE-MAP.md](docs/FEATURE-MAP.md) | 全站功能地图：62 表 / 263 接口 / 34 前台页 / 32 后台页 |
+| [docs/FEATURE-REVIEW.md](docs/FEATURE-REVIEW.md) | 功能评审总表与风险登记（R1–R7） |
+| [docs/DATA-MODEL.md](docs/DATA-MODEL.md) | 59 张存量表 + V28 三张新表的设计与取舍 |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 上线手册：gateway 分流、Cloudflare、证书、备份恢复、排查 |
-| [docs/CI-CD.md](docs/CI-CD.md) | 流水线、镜像发布、发布与回滚 |
-| [docs/DOCKER.md](docs/DOCKER.md) | 容器编排、Flyway 迁移、常见问题 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 各版本变更明细 |
-| [docs/BASELINE.md](docs/BASELINE.md) | 上游导入、基线定义、提交规范 |
-| [docs/CP-WEB-01](docs/CP-WEB-01-现状核查与设计方案.md) / [02](docs/CP-WEB-02-功能范围与代码审计对照表.md) | 信息架构改造的现状核查与范围基线 |
-| [docs/ADR-0001](docs/ADR-0001-VECTOR-STORE.md) · [0002](docs/ADR-0002-HYBRID-RETRIEVAL.md) · [0003](docs/ADR-0003-QUERY-REWRITE-RERANK.md) | 检索与问答的技术决策记录 |
 
 ## CI/CD
 

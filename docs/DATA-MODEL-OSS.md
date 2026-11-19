@@ -3,6 +3,9 @@
 > 配套 `PRD-OSS-INSIGHTS.md`、`ADR-0004-OPEN-SOURCE-MODEL.md`、`CP-WEB-OS-01-现状审计与改造方案.md`。
 > **v2 变更**：由「复用 portfolio + kind」改为「新建 oss_project」。理由见 ADR-0004。
 > 执行方式：只写 `V28__open_source_insights.sql`，随部署自动执行，**不手工改生产库**。
+>
+> **状态：已上线**（v1.1.0，2026-11-20）。本文件是设计 / 决策记录，不再随实现演进修改；
+> 系统现状以 [FEATURE-MAP.md](FEATURE-MAP.md) 为准，待办与偏差以 [TASKS-OSS-INSIGHTS.md](TASKS-OSS-INSIGHTS.md) 为准。
 
 ---
 

@@ -1,6 +1,8 @@
 # ADR-0004：开源项目商业观察的数据模型
 
-- 状态：**建议采纳**（2026-11-20，待确认）
+> **状态：已采纳并落地**（v1.1.0，2026-11-20 上线）。本 ADR 是决策记录，不再随实现修改；
+> 系统现状以 [FEATURE-MAP.md](FEATURE-MAP.md) 为准，落地偏差见 [TASKS-OSS-INSIGHTS.md](TASKS-OSS-INSIGHTS.md)。
+
 - 背景：要在一个已经跑着 59 张表的站点上加「开源项目商业观察」栏目
 - 关联：`CP-WEB-OS-01-现状审计与改造方案.md`、`PRD-OSS-INSIGHTS.md`、`DATA-MODEL-OSS.md`
 

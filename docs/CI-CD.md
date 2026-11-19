@@ -22,12 +22,15 @@
 发布一个起不来的版本。CI 里起一个空 MySQL，用 `flyway/flyway:11` 真跑一遍
 `V*.sql`，然后断言「业务表 ≥ 53 张、site_setting ≥ 30 项」。
 用下限而不是等值：后续版本还会加表，等值断言每加一张表就要改 CI。
-（当前实际 59 张 / V27。）
+（当前实际 62 张 / V28；下限断言仍是 53，加表不需要改 CI。）
 脚本语法错、顺序错、忘了建表，都会在 PR 阶段红掉。
 
 几点说明：
 
-- **不跑单元测试**。目前只有一个 `@SpringBootTest` 的 `contextLoads`，启动上下文需要 MySQL 和 Redis，CI 里没有。所以先只做 `test-compile`——**测试代码也要能编译**（改包名时最容易漏的就是测试目录）。
+- **不跑单元测试**。CI 里是 `mvn -DskipTests package`，只编译不打测试。
+  原因：`@SpringBootTest` 的 `contextLoads` 需要 MySQL 与 Redis，CI 里没有。
+  现有的 `MarkdownUtilsTest` 是纯单元测试（不依赖 Spring），本可以直接跑，但尚未接进流水线 —— 属于待改进项。
+  当前能保证的是**测试代码也能编译**（改包名时最容易漏的就是测试目录）。
 - **用 `npm ci` 而不是 `npm install`**。锁文件与 `package.json` 不一致时直接失败，这是刻意的：避免「本地能跑、CI 装了另一套依赖」。
 - 只改了 `**.md` 或 `docs/**` 时跳过，不浪费额度。
 - 同一分支连续推送会取消上一次未完成的运行（`concurrency`）。
@@ -123,7 +126,7 @@ SITE_URL=https://coolskyai.com
 
 ```bash
 cd $DEPLOY_PATH
-export TAG=v1.0.1
+export TAG=v1.1.0
 docker compose -f docker-compose.prod.yml pull     # 拉新镜像
 docker compose -f docker-compose.prod.yml up -d    # 只重建变化的容器
 docker image prune -f                              # 清悬空镜像
@@ -164,8 +167,8 @@ proxy_set_header X-Forwarded-For $remote_addr;   # 不要用 $proxy_add_x_forwar
 ### 发布
 
 ```bash
-git tag -a v1.0.1 -m "v1.0.1: 品牌名按语言区分"
-git push origin v1.0.1
+git tag -a v1.1.0 -m "v1.1.0: 开源项目商业观察栏目"
+git push origin v1.1.0
 ```
 
 推 tag 触发 release，镜像好了自动部署（如果开了 `DEPLOY_ENABLED`）。

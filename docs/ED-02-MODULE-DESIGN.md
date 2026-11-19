@@ -3,6 +3,8 @@
 > 版本：v1.0 ｜ 日期：2026-11-04
 > 基线：coolpilot-server 211 个 Java 文件 / 81 个接口 / 19 张表（Spring Boot 4.1.2 + JDK 21）
 > 关联文档：`ARCHITECTURE.md`（现状）、`PRD-V1.md`（需求）、`DATA-MODEL.md`（数据）
+>
+> **文档性质：设计参考（部分已被实现超越）**。模块划分按本文实施，但数量与命名有演进（当前 17 个模块，见 [ARCHITECTURE.md](ARCHITECTURE.md) §4.2）。
 
 ---
 

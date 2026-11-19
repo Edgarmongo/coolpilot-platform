@@ -40,7 +40,7 @@
 | 服务器 | 2C4G 起步；Docker 24+ 与 compose 插件 |
 | 域名 | A 记录指向服务器 IP；`www` 可选但要和 `SERVER_NAME` 一致 |
 | 端口 | 安全组/防火墙只放 22、80、443；**不要**放 8081/8079/8091 |
-| 代码 | 仓库已打 tag（如 `v1.0.1`），Release 已把四个镜像推到 GHCR |
+| 代码 | 仓库已打 tag（如 `v1.1.0`），Release 已把四个镜像推到 GHCR |
 
 ---
 
@@ -69,7 +69,7 @@ MYSQL_ROOT_PASSWORD=<强密码>
 REDIS_PASSWORD=<强密码>
 JWT_SECRET=<openssl rand -hex 48 生成，禁止用示例值>
 REGISTRY=ghcr.io/edgarmongo
-TAG=v1.0.1
+TAG=v1.1.0
 SITE_URL=https://coolskyai.com
 SERVER_NAME=coolskyai.com www.coolskyai.com
 ```
@@ -152,27 +152,48 @@ crontab -e
 ### 发布
 
 ```bash
-git tag -a v1.2.1 -m "v1.2.1: ..."
-git push origin v1.2.1
+git tag -a v1.1.0 -m "v1.1.0: ..."
+git push origin v1.1.0
 ```
 
 Release 构建完四个镜像后（开了 `DEPLOY_ENABLED` 会自动部署），服务器上：
 
 ```bash
 cd /opt/coolpilot-platform
-sed -i 's/^TAG=.*/TAG=v1.2.1/' .env
+cp .env .env.bak-$(date +%Y%m%d%H%M)          # 出错可原样退回
+
+# 本次含 Flyway 迁移时才需要：先备库
+docker exec coolpilot-mysql sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" \
+  --single-transaction --quick --routines coolpilot' > /opt/backup/pre-$(date +%Y%m%d%H%M).sql
+
+sed -i 's/^TAG=.*/TAG=v1.1.0/' .env
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 `up -d` 只重建镜像变了的服务，MySQL/Redis 不受影响，数据卷不会动。
 
+**迁移后确认一次**：
+
+```bash
+docker logs coolpilot-server 2>&1 | grep -E "Migrating schema|Successfully applied|ERROR"
+```
+
+**如果本次迁移改动了 `nav_menu`（或任何走 Redis 长缓存的配置），必须清缓存**，否则新菜单不会出现：
+
+```bash
+docker exec coolpilot-redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning \
+  DEL "\"navMenuList:zh-CN\"" "\"navMenuList:en\""'
+```
+
+键名外的双引号是 Spring 序列化的结果，不能省 —— 省了 `DEL` 返回 0，看起来删了其实没删。
+
 ### 回滚
 
 镜像不可变，回滚就是改回上一个 tag：
 
 ```bash
-sed -i 's/^TAG=.*/TAG=v1.0.1/' .env
+sed -i 's/^TAG=.*/TAG=v1.0.4/' .env
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```

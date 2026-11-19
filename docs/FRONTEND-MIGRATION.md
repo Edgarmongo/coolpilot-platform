@@ -3,6 +3,8 @@
 > 决策日期：2026-11-05
 > 目标：`coolpilot-admin` 改为 Vue 3 + Vite + Element Plus；`coolpilot-web` 改为 Nuxt 3 + Vue 3 + TypeScript
 > 原则：**迁移期间旧版本必须保持可运行**，不做「半成品替换」
+>
+> **文档性质：已完成的迁移方案**。Vue 2 → Vue 3 / Nuxt 3 迁移已全部完成（v1.0.0 起为 Nuxt 3 + Vue 3），本文仅作过程记录。
 
 ---
 

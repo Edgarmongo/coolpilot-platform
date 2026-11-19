@@ -1,10 +1,10 @@
-# 数据模型设计：从 19 张基础表到 59 张业务表
+# 数据模型设计：从 19 张基线表到 62 张业务表（V1–V28）
 
 > 版本：v1.0 草案 ｜ 日期：2026-11-04（2026-11-07 更新实际值）
 > 范围：V1.0 – V1.2（AI 域仅预留结构，V1.3 再落库）
-> 基线：MySQL 8.0.40 / `coolpilot` 库现有 19 张表
+> 基线：上游 `coolpilot` 库 19 张表（`V1__init_schema.sql` 在此基础上扩到 39 张）
 >
-> **当前实际**：59 张业务表，Flyway 到 V27。
+> **当前实际**：62 张业务表，Flyway 到 V28（V28 新增开源观察三表，见 §十九）。
 > 本文最初按 39 张表规划；后续迁移陆续补入 `nav_menu`、`social_account`、`portfolio`、
 > `ai_setting`、`ai_usage` 等表，并在 `product` 上加 `deal_mode`。
 > 表结构以 `db/migration/` 为准，本文负责解释「为什么这么设计」。
@@ -876,3 +876,38 @@ file 1──N download_record
 - 非服务商品保存时强制清空该列：配了不生效，留着只会让后台看着像可配
 - 后台：商品表单「定价方式」下方，仅 `SERVICE` 类型显示「成交模式」
 - 前台：`QUOTE` 只给「提交需求」；`BOTH` 给两个；`DIRECT` 只给「立即购买」
+
+## 十九、开源观察域（V28）—— 已落库
+
+栏目定位与取舍见 [ADR-0004](ADR-0004-OPEN-SOURCE-MODEL.md)，字段与查询口径见
+[DATA-MODEL-OSS.md](DATA-MODEL-OSS.md)。这里只记结论。
+
+**三张表，不建分类表与标签表**
+
+| 表 | 作用 | 关键设计 |
+|---|---|---|
+| `oss_project` | 项目档案（23 列） | `slug` 唯一；`research_status` 与 `publish_status` 两条**独立**状态轴；评估卡存 `assessment_json` |
+| `oss_project_article` | 项目 ↔ 文章 | `relation_type` 四值（business / research / practice / compare），`blog` 外键只做逻辑关联 |
+| `oss_project_tag` | 项目 ↔ 标签 | 复用既有 `tag` 表，不新建标签体系 |
+
+**两条状态轴为什么要分开**
+
+`research_status`（todo / researching / done）回答「研究做到哪一步」，
+`publish_status`（draft / published / archived）回答「能不能被看到」。
+合并成一个字段会立刻出现「研究做完了但文章还没写完，能不能先发档案」这种无处安放的状态。
+
+公开接口只认 `published`，与 `research_status` 无关 —— 所以草稿档案前台不可见，
+但「未完成研究」的项目可以先发一个简版档案。
+
+**没有做的事（有意）**
+
+- 不建 `oss_category` 表：领域固定在 6 个枚举里（`data-search` / `agent` / `ai-project` / `devtool` / `enterprise` / `other`），加领域要同时改枚举与 i18n，故意提高门槛
+- 不建 `oss_tag` 表：标签复用 `tag`，避免出现两套标签并行
+- 不存 star 快照历史：只存当前值，仅作关注度参考，不用于排序打分
+- 不建评分视图：评估卡的七维是人工判断，不做加权计算，避免"看起来很科学"
+
+**归档不等于删除**
+
+`publish_status='archived'` 后，档案页 404、不出现在列表与 sitemap，
+但 `oss_project_article` 的关联记录全部保留，文章仍可正常阅读。
+原因：分析文章的价值不依赖项目是否还活跃。

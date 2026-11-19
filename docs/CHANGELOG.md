@@ -2,6 +2,8 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
+**当前线上版本：`v1.1.0`**
+
 ---
 
 ## v1.1.0（2026-11-20）
@@ -28,6 +30,17 @@
 - 导航走 Redis 缓存，Flyway 插入的新菜单不会自动生效。
   部署后需执行一次：`redis-cli DEL '"navMenuList:zh-CN"' '"navMenuList:en"'`
   （键名带双引号，是 key 序列化的结果，不能省）。
+- 本版含 Flyway V28，发布前先 `mysqldump` 备库；迁移不可回退，
+  应用退回 v1.0.4 时三张 `oss_*` 表会保留（旧代码不读，无影响）。
+
+**发布结果（2026-11-20）**
+
+- 迁移：`Successfully applied 1 migration ... now at version v28`（0.109s）
+- 部署前备份：全库 8.3MB + `.env.bak-v1.0.4-*`
+- 导航缓存已清，第 7 项 `/open-source` 生效
+- 生产录入 Crawl4AI 档案（`oss_project.id=1`），关联分析文章 `blog_id=11`
+- sitemap 从 12 条增至 16 条，新增栏目、项目档案与有内容的领域页
+- 六个容器 healthy，mysql（13 天）与 redis 未重启
 
 ---
 

@@ -3,6 +3,9 @@
 > 栏目名：**开源项目商业观察**（Open Source Business Insights）
 > 版本：**v1.2** · 2026-11-20
 > 状态：待评审 · 1 项待决（导航，见 §4.1）
+>
+> **状态：已上线**（v1.1.0，2026-11-20）。本文件是设计 / 决策记录，不再随实现演进修改；
+> 系统现状以 [FEATURE-MAP.md](FEATURE-MAP.md) 为准，待办与偏差以 [TASKS-OSS-INSIGHTS.md](TASKS-OSS-INSIGHTS.md) 为准。
 
 **修订记录**
 
