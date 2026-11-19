@@ -48,6 +48,16 @@
 						<span v-if="topics[0].articleCount" class="muted">{{ t('post.topicCount', {n: topics[0].articleCount}) }}</span>
 					</div>
 
+					<!-- 本篇所属项目：与项目档案形成双向内链。未关联时不渲染，不留空白 -->
+					<div v-if="ossProject" class="oss-link">
+						<span class="muted oss-label">{{ t('oss.blog.inProject') }}</span>
+						<NuxtLink :to="localePath(`/open-source/projects/${ossProject.slug}`)" class="oss-card">
+							<span class="oss-name">{{ ossProject.name }}</span>
+							<span class="oss-summary">{{ ossProject.summary }}</span>
+							<span v-if="ossProject.verdict" class="oss-verdict">{{ t(`oss.verdicts.${ossProject.verdict}`) }}</span>
+						</NuxtLink>
+					</div>
+
 					<!-- 关联付费内容 -->
 					<div v-if="relatedProducts.length" class="related">
 						<h3 class="block-title">{{ t('post.related') }}</h3>
@@ -167,6 +177,7 @@ const likeCount = ref(0)
 const relatedProducts = ref<any[]>([])
 const topics = ref<any[]>([])
 const relatedPosts = ref<any[]>([])
+const ossProject = ref<any>(null)
 // 密码凭证按文章维度存，30 天有效
 const pwdToken = useCookie<string | null>(`cp_blog_pwd_${param}`, {maxAge: 60 * 60 * 24 * 30, sameSite: 'lax'})
 
@@ -223,7 +234,7 @@ async function fetchBlog() {
 		blog.value = res.data
 		if (res.data && res.data.id) {
 			blogId.value = res.data.id
-			await Promise.all([loadRelated(), loadTopics(), loadRelatedPosts()])
+			await Promise.all([loadRelated(), loadTopics(), loadRelatedPosts(), loadOssProject()])
 		}
 		locked.value = false
 		message.value = ''
@@ -335,6 +346,12 @@ async function loadRelatedPosts() {
 	const res: any = await call(url).catch(() => null)
 	const list = (res && res.data && res.data.list) || []
 	relatedPosts.value = list.filter((item: any) => item.id !== current.id).slice(0, 5)
+}
+
+/** 文章所属的开源项目档案：栏目文章才有，普通文章返回 null */
+async function loadOssProject() {
+	const res: any = await call(`/open-source/blog/${blogId.value}/project`).catch(() => null)
+	ossProject.value = (res && res.code === 200) ? (res.data || null) : null
 }
 
 function typeText(type: string) {
@@ -522,6 +539,67 @@ if (blog.value) {
 	font-size: 14px;
 	font-weight: 700;
 	color: var(--teal);
+}
+
+.oss-link {
+	margin-top: 26px;
+	padding: 16px 18px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--teal-050);
+}
+
+.oss-label {
+	display: block;
+	margin-bottom: 10px;
+}
+
+.oss-card {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 10px;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 9px;
+	padding: 12px 14px;
+	transition: border-color .15s, transform .15s;
+}
+
+.oss-card:hover {
+	border-color: var(--line-2);
+	transform: translateY(-1px);
+}
+
+.oss-name {
+	font-size: 14.5px;
+	font-weight: 700;
+}
+
+.oss-card:hover .oss-name {
+	color: var(--teal);
+}
+
+.oss-summary {
+	flex: 1;
+	min-width: 180px;
+	font-size: 12.5px;
+	color: var(--muted);
+	line-height: 1.6;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.oss-verdict {
+	font-size: 11.5px;
+	font-weight: 600;
+	color: var(--teal-700);
+	background: var(--teal-100);
+	border-radius: 5px;
+	padding: 3px 8px;
+	white-space: nowrap;
 }
 
 .actions {

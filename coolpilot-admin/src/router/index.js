@@ -78,6 +78,13 @@ export const routes = [
 				meta: {title: 'menu.topics', icon: 'Notebook'}
 			},
 			{
+				// 开源项目商业观察：第三方开源项目的分析档案，与「项目展示」(portfolio) 是两件事
+				path: 'oss/projects',
+				name: 'OssProjectList',
+				component: () => import('@/views/oss/ProjectList.vue'),
+				meta: {title: 'menu.oss', icon: 'Compass'}
+			},
+			{
 				path: 'moment',
 				name: 'MomentList',
 				component: () => import('@/views/blog/MomentList.vue'),

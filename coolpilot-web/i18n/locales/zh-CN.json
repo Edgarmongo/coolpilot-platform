@@ -760,5 +760,113 @@
     "passwordMismatch": "两次输入的密码不一致",
     "success": "密码已重置，正在跳转登录…",
     "failed": "操作失败，请稍后再试"
+  },
+  "oss": {
+    "eyebrow": "Open Source Business Insights",
+    "title": "开源项目商业观察",
+    "lead": "发现开源项目，研究技术价值，挖掘商业机会。",
+    "desc": "从技术架构、用户与场景、商业模式、成本与风险四个维度，用实际部署与测试得到的证据，判断一个开源项目能不能变成生意——以及什么条件下不能。",
+    "searchPlaceholder": "搜索项目或技术，如 crawl4ai / 数据采集 / AI Agent",
+    "searchBtn": "搜索",
+    "note": "只发布跑过的结论 · 每条判断标注证据等级（F/S/T/M/A）",
+    "allProjects": "全部项目",
+    "featured": "精选研究",
+    "latest": "最新项目研究",
+    "latestSub": "部署、实测与源码分析，都是跑过之后写的",
+    "viewAll": "查看更多",
+    "method": "研究方法",
+    "methodTech": "技术架构",
+    "methodTechDesc": "拆解项目的结构设计与核心机制，判断它的能力边界和扩展性。",
+    "methodUser": "用户与场景",
+    "methodUserDesc": "谁在用它、解决什么具体问题，真实需求与宣传话术的区别在哪。",
+    "methodBiz": "商业模式",
+    "methodBizDesc": "开源方怎么赚钱、模仿者能靠什么赚钱，以及替代品的定价参照。",
+    "methodRisk": "成本与风险",
+    "methodRiskDesc": "服务器、模型、人力与维护成本，以及合规和稳定性上的隐性代价。",
+    "empty": "本期暂无，正在研究",
+    "emptyList": "该领域暂无已发布项目",
+    "noAnalysis": "尚未发布分析",
+    "researching": "待研究",
+    "articleCount": "{n} 篇分析",
+    "projectCount": "{n} 个项目",
+    "verdictLabel": "结论",
+    "disclaimer": "结论基于特定版本与环境，不构成交付承诺",
+    "verdicts": {
+      "watch": "值得持续关注",
+      "deploy": "值得部署使用",
+      "extend": "值得二次开发",
+      "commercial": "值得商业化探索",
+      "hold": "暂不建议投入"
+    },
+    "cats": {
+      "ai-project": "AI 开源项目",
+      "agent": "AI Agent 与自动化",
+      "data-search": "数据采集与搜索",
+      "devtool": "开发者工具",
+      "enterprise": "企业级开源软件"
+    },
+    "relations": {
+      "business": "商业分析",
+      "research": "技术研究",
+      "practice": "实践",
+      "compare": "对比"
+    },
+    "assessmentTitle": "商业价值评估",
+    "assessmentInvalid": "评估数据异常，已跳过评估卡；其余内容不受影响。",
+    "evidenceTip": "证据等级：F 官方事实 · S 源码 · T 实测 · M 市场 · A 推断 · ? 待验证",
+    "fields": {
+      "techMaturity": "技术成熟度",
+      "marketDemand": "市场需求",
+      "commercialSpace": "商业化空间",
+      "deployCost": "部署成本",
+      "competition": "竞争程度",
+      "devValue": "二次开发价值",
+      "insightFit": "Insight 适配"
+    },
+    "levels": {
+      "high": "高",
+      "mid": "中",
+      "low": "低"
+    },
+    "pending": "待验证",
+    "evidence": {
+      "F": "官方事实",
+      "S": "源码",
+      "T": "实测",
+      "M": "市场",
+      "A": "推断",
+      "?": "待验证"
+    },
+    "detail": {
+      "back": "返回开源项目商业观察",
+      "github": "代码仓库",
+      "official": "官网",
+      "docs": "文档",
+      "verifiedAt": "资料核验于 {date}",
+      "starsRef": "star {n}，仅作关注度参考",
+      "analysis": "本项目的分析",
+      "analysisEmpty": "该项目的分析文章正在写，先看档案。",
+      "related": "相关项目",
+      "overview": "项目简介"
+    },
+    "list": {
+      "title": "全部项目",
+      "desc": "按领域与技术栈浏览已发布的开源项目档案，每份档案都标注了资料核验时间。",
+      "sortDefault": "默认排序",
+      "sortDensity": "研究最多"
+    },
+    "search": {
+      "title": "栏目搜索",
+      "desc": "在开源项目档案与分析文章里搜索",
+      "projects": "项目",
+      "articles": "文章",
+      "empty": "没有找到相关内容，换个关键词试试",
+      "placeholder": "输入项目名或技术关键词"
+    },
+    "blog": {
+      "inProject": "所属项目"
+    },
+    "readAnalysis": "阅读分析",
+    "viewProfile": "查看档案"
   }
 }

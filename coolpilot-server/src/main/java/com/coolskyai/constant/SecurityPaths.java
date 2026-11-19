@@ -98,6 +98,9 @@ public final class SecurityPaths {
 			"/planet",
 			// 专题：公开页面，文章本身仍由 /blog 的可见性规则把关
 			"/topics", "/topic/*",
+			// 开源项目商业观察：整条栏目都是公开内容，用 ** 一次放行
+			// （逐个列举容易漏一个就是 403；代价是这里以后不能放宽需要鉴权的接口）
+			"/open-source/**",
 			// 评论：匿名可读；匿名可提交（密码文章另有 token 校验，见 CommentController）
 			"/comments", "/comment",
 			// 友链：匿名可看、可申请；浏览量计数在 Service 层按 IP 去重

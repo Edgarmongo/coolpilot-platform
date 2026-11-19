@@ -15,6 +15,7 @@ export default {
 		blogEdit: '编辑文章',
 		categories: '分类管理',
 		tags: '标签管理',
+		oss: '开源观察',
 		topics: '专题管理',
 		moments: '动态管理',
 		feedback: '用户反馈',

@@ -760,5 +760,113 @@
     "passwordMismatch": "The two passwords do not match",
     "success": "Password reset. Redirecting to sign in…",
     "failed": "Something went wrong, please try again"
+  },
+  "oss": {
+    "eyebrow": "Open Source Business Insights",
+    "title": "Open Source Business Insights",
+    "lead": "Find open-source projects, study what they are worth, and look for the business behind them.",
+    "desc": "Architecture, users, business model, cost and risk — judged from real deployments and tests, not from READMEs. Including the cases where an open-source project cannot become a business, and why.",
+    "searchPlaceholder": "Search a project or a technology, e.g. crawl4ai / crawling / AI agent",
+    "searchBtn": "Search",
+    "note": "Only conclusions I have actually run · every judgement carries an evidence level (F/S/T/M/A)",
+    "allProjects": "All projects",
+    "featured": "Featured research",
+    "latest": "Latest project research",
+    "latestSub": "Deployments, tests and source reading — written after running them",
+    "viewAll": "View more",
+    "method": "How I research",
+    "methodTech": "Architecture",
+    "methodTechDesc": "How the project is built and what its real limits are.",
+    "methodUser": "Users & scenarios",
+    "methodUserDesc": "Who uses it, for what problem, and where marketing diverges from reality.",
+    "methodBiz": "Business model",
+    "methodBizDesc": "How the maintainers make money, how a copycat could, and what substitutes cost.",
+    "methodRisk": "Cost & risk",
+    "methodRiskDesc": "Servers, models, people, maintenance — plus the hidden cost of compliance and stability.",
+    "empty": "Nothing published yet — research in progress",
+    "emptyList": "No published projects in this field yet",
+    "noAnalysis": "No analysis published yet",
+    "researching": "Researching",
+    "articleCount": "{n} analyses",
+    "projectCount": "{n} projects",
+    "verdictLabel": "Verdict",
+    "disclaimer": "Based on specific versions and environments; not a delivery commitment",
+    "verdicts": {
+      "watch": "Worth watching",
+      "deploy": "Worth deploying",
+      "extend": "Worth building on",
+      "commercial": "Worth exploring commercially",
+      "hold": "Hold off"
+    },
+    "cats": {
+      "ai-project": "AI Projects",
+      "agent": "Agents & Automation",
+      "data-search": "Data & Search",
+      "devtool": "Developer Tools",
+      "enterprise": "Enterprise OSS"
+    },
+    "relations": {
+      "business": "Business",
+      "research": "Research",
+      "practice": "Practice",
+      "compare": "Compare"
+    },
+    "assessmentTitle": "Business assessment",
+    "assessmentInvalid": "Assessment data is malformed and was skipped; the rest of the page is unaffected.",
+    "evidenceTip": "Evidence: F official · S source · T tested · M market · A inference · ? unverified",
+    "fields": {
+      "techMaturity": "Tech maturity",
+      "marketDemand": "Market demand",
+      "commercialSpace": "Commercial space",
+      "deployCost": "Deploy cost",
+      "competition": "Competition",
+      "devValue": "Build-on value",
+      "insightFit": "Fit for Insight"
+    },
+    "levels": {
+      "high": "High",
+      "mid": "Mid",
+      "low": "Low"
+    },
+    "pending": "Unverified",
+    "evidence": {
+      "F": "Official",
+      "S": "Source",
+      "T": "Tested",
+      "M": "Market",
+      "A": "Inference",
+      "?": "Unverified"
+    },
+    "detail": {
+      "back": "Back to Open Source Business Insights",
+      "github": "Repository",
+      "official": "Website",
+      "docs": "Docs",
+      "verifiedAt": "Verified {date}",
+      "starsRef": "{n} stars, for attention only",
+      "analysis": "Analyses of this project",
+      "analysisEmpty": "The analysis is being written — the profile is ready first.",
+      "related": "Related projects",
+      "overview": "Overview"
+    },
+    "list": {
+      "title": "All projects",
+      "desc": "Browse published open-source profiles by field and stack. Every profile states when it was last verified.",
+      "sortDefault": "Default",
+      "sortDensity": "Most researched"
+    },
+    "search": {
+      "title": "Search this column",
+      "desc": "Search project profiles and analysis articles",
+      "projects": "Projects",
+      "articles": "Articles",
+      "empty": "Nothing matched. Try another keyword.",
+      "placeholder": "Project name or technology"
+    },
+    "blog": {
+      "inProject": "Project"
+    },
+    "readAnalysis": "Read the analysis",
+    "viewProfile": "View profile"
   }
 }

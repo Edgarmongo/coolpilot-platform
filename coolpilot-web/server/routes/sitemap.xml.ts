@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 	const base = (config.public.siteUrl || 'http://localhost:8081').replace(/\/$/, '')
 	const api = config.apiBase
 
-	const staticPaths = ['/', '/archives', '/topic', '/projects', '/knowledge', '/service', '/follow', '/about', '/friends', '/search']
+	const staticPaths = ['/', '/archives', '/topic', '/projects', '/knowledge', '/service', '/follow', '/about', '/friends', '/search', '/open-source', '/open-source/projects']
 
 	const urls: {loc: string, lastmod?: string, changefreq?: string, priority?: string}[] = staticPaths.map(p => ({
 		loc: base + p,
@@ -73,6 +73,33 @@ export default defineEventHandler(async (event) => {
 		}
 	} catch {
 		// 同上
+	}
+
+	try {
+		// 开源项目商业观察：栏目首页与项目档案。接口只返回 published，
+		// 所以 draft / archived 天然不会进 sitemap。
+		const ossProjects: any = await $fetch(`${api}/open-source/projects?pageNum=1&pageSize=1000`)
+		for (const p of (ossProjects?.data?.list || [])) {
+			urls.push({
+				loc: `${base}/open-source/projects/${p.slug}`,
+				lastmod: p.updateTime ? new Date(p.updateTime).toISOString().slice(0, 10) : undefined,
+				changefreq: 'weekly',
+				priority: '0.8'
+			})
+		}
+		// 领域页：只有真的有已发布项目的领域才提交，避免收录一堆空页
+		const ossCategories: any = await $fetch(`${api}/open-source/categories`)
+		for (const c of (ossCategories?.data || [])) {
+			if (c.count > 0) {
+				urls.push({
+					loc: `${base}/open-source/category/${c.code}`,
+					changefreq: 'weekly',
+					priority: '0.6'
+				})
+			}
+		}
+	} catch {
+		// 后端不可用时不影响其余条目
 	}
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>

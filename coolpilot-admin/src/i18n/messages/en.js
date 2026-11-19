@@ -9,6 +9,7 @@ export default {
 		blogEdit: 'Edit article',
 		categories: 'Categories',
 		tags: 'Tags',
+		oss: 'Open Source',
 		topics: 'Topics',
 		moments: 'Moments',
 		feedback: 'Feedback',

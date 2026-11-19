@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  开源项目档案 SQL。
+
+  两条反复出现的写法，先说明白，避免以后被「优化」掉：
+  1. article_count 用子查询实时算，不落冗余字段。
+     冗余计数最容易出现「文章下架了但计数没减」，而这个数字是给人看的判断依据，
+     宁可多查一次也不要出现对不上的情况。栏目规模在百级，代价可以忽略。
+  2. tags_csv 用 GROUP_CONCAT 一次带出，避免列表页 N+1。
+     渲染时再 split —— 标签名里不允许出现逗号（后台录入时校验）。
+-->
+<mapper namespace="com.coolskyai.modules.opensource.mapper.OssProjectMapper">
+
+    <sql id="cardColumns">
+        p.id, p.slug, p.name, p.summary, p.category, p.license, p.language, p.verdict,
+        p.stars, p.cover_url, p.featured, p.research_status, p.last_verified_at, p.update_time,
+        (SELECT COUNT(*) FROM oss_project_article pa
+         JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+         WHERE pa.project_id = p.id) AS article_count,
+        (SELECT GROUP_CONCAT(t.tag_name ORDER BY t.id SEPARATOR ',')
+         FROM oss_project_tag pt JOIN tag t ON t.id = pt.tag_id
+         WHERE pt.project_id = p.id) AS tags_csv
+    </sql>
+
+    <sql id="publishedFilter">
+        AND (#{category} IS NULL OR #{category} = '' OR p.category = #{category})
+        <if test="tag != null and tag != ''">
+            AND EXISTS (SELECT 1 FROM oss_project_tag pt
+                        JOIN tag t ON t.id = pt.tag_id
+                        WHERE pt.project_id = p.id AND t.tag_name = #{tag})
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                 OR p.summary LIKE CONCAT('%', #{keyword}, '%')
+                 OR p.language LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </sql>
+
+    <!-- ==================== 前台 ==================== -->
+
+    <select id="pagePublished" resultType="com.coolskyai.modules.opensource.vo.OssProjectCard">
+        SELECT <include refid="cardColumns"/>
+        FROM oss_project p
+        WHERE p.publish_status = 'published'
+        <include refid="publishedFilter"/>
+        <if test="featured != null">AND p.featured = #{featured}</if>
+        ORDER BY
+        <choose>
+            <!-- 侧栏「热门项目」按研究密度排：站内分析篇数优先，star 不参与排序 -->
+            <when test="sort == 'density'">article_count DESC, p.update_time DESC</when>
+            <otherwise>p.featured DESC, p.sort ASC, p.update_time DESC</otherwise>
+        </choose>
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countPublished" resultType="int">
+        SELECT COUNT(*) FROM oss_project p
+        WHERE p.publish_status = 'published'
+        <include refid="publishedFilter"/>
+        <if test="featured != null">AND p.featured = #{featured}</if>
+    </select>
+
+    <select id="findPublishedBySlug" resultType="com.coolskyai.modules.opensource.entity.OssProject">
+        SELECT p.*,
+               (SELECT COUNT(*) FROM oss_project_article pa
+                JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+                WHERE pa.project_id = p.id) AS article_count,
+               (SELECT GROUP_CONCAT(t.tag_name ORDER BY t.id SEPARATOR ',')
+                FROM oss_project_tag pt JOIN tag t ON t.id = pt.tag_id
+                WHERE pt.project_id = p.id) AS tags_csv
+        FROM oss_project p
+        WHERE p.slug = #{slug} AND p.publish_status = 'published'
+    </select>
+
+    <resultMap id="articleItemMap" type="com.coolskyai.modules.opensource.vo.OssArticleItem">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="readTime" column="read_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="relationType" column="relation_type"/>
+        <association property="project"
+                     javaType="com.coolskyai.modules.opensource.vo.OssArticleItem$ProjectBrief">
+            <result property="slug" column="project_slug"/>
+            <result property="name" column="project_name"/>
+            <result property="verdict" column="project_verdict"/>
+            <result property="category" column="project_category"/>
+            <result property="summary" column="project_summary"/>
+        </association>
+    </resultMap>
+
+    <sql id="articleColumns">
+        b.id, b.title, b.slug, b.description, b.first_picture AS cover_url, b.read_time,
+        b.create_time, b.update_time, pa.relation_type,
+        p.slug AS project_slug, p.name AS project_name, p.verdict AS project_verdict,
+        p.category AS project_category, p.summary AS project_summary
+    </sql>
+
+    <select id="listArticlesOfProject" resultMap="articleItemMap">
+        SELECT <include refid="articleColumns"/>
+        FROM oss_project_article pa
+        JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+        JOIN oss_project p ON p.id = pa.project_id
+        WHERE pa.project_id = #{projectId}
+        ORDER BY pa.sort ASC, b.create_time DESC
+    </select>
+
+    <select id="pageArticles" resultMap="articleItemMap">
+        SELECT <include refid="articleColumns"/>
+        FROM oss_project_article pa
+        JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+        JOIN oss_project p ON p.id = pa.project_id AND p.publish_status = 'published'
+        <where>
+            <if test="category != null and category != ''">AND p.category = #{category}</if>
+            <if test="tag != null and tag != ''">
+                AND EXISTS (SELECT 1 FROM oss_project_tag pt
+                            JOIN tag t ON t.id = pt.tag_id
+                            WHERE pt.project_id = p.id AND t.tag_name = #{tag})
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (b.title LIKE CONCAT('%', #{keyword}, '%')
+                     OR p.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY b.create_time DESC, b.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countArticles" resultType="int">
+        SELECT COUNT(*)
+        FROM oss_project_article pa
+        JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+        JOIN oss_project p ON p.id = pa.project_id AND p.publish_status = 'published'
+        <where>
+            <if test="category != null and category != ''">AND p.category = #{category}</if>
+            <if test="tag != null and tag != ''">
+                AND EXISTS (SELECT 1 FROM oss_project_tag pt
+                            JOIN tag t ON t.id = pt.tag_id
+                            WHERE pt.project_id = p.id AND t.tag_name = #{tag})
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (b.title LIKE CONCAT('%', #{keyword}, '%')
+                     OR p.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+    <select id="countByCategory" resultType="java.util.Map">
+        SELECT category AS code, COUNT(*) AS total
+        FROM oss_project
+        WHERE publish_status = 'published'
+        GROUP BY category
+    </select>
+
+    <select id="listTags" resultType="java.util.Map">
+        SELECT t.id AS id, t.tag_name AS name, t.color AS color, COUNT(*) AS total
+        FROM oss_project_tag pt
+        JOIN tag t ON t.id = pt.tag_id
+        JOIN oss_project p ON p.id = pt.project_id AND p.publish_status = 'published'
+        GROUP BY t.id, t.tag_name, t.color
+        ORDER BY total DESC, t.id ASC
+    </select>
+
+    <select id="findFeaturedProject" resultType="com.coolskyai.modules.opensource.vo.OssProjectCard">
+        SELECT <include refid="cardColumns"/>
+        FROM oss_project p
+        WHERE p.publish_status = 'published' AND p.featured = b'1'
+        ORDER BY p.sort ASC, p.update_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="findLatestArticleOfProject" resultMap="articleItemMap">
+        SELECT <include refid="articleColumns"/>
+        FROM oss_project_article pa
+        JOIN blog b ON b.id = pa.blog_id AND b.is_published = b'1'
+        JOIN oss_project p ON p.id = pa.project_id AND p.publish_status = 'published'
+        WHERE pa.project_id = #{projectId} AND pa.relation_type = #{relationType}
+        ORDER BY b.create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="listRelated" resultType="com.coolskyai.modules.opensource.vo.OssProjectCard">
+        SELECT <include refid="cardColumns"/>
+        FROM oss_project p
+        WHERE p.publish_status = 'published' AND p.id &lt;&gt; #{projectId}
+          AND EXISTS (SELECT 1 FROM oss_project_tag a
+                      JOIN oss_project_tag b ON b.tag_id = a.tag_id
+                      WHERE a.project_id = #{projectId} AND b.project_id = p.id)
+        ORDER BY p.featured DESC, p.update_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findProjectOfBlog"
+            resultType="com.coolskyai.modules.opensource.vo.OssArticleItem$ProjectBrief">
+        SELECT p.slug, p.name, p.verdict, p.category, p.summary
+        FROM oss_project_article pa
+        JOIN oss_project p ON p.id = pa.project_id
+        WHERE pa.blog_id = #{blogId} AND p.publish_status = 'published'
+        LIMIT 1
+    </select>
+
+    <!-- ==================== 后台 ==================== -->
+
+    <sql id="adminFilter">
+        <where>
+            <if test="publishStatus != null and publishStatus != ''">AND p.publish_status = #{publishStatus}</if>
+            <if test="researchStatus != null and researchStatus != ''">AND p.research_status = #{researchStatus}</if>
+            <if test="category != null and category != ''">AND p.category = #{category}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR p.slug LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="pageAdmin" resultType="com.coolskyai.modules.opensource.entity.OssProject">
+        SELECT p.*,
+               (SELECT COUNT(*) FROM oss_project_article pa WHERE pa.project_id = p.id) AS article_count
+        FROM oss_project p
+        <include refid="adminFilter"/>
+        ORDER BY p.sort ASC, p.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countAdmin" resultType="int">
+        SELECT COUNT(*) FROM oss_project p
+        <include refid="adminFilter"/>
+    </select>
+
+    <select id="findById" resultType="com.coolskyai.modules.opensource.entity.OssProject">
+        SELECT * FROM oss_project WHERE id = #{id}
+    </select>
+
+    <select id="findBySlugAny" resultType="com.coolskyai.modules.opensource.entity.OssProject">
+        SELECT id, slug, name, publish_status FROM oss_project WHERE slug = #{slug}
+    </select>
+
+    <insert id="insert" parameterType="com.coolskyai.modules.opensource.entity.OssProject"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO oss_project (slug, name, summary, description, repo_url, official_url, docs_url,
+                                 license, language, category, cover_url, stars, stars_at, verdict,
+                                 assessment_json, research_status, publish_status, featured,
+                                 last_verified_at, sort)
+        VALUES (#{slug}, #{name}, #{summary}, #{description}, #{repoUrl}, #{officialUrl}, #{docsUrl},
+                #{license}, #{language}, #{category}, #{coverUrl}, #{stars}, #{starsAt}, #{verdict},
+                #{assessmentJson}, #{researchStatus}, #{publishStatus}, #{featured},
+                #{lastVerifiedAt}, #{sort})
+    </insert>
+
+    <update id="update" parameterType="com.coolskyai.modules.opensource.entity.OssProject">
+        UPDATE oss_project
+        SET slug = #{slug}, name = #{name}, summary = #{summary}, description = #{description},
+            repo_url = #{repoUrl}, official_url = #{officialUrl}, docs_url = #{docsUrl},
+            license = #{license}, language = #{language}, category = #{category},
+            cover_url = #{coverUrl}, stars = #{stars}, stars_at = #{starsAt}, verdict = #{verdict},
+            assessment_json = #{assessmentJson}, research_status = #{researchStatus},
+            publish_status = #{publishStatus}, featured = #{featured},
+            last_verified_at = #{lastVerifiedAt}, sort = #{sort},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePublishStatus">
+        UPDATE oss_project SET publish_status = #{status}, update_time = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <delete id="deleteTags">
+        DELETE FROM oss_project_tag WHERE project_id = #{projectId}
+    </delete>
+
+    <insert id="insertTag">
+        INSERT INTO oss_project_tag (project_id, tag_id) VALUES (#{projectId}, #{tagId})
+    </insert>
+
+    <select id="listTagIds" resultType="java.lang.Long">
+        SELECT tag_id FROM oss_project_tag WHERE project_id = #{projectId} ORDER BY tag_id
+    </select>
+
+    <delete id="deleteArticles">
+        DELETE FROM oss_project_article WHERE project_id = #{projectId}
+    </delete>
+
+    <insert id="insertArticle">
+        INSERT INTO oss_project_article (project_id, blog_id, relation_type, sort)
+        VALUES (#{projectId}, #{blogId}, #{relationType}, #{sort})
+    </insert>
+
+    <select id="filterUsableBlogIds" resultType="java.lang.Long">
+        SELECT id FROM blog WHERE is_published = b'1' AND id IN
+        <foreach collection="blogIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <select id="listAllArticlesOfProject" resultMap="articleItemMap">
+        SELECT b.id, b.title, b.slug, b.description, b.first_picture AS cover_url, b.read_time,
+               b.create_time, b.update_time, pa.relation_type,
+               p.slug AS project_slug, p.name AS project_name, p.verdict AS project_verdict,
+               p.category AS project_category, p.summary AS project_summary
+        FROM oss_project_article pa
+        JOIN blog b ON b.id = pa.blog_id
+        JOIN oss_project p ON p.id = pa.project_id
+        WHERE pa.project_id = #{projectId}
+        ORDER BY pa.sort ASC, b.create_time DESC
+    </select>
+
+</mapper>
