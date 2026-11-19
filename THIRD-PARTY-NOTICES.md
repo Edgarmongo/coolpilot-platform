@@ -24,13 +24,30 @@
 
 | 部分 | 现状 |
 |---|---|
-| 服务端基础结构与遗留业务包 | **派生**。`controller/`、`service/`、`entity/`、`mapper/`、`util/` 等扁平平来自 NBlog 的 `top.naccl` 包，已迁移到 `com.coolskyai` 并按需修改 |
+| 服务端基础结构 | **派生**。`controller/`、`service/`、`entity/`、`mapper/`、`util/`、`model/` 等扁平平来自 NBlog 的 `top.naccl` 包，已迁移到 `com.coolskyai` |
+| 基线已有的 6 个模块 | **部分仍是原文**。`account` / `community` / `entitlement` / `file` / `product` / `trade` 在基线时就存在，其中 43 个文件与上游逐字相同（trade 16、community 9、product 9、entitlement 7 …） |
 | 初始数据库结构 | **派生**。`V1__init_schema.sql` 在 NBlog 的 `nblog.sql` 基础上改造而来 |
 | 构建配置 | 派生。`pom.xml` 的依赖选择沿用上游 |
 | 前台（`coolpilot-web`） | **已全部重写**。Nuxt 3 + Vue 3 + TypeScript，不含上游 Vue 2 代码 |
 | 后台（`coolpilot-admin`） | **已全部重写**。Vue 3 + Vite + Element Plus |
-| v1.0.0 之后新增的业务 | **独立开发**。商品、交易、权益、技术服务、AI 问答、开源观察、专题、作品集等模块，以及 V3–V28 迁移 |
+| 基线之后新增的 11 个模块 | **独立开发**。`ai` / `auth` / `brand` / `nav` / `notify` / `opensource` / `planet` / `portfolio` / `service` / `social` / `topic` —— 基线中不存在这些目录 |
+| V3–V28 迁移 | **独立开发** |
 | 文档与视觉系统 | **独立开发** |
+
+### 量化边界（2026-11-20 实测）
+
+用 `git show v0.1.0-baseline:<file>` 逐文件与当前版本做文本相似度比对：
+
+| 分类 | 文件数 | 行数 | 占当前后端 |
+|---|---|---|---|
+| 与上游**逐字一致**（仍是原文） | 159 | 9,946 | **31.3%** |
+| 小幅修改（衍生作品） | 102 | 5,788 | 18.2% |
+| 大幅改写 | 12 | 835 | 2.6% |
+| 独立重写 | 2 | 48 | 0.2% |
+| 基线之后新增 | — | ~15,100 | 47.6% |
+| **当前后端合计** | **412** | **31,748** | 100% |
+
+逐目录清单与重写优先级见 [docs/CODE-PROVENANCE.md](docs/CODE-PROVENANCE.md)。
 
 ### MIT 许可全文（原文照录）
 
