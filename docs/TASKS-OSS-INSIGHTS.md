@@ -1,305 +1,252 @@
 # 任务卡：开源项目商业观察
 
-> 配套 `PRD-OSS-INSIGHTS.md`（v1.1）与 `DATA-MODEL-OSS.md`。
-> **已按 `CP-WEB-OS-01-现状审计与改造方案.md` 修订**：迁移方式改为 V28、补白名单、接口形状、卡片组件、sitemap 缺口。
-> 治理规则沿用 `ED-05-TASKS.md` §1：不得 `DROP TABLE` / 无 `WHERE` 的 `DELETE` / `UPDATE`；破坏性变更须先出迁移与回滚脚本。
+> 配套 `PRD-OSS-INSIGHTS.md`（v1.2）、`DATA-MODEL-OSS.md`（v2）、`ADR-0004-OPEN-SOURCE-MODEL.md`。
+> 治理规则沿用 `ED-05-TASKS.md` §1。编号沿用规划文档的 `OS-DEV-xxx`，便于对齐。
 
 ---
 
 ## 〇、开工前必须确认
 
-| # | 事项 | 阻塞什么 |
+| # | 事项 | 阻塞 |
 | --- | --- | --- |
-| 1 | 导航方案 A / B / C（PRD §4.1） | OSS-01（V28 里要不要插 `nav_menu`） |
-| 2 | 是否把 `blog/11` 从「文章」迁到「运维实录」 | 无阻塞，可后置 |
-| 3 | `verdict` 五档中文文案 | OSS-05 渲染 |
+| 1 | 导航方案 A / B / C（PRD §4.1） | OS-DEV-101（V28 里要不要插 `nav_menu`） |
+| 2 | `verdict` 五档中文文案 | OS-DEV-202 渲染 |
+| 3 | 是否把 `blog/11` 从「文章」迁「运维实录」 | 无阻塞，可后置 |
 
 ---
 
-## 一、依赖与顺序
+## Phase 0 · 审计与设计冻结（✅ 已完成）
 
-```
-导航决策 ──→ OSS-01 数据模型（V28）
-                   │
-                   ├──→ OSS-02 后端接口 ──→ OSS-03 后台管理
-                   │            │
-                   │            └──→ OSS-04 栏目首页 ──→ OSS-05 档案详情
-                   │                        │
-                   │                        └──→ OSS-06 文章页关联
-                   │
-                   └──→ OSS-08 内容生产（可与开发并行，但上线前必须完成）
+| 编号 | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| OS-DEV-001 | 审计现有博客数据模型 | `CP-WEB-OS-01` §3.1 | ✅ |
+| OS-DEV-002 | 审计分类标签复用能力 | 同上 | ✅ |
+| OS-DEV-003 | 审计 CMS 编辑器 | §3.4（已有 Markdown + 贴图） | ✅ |
+| OS-DEV-004 | 审计 Nuxt 页面与 SEO | §3.5、§3.7（sitemap 缺 portfolio） | ✅ |
+| OS-DEV-005 | 确定数据模型 | `ADR-0004` + `DATA-MODEL-OSS` v2 | ✅ 3 张表 |
+| OS-DEV-006 | 确定 API 契约 | `DATA-MODEL-OSS` §5 | ✅ |
+| OS-DEV-007 | 确定 URL 与 SEO 规范 | `PRD` §4.0、§6 | ✅ |
 
-OSS-07 SEO  ← 依赖 OSS-04 / OSS-05
-OSS-09 上线验收 ← 全部
-```
-
-**可并行的两条线**：开发线（01→06）与内容线（08）。内容线不需要等代码——文章可以先在本地写完，等页面就绪再发布。
+**关键结论**：不改任何现有表；新建 `oss_project` / `oss_project_article` / `oss_project_tag`；文章唯一 URL 为 `/blog/{slug}`。
 
 ---
 
-## OSS-01 · 数据模型迁移
+## Phase 1 · 项目档案（P0）
+
+### OS-DEV-101 · V28 迁移
 
 | 项 | 内容 |
 | --- | --- |
-| **目标** | `portfolio` 支持双类型与评估卡，新增文章关联表，新增 4 个栏目分类 |
-| **前置** | 本文件评审通过 + **导航方案已定**（§4.1，决定 V28 里要不要插 nav_menu） |
-| **方式** | **只写迁移文件 `V28__open_source_insights.sql`，不手工执行生产 DDL** |
-| **改动** | `DATA-MODEL-OSS.md` §3 的 3 组语句 |
-| **不做** | 不改现有列类型、不删列、不动 `project` 表 |
-
-**步骤**
-
-```
-1. 写 V28__open_source_insights.sql（内容 = DATA-MODEL-OSS §3）
-2. 本地起服务，看启动日志 Flyway 执行 V28
-3. 本地校验（见下）
-4. 提交，随下一个版本部署
-```
-
-**为什么不手工执行**：`spring.flyway.validate-on-migrate=true` + `out-of-order=false`。
-手工 DDL 会让 schema 领先于迁移历史，下次部署要么「列已存在」报错，要么校验失败直接阻止启动。
-V27 的注释专门记录过这个坑。
+| **目标** | 三张表 + 三个栏目分类就绪 |
+| **方式** | 写 `V28__open_source_insights.sql`，**不手工执行 DDL** |
+| **前置** | 导航决策（决定是否含 nav 插入） |
 
 **验收**
 
-- [ ] 本地启动日志出现 `Migrating schema ... to version 28`
-- [ ] `desc portfolio` 显示 7 个新列，`kind` 默认 `own`
-- [ ] `select kind, count(*) from portfolio group by kind` → `own: 3`（3 条存量，不是 1 条）
-- [ ] `portfolio_article` 存在且为空
-- [ ] `category` 共 9 行
-- [ ] 重复启动一次不报错（幂等）
+- [ ] 本地启动日志 `Migrating to version 28`
+- [ ] `show tables like 'oss_%'` → 3 张
+- [ ] `desc oss_project` → 23 列，`publish_status` 默认 `draft`
+- [ ] `select category_name from category` 含 3 个新栏目
+- [ ] 重复启动幂等，不报错
 
-**回滚**：`DATA-MODEL-OSS.md` §7 末尾的 `V28-down.sql`，另存于 `docs/rollback/`。
-
----
-
-## OSS-02 · 后端接口
+### OS-DEV-102 · 项目 CRUD
 
 | 项 | 内容 |
 | --- | --- |
-| **目标** | 前台能按 kind 取档案、取档案详情（含文章）、文章反查项目；后台能带新字段读写 |
-| **前置** | OSS-01 |
-| **改动** | `Portfolio.java`、`PortfolioSaveDTO.java`、`PortfolioMapper`、`PortfolioService`（在现有 Map 上加 `articles`，不新建 VO 改结构）、`PortfolioController`、`PortfolioAdminController`、**`SecurityPaths.java`** |
-| **不动** | `project` 模块（服务订单） |
+| **改动** | 新建 `modules/opensource/`（entity/mapper/service/controller/dto/vo/enums） |
+| **不动** | `blog` / `portfolio` / `project` 模块 |
 
 **验收**
 
-```
-GET /api/portfolios                  → 返回全部（含 kind 字段），行为与改前一致
-GET /api/portfolios?kind=oss         → 只返回 oss
-GET /api/portfolios?kind=own         → 只返回 own
-GET /api/portfolio/{oss-slug}        → data 含 portfolio（内含 assessmentJson）+ contentHtml + articles[]
-GET /api/portfolio/{own-slug}        → 同上，articles 为空数组
-GET /api/blog/{blogId}/portfolio     → 命中返回项目，未关联返回 data=null
-POST /api/admin/portfolio            → 可写入 kind/license/verdict/assessmentJson
-```
+- [ ] `GET /api/open-source/projects` 只返回 `published`
+- [ ] `GET /api/open-source/projects?category=data-search` 过滤正确
+- [ ] `GET /api/open-source/projects/{draft-slug}` → 404
+- [ ] `slug` 重复返回明确错误（不是 500）
+- [ ] `description` 返回 `contentHtml`（Markdown 已转换）
+- [ ] 后台 `POST/PUT /admin/oss/project` 可写全部字段
 
-- [ ] 详情接口保持 `{portfolio, contentHtml}` 结构，**只增 `articles` 键**，不改形状
-- [ ] `kind` 非法值（如 `foo`）返回 400 而非入库
-- [ ] `assessment_json` 非法 JSON 在保存时被拒绝
-- [ ] 匿名访问 `/portfolio/{slug}`、`/portfolio/{slug}/articles`、`/blog/{id}/portfolio` 均为 200
-- [ ] `SecurityPaths.PUBLIC` 已加 `/portfolio/*/articles` 与 `/blog/*/portfolio`
-- [ ] 后台接口无 token 为 401/403
+### OS-DEV-103/104 · 领域与标签
 
-**风险**
+**验收**
 
-1. `assessment_json` 存坏数据会让前端整卡失败。后端保存时校验 + 前端 try/catch，两道防线。
-2. **白名单漏配 = 403**。`/portfolio/*` 是单段通配，两段路径不通——这是本项目最容易漏的一步（`SecurityPaths` 注释：「默认拒绝 + 显式放行」）。
+- [ ] `GET /api/open-source/categories` 返回 6 个领域 + 项目数（0 也要返回）
+- [ ] `GET /api/open-source/tags` 只统计 `published` 项目的标签
+- [ ] 后台可全量覆盖某项目的标签（`PUT /admin/oss/project/{id}/tags`）
+- [ ] 标签复用现有 `tag` 表，标签页与文章标签通用
 
----
+### OS-DEV-105 · 项目与文章关联
 
-## OSS-03 · 后台管理
+**验收**
+
+- [ ] 后台可勾选文章、设 `relationType`、调顺序
+- [ ] 同一项目重复关联同一文章 → 冲突失败（主键约束生效）
+- [ ] 文章未发布时不出现在 `projects/{slug}/articles`
+- [ ] `GET /api/open-source/blog/{blogId}/project` 可反查
+
+### OS-DEV-106 · 双状态机
+
+**验收**
+
+- [ ] `research_status` 与 `publish_status` 可独立变更
+- [ ] `POST /admin/oss/project/{id}/publish` 后前台立即可见
+- [ ] `POST /admin/oss/project/{id}/archive` 后档案 404，文章仍可读
+- [ ] 归档不删除任何关联记录
+
+### OS-DEV-107 · 后台页面
 
 | 项 | 内容 |
 | --- | --- |
-| **目标** | 运营可在后台维护开源项目档案与评估卡，无需碰数据库 |
-| **前置** | OSS-02 |
-| **改动** | `coolpilot-admin/src/views/page/PortfolioList.vue`（现有）、新增/编辑表单组件 |
-| **复用** | 现有路由 `/portfolio`、现有列表分页 |
+| **新建** | `views/oss/ProjectList.vue` + 路由 `/oss/projects` |
+| **复用** | `PortfolioList.vue` 的 Markdown 编辑器 + Ctrl+V 贴图（不改原文件，复制后裁剪） |
 
 **验收**
 
-- [ ] 列表可按 `kind` 筛选，列显示「类型 / 名称 / 结论档 / 星数 / 更新时间」
-- [ ] 新建时可选 `kind`，选 `oss` 时显示 license / language / stars / verdict / 评估卡
-- [ ] 评估卡七项可逐项填 level + note + evidence；未填保存为 `null`
-- [ ] 可在一个页面内勾选关联文章并排序（走 `PUT /admin/portfolio/{id}/articles`）
-- [ ] 保存后前台刷新即生效（无缓存问题）
-
-**不做**：不做批量导入、不做 GitHub API 自动填充（第二期评估）。
+- [ ] 列表可按 `publishStatus` / `researchStatus` / `category` / 关键词筛选
+- [ ] 编辑表单含基本情况、评估卡七项、标签、关联文章
+- [ ] 评估卡七项可逐项填 `level + note + evidence`，未填存 `null`
+- [ ] 保存后前台刷新即生效（本期不加缓存）
+- [ ] 菜单出现在「内容管理」分组下
 
 ---
 
-## OSS-04 · 栏目首页
+## Phase 2 · 前台（P0）
 
-| 项 | 内容 |
-| --- | --- |
-| **目标** | `/open-source` 可访问，呈现精选档案、最新分析、进行中专题 |
-| **前置** | OSS-02 |
-| **新建** | `coolpilot-web/pages/open-source/index.vue` + 卡片组件 |
-| **复用** | `useApi`、`useFormat`；`projects/index.vue` 的卡片**样式**（复制后改，现有仅为内联样式） |
-
-> 审计更正：`components/` 下只有 `CommentSection`、`PostList`、`SocialIcon` 三个，
-> **没有可复用的卡片组件**。卡片样式内联在 `projects/index.vue` 等页面里。
-> 本期顺手抽一个 `OssProjectCard.vue`，两个页面共用。
+### OS-DEV-201 · 栏目首页
 
 **验收**
 
-- [ ] SSR 输出 HTML 中含档案名称（`curl` 直接可见，非客户端渲染）
-- [ ] 精选档案 ≤ 6 条，显示 name / verdict / license / techStack / 篇数
-- [ ] 最新分析走 **`/category?categoryName=开源项目商业观察`**（`/blogs` 不支持分类筛选）
-- [ ] 专题区取 `/topics`，显示标题 + 篇数 + 更新时间
-- [ ] 三个区块各自空数据时显示占位文案，页面不报错
-- [ ] 375px 宽度下卡片单列不溢出
-- [ ] `kind=oss` 无数据时不显示空白卡片框
-- [ ] 中英文切换正常（`zh-CN.json` 与 `en.json` 都加了 key）
+- [ ] SSR 输出的 HTML 含项目名（`curl` 直接可见）
+- [ ] 精选 ≤ 6 条；领域入口 6 个；最新分析与深度研究各取对应栏目
+- [ ] 三个区块空数据时显示占位文案
+- [ ] 375px 单列不溢出
+- [ ] 中英文切换正常（两份 i18n 都加了 key）
 
----
-
-## OSS-05 · 项目档案详情
-
-| 项 | 内容 |
-| --- | --- |
-| **目标** | `/open-source/{slug}` 展示评估卡、结论、正文、关联文章、相关项目 |
-| **前置** | OSS-02 |
-| **新建** | `coolpilot-web/pages/open-source/[slug].vue` |
-| **复用** | `pages/projects/[slug].vue` 的正文区块（`contentHtml` + `v-html`），抽成共享组件两处引用 |
+### OS-DEV-202 · 项目档案页
 
 **验收**
 
-- [ ] 用 `contentHtml` 渲染正文（**不是** `portfolio.content` 的 Markdown 原文）
-- [ ] 评估卡七项按 `assessmentJson` 渲染；`level` 为 null 显示「待验证」灰标
-- [ ] 每项显示证据标记 `[V]/[S]/[D]/[?]`
-- [ ] 结论档位映射为中文：`watch→值得持续关注`、`deploy→值得部署使用`、`extend→值得二次开发`、`commercial→值得商业化探索`、`hold→暂不建议投入`
-- [ ] `assessment_json` 解析失败时显示「评估数据异常」，其余区块正常
-- [ ] 关联文章列表可点击，跳转正确
-- [ ] 正文为空时不渲染空 `<article>`
-- [ ] 档案页固定声明：「结论基于特定版本与环境，不构成交付承诺」
-- [ ] `/projects` 仍只显示 `kind=own`（回归检查）
-- [ ] `kind=own` 的 slug 走 `/open-source/{slug}` 时不得展示（404 或跳转 `/projects/{slug}`）
+- [ ] 用 `contentHtml` 渲染正文（不是 Markdown 原文）
+- [ ] 评估卡七项 + 证据标记 `F/S/T/M/A/?` 正确
+- [ ] `level=null` 显示「待验证」灰标
+- [ ] `assessmentJson` 解析失败 → 显示「评估数据异常」，其余区块正常
+- [ ] 结论档中文映射正确
+- [ ] 页脚固定声明「结论基于特定版本与环境，不构成交付承诺」
+- [ ] `last_verified_at` 展示为「资料核验于 YYYY-MM-DD」
 
----
-
-## OSS-06 · 文章页关联
-
-| 项 | 内容 |
-| --- | --- |
-| **目标** | 文章底部显示所属项目卡，形成双向内链 |
-| **前置** | OSS-02、OSS-05 |
-| **改动** | `coolpilot-web/pages/blog/[id].vue` |
-| **接口** | `GET /blog/{id}/portfolio`（与已有 `/blog/{id}/topics` 同形） |
+### OS-DEV-203 · 文章详情增量
 
 **验收**
 
-- [ ] 文章关联了项目时，底部出现项目卡（名称 + 结论档 + 链接）
-- [ ] 未关联时不显示，不留空白
-- [ ] 反向：档案页 → 文章 → 档案，一圈可回
-- [ ] 不增加首屏请求数（与文章详情并发或延后加载）
+- [ ] 底部出现「所属项目」卡（名称 + 档位 + 链接）
+- [ ] 未关联时不显示、不留空白
+- [ ] 不增加首屏请求阻塞（与文章详情并发或延后）
 
----
-
-## OSS-07 · SEO
-
-| 项 | 内容 |
-| --- | --- |
-| **目标** | 新页面可被收录，结构化数据正确 |
-| **前置** | OSS-04、OSS-05 |
-| **改动** | `server/routes/sitemap.xml.ts`、两个新页面的 `useHead` |
+### OS-DEV-204/205 · 分类与标签页
 
 **验收**
 
-- [ ] sitemap 含 `/open-source` 及所有 `kind=oss && enabled` 的档案 URL
-- [ ] sitemap 中 own 类档案指向 `/projects/{slug}`，oss 类指向 `/open-source/{slug}`
-- [ ] 每个新页面有独立 `title` / `description` / `canonical`
-- [ ] 档案页输出 `TechArticle` + `BreadcrumbList`，用 Google Rich Results 测试无误
-- [ ] `robots.txt` 未误屏蔽 `/open-source`
+- [ ] `/open-source/category/data-search` 可直接访问、可被收录
+- [ ] 空领域显示「该领域暂无已发布项目」
+- [ ] 标签页复用现有 tag 数据，计数只算 published 项目
 
-> 审计发现：现有 `sitemap.xml.ts` 的 `staticPaths` 有 `/projects`，但**从未把 portfolio 详情
-> 写进 sitemap**（它只遍历了 blogs / topics / products）。这次要一并补上，
-> 顺带解决「作品集详情页一直没被收录」的旧问题。
-
-**不做**：不加 `Review` / `AggregateRating`（无真实用户评分，属滥用）。
-
----
-
-## OSS-08 · 首批内容
-
-| 项 | 内容 |
-| --- | --- |
-| **目标** | 上线时栏目至少有 1 个完整档案 + 3 篇文章 |
-| **前置** | 无（可与开发并行） |
-| **产出** | 项目档案 1–2 条 + 商业分析 1 篇 + 技术文章 2 篇 |
-
-见下方「首批内容计划」。
+### OS-DEV-206 · 栏目搜索
 
 **验收**
 
-- [ ] 档案评估卡七项无空缺（未评项显式标 `?`）
-- [ ] 每篇文章能追到研究仓的 `docs/experiments/`
-- [ ] 通过 `ARTICLE-REVIEW-CHECKLIST.md` 三条红线
+- [ ] `/open-source/search?q=crawl` 返回 `{projects, articles}`
+- [ ] 无结果给明确提示，不白屏
+
+### OS-DEV-207/208 · 内链与移动端
+
+**验收**
+
+- [ ] 档案 ↔ 文章双向可回
+- [ ] 同标签相关项目 ≤ 3 条
+- [ ] 375 / 768 / 1440 三档无溢出、无遮挡
 
 ---
 
-## OSS-09 · 上线验收
+## Phase 3 · SEO（P0）
 
-- [ ] 匿名访问 `/open-source`、`/open-source/{slug}` 均 200
-- [ ] sitemap 中随机抽 3 条 URL 均 200
-- [ ] 移动端 375 / 768 / 1440 三档检查
-- [ ] 后台建一条测试档案 → 前台可见 → 删除测试档案 → 前台消失
-- [ ] `/projects` 作品集无 oss 混入
-- [ ] 导航入口按要求出现（方案见 PRD §4.1）
-- [ ] `enabled=0` 的档案不泄漏（列表与详情都取不到）
-- [ ] **分类改名演练**：改「开源项目商业观察」的分类名后，确认栏目页空态有提示而不是白屏
-- [ ] 新接口在白名单内（未登录访问 200，不是 403）
-- [ ] 记录改动文件清单与验证结果（ED-05 §1 第 6 条）
+| 编号 | 任务 | 验收 |
+| --- | --- | --- |
+| OS-DEV-301 | 元信息 | 每个项目/列表页有独立 title + description |
+| OS-DEV-302 | Canonical | 全部指向自身，无跨页 canonical |
+| OS-DEV-303 | Sitemap | 含 `/open-source`、领域页、published 项目页；draft 不含 |
+| OS-DEV-304 | OG | 分享卡片标题/描述/封面正确 |
+| OS-DEV-305 | 结构化数据 | 项目页 `TechArticle` + `BreadcrumbList`，Rich Results 无报错 |
+| OS-DEV-306 | 面包屑 | 首页 / 开源观察 / 项目名 |
+| OS-DEV-307 | 内链 | 每篇商业分析 ≥ 2 条技术文章链接 |
+| OS-DEV-308 | 访问统计 | 项目页、列表页、搜索各埋一个事件 |
+
+> 审计发现：现有 sitemap **从未收录 portfolio 详情**。本次一并补，顺手解决旧问题。
+
+**不做**：`Review` / `AggregateRating` 结构化数据。
+
+---
+
+## Phase 4 · 运营（P1）
+
+| 编号 | 任务 | 说明 |
+| --- | --- | --- |
+| OS-DEV-401/402 | 栏目与文章访问统计 | 复用现有 `visit_log` |
+| OS-DEV-403 | 搜索词统计 | 记录 `q`，用于选题 |
+| OS-DEV-404 | 来源追踪 | UTM 参数落库 |
+| OS-DEV-405/406 | 知识星球 / 技术服务入口 | 文章底部转化位，与主题相关 |
+| OS-DEV-407 | 分享 | 复用现有分享能力 |
+| OS-DEV-408 | 订阅入口 | 复用现有 |
+
+---
+
+## Phase 5 · AI 辅助（P2，不做）
+
+`OS-DEV-501~506`（资料采集、GitHub 同步、大纲生成、分析草稿、证据检查、更新提醒）全部延后。
+
+理由：MVP 阶段内容是手工的，先验证「有没有人看」，再谈自动化。
+硬约束：AI 只能辅助，**商业判断、许可证解释、市场规模、客户需求必须人工核验**。
 
 ---
 
 ## 首批内容计划
 
-### 能立刻做的（有实测证据）
+### 能做的（有实测）
 
-| 项目 | 状态 | 可写的文章 | 证据位置 |
-| --- | --- | --- | --- |
-| **Crawl4AI** | 已实测 | ① 商业价值分析 ② Markdown 质量边界 ③ 深度采集边界 ④ Docker 部署 | 研究仓 `docs/experiments/crawl4ai/` + `commercial-value-round1.md` |
-| **Hermes Agent** | 仅调研 | ① 项目定位与插件生态（**只能写调研，不能写实测**） | 插件页核实记录 |
+| 项目 | 可写文章 | 证据位置 |
+| --- | --- | --- |
+| **Crawl4AI** | ① 商业价值分析 ② Markdown 质量边界 ③ 深度采集边界 ④ Docker 部署 | 研究仓 `docs/experiments/crawl4ai/` + `commercial-value-round1.md` |
 
-Crawl4AI 的档案可以一次做完整：技术成熟度 `[V]`、部署成本 `[V]`、Insight 适配度 `[V]`，其余标 `?`。
+档案评估卡可一次填满三项实测：技术成熟度 `T`、部署成本 `T`、Insight 适配度 `T`，其余标 `?`。
 
-### 不能立刻做的（必须说明）
+### 不能做的（零实测）
 
-原计划里的 Scrapy、Swirl Search、MCP 生态、Milvus —— **手上零实测**。
+规划文档首批列了 Scrapy、Swirl Search、Milvus、Hermes Agent。**手上全部零实测。**
 
-按 `ARTICLE-STANDARD.md`，这些只能写成三种东西：
+按 `ARTICLE-STANDARD.md`，只有三条路：
 
-1. **不写**（最诚实）
-2. 写成「选题预告」，明说「研究中，尚无实测」
-3. 先做研究：每个项目按 10 维度补齐，至少 2–3 天
+1. 不写（最诚实）
+2. 写成「选题预告」，明说研究中、无实测
+3. 先补研究，每个项目 2–3 天
 
-**建议**：首批只发 Crawl4AI 一个项目。一个做透的档案 + 4 篇文章，比 6 个半成品档案更能建立可信度。
+**建议**：首批只发 Crawl4AI。一个做透的档案 + 4 篇文章，比 5 个半成品档案更能建立可信度。
 
-### 与技术研究栏目的映射
-
-Crawl4AI 12 篇专题在四个栏目里的归属：
+### 与栏目映射
 
 | 栏目 | 篇目 |
 | --- | --- |
-| 开源项目商业观察 | 商业价值分析（新写，基于 round1 商业分析） |
+| 开源项目商业观察 | 商业价值分析（新写） |
 | 开源技术研究 | 02 架构 · 03 AsyncWebCrawler · 04 配置 · 05 结果 · 06 Markdown · 07 提取 · 08 深爬 · 09 缓存 |
-| AI 应用实践 | 10 Docker · 11 可视化封装 · 12 接入 Insight |
-| 商业实践与案例 | 后续：CoolPilot Insight 研发实录 |
-
-> 一篇商业分析 + 八篇技术研究 + 三篇实践 = 一个项目的完整内容组。
-> 这正是「一次研究产出多篇内容」的可行形态，而不是把一份研究拆成六份重复内容。
+| 开源技术实践 | 10 Docker · 11 可视化封装 · 12 接入 Insight |
 
 ---
 
-## 排期建议
+## 排期（4 周）
 
-| 批次 | 任务 | 说明 |
+| 周 | 内容 | 交付 |
 | --- | --- | --- |
-| 第 1 批 | OSS-01 → OSS-02 | 数据与接口，无 UI 变化，风险最低 |
-| 第 2 批 | OSS-04 + OSS-05（并行） | 页面骨架，先用假数据调样式 |
-| 第 3 批 | OSS-03 + OSS-06 | 后台与关联，依赖前两批 |
-| 第 4 批 | OSS-07 + OSS-08 + OSS-09 | SEO 与首批内容，一起上线 |
+| 第 1 周 | 决策确认 + OS-DEV-101/102 | V28 跑通、接口可用 |
+| 第 2 周 | 103–107 | 后台能录数据、能关联文章 |
+| 第 3 周 | 201–208 | 前台页面可浏览 |
+| 第 4 周 | 301–308 + 首批内容 | SEO 就绪、上线验收 |
 
-**上线最小集**：01 + 02 + 04 + 05 + 07 + 08。后台（03）可以第二周补——第一期用 SQL 录数据也能跑，但长期必须有后台，否则运营成本会把人劝退。
+**上线最小集**：101 + 102 + 201 + 202 + 303 + 首批内容。
+后台（107）可第二周补——第一期用 SQL 录数据也能跑，但长期必须有，否则运营成本会把人劝退。
