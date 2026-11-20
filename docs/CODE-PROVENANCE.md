@@ -69,19 +69,19 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 git show --diff-filter=A --name-only --format= 76aa73f | grep '\.java$'
 ```
 
-据此重新分类（2026-11-21，批次 A–E + util 第一批完成后）：
+据此重新分类（2026-11-21，批次 A–E + util 两批完成后）：
 
 | 分类 | 文件数 | 行数 | 占基线 |
 |---|---:|---:|---:|
-| 逐字一致 · **NBlog 原有** | 93 | 4,698 | 28.3% |
+| 逐字一致 · **NBlog 原有** | 90 | 4,234 | 25.5% |
 | 逐字一致 · **导入时新增（自有）** | 40 | 2,093 | 12.6% |
 | 小幅修改 | 106 | 6,499 | 39.1% |
-| 大幅改写 | 25 | 2,276 | 13.7% |
-| 独立重写 | 11 | 1,051 | 6.3% |
+| 大幅改写 | 27 | 2,422 | 14.6% |
+| 独立重写 | 12 | 1,369 | 8.2% |
 | 已移除 | 0 | 0 | — |
 | **基线合计** | **275** | **16,617** | 100% |
 
-**真正需要处理的只有第一行：93 个文件 / 4,698 行。**
+**真正需要处理的只有第一行：90 个文件 / 4,234 行。**
 第二行那 40 个文件（trade / product / entitlement / community / account / file 等模块）是导入时自己带进来的，
 与基线一致只说明「导入之后没再动过」，不是第三方代码，改它没有任何版权收益。
 
@@ -700,14 +700,88 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
 | 参数序列化 | ✅ `visit_log.param` = `{"query":"ssh"}`、`exception_log.param` = `{"id":999999,"slug":null}`，无一条 JSON 失败告警 |
 | UA 解析 | ✅ `visit_log` 的 os/browser 有值（`Curl 8.22.0`），说明 yauaa 规则集正常加载 |
 
-### util 剩下 22 个怎么处理
+
+### 批次 A 第二批：评论工具与两个通知通道
+
+| 文件 | 基线 → 当前 | 相似度 | 最长连续 |
+|---|---|---:|---:|
+| `CommentUtils` | 318 → 293 | 0.95 → **0.13** | 9 行 |
+| `TelegramChannel` | 92 → 96 | 0.97 → **0.35** | 5 行 |
+| `MailChannel` | 54 → 59 | 0.96 → **0.45** | 3 行 |
+
+`CommentUtils` 从 318 行压到 293 行，少的 25 行是一个**从未被调用**的私有方法
+（`setCommentQQAvatar`，把 QQ 头像上传后写 Redis）。`setVisitorComment` 里并没有调它，
+也就是说「评论昵称填 QQ 号会自动换成 QQ 头像」这个功能实际上一直是关的 —— 访客一律走随机头像。
+删掉它顺带解除了 `CommentUtils` 对 `RedisService` 与 `QQInfoUtils` 的依赖。
+**如果这个功能本就该生效，那是另一个 bug，需要单独确认后再接回去。**
+
+### 修掉一个并发串号的缺陷：往枚举里写数据
+
+`CommentPageEnum` 是枚举单例，却带着 `setTitle` / `setPath`：
+
+```java
+// 原实现
+CommentPageEnum commentPageEnum = CommentPageEnum.BLOG;
+commentPageEnum.setTitle(blogService.getTitleByBlogId(comment.getBlogId()));
+commentPageEnum.setPath("/blog/" + comment.getBlogId());
+return commentPageEnum;
+```
+
+两个不同文章的评论同时触发通知时，后一个请求会把前一个写进去的标题覆盖掉，
+于是邮件或 Telegram 里可能显示**另一篇文章的标题**。单实例低流量时几乎不会撞上，
+流量一大就是随机的错乱，而且日志里看不出来。
+
+现在拆成两个静态方法，按评论各自计算，不再碰枚举：
+
+| 方法 | 返回 |
+|---|---|
+| `getCommentPageEnum(comment)` | 只返回常量（ABOUT / FRIEND / UNKNOWN / BLOG），不携带标题路径 |
+| `getPageTitle(comment)` | 文章页实时查标题，其余页取枚举自带的静态文案 |
+| `getPagePath(comment)` | 文章页拼 `/blog/{id}`，其余页取枚举路径 |
+
+三处调用点同步改掉：`MailChannel`、`TelegramChannel`、`TelegramBotMsgHandler`（各 2–3 行）。
+
+### 其它改动
+
+| 项 | 说明 |
+|---|---|
+| 提醒判断 | `parent.getAdminComment()` / `getNotice()` 原来直接拆箱，值为 null 会 NPE；改用 `Boolean.TRUE.equals` |
+| 页面判定 | `judgeCommentState(null, ...)` 原来 NPE，现在返回 `NOT_FOUND`；三个页面拆成 `blogState / aboutState / friendState` |
+| 博主身份 | `setAdminComment*` 查不到 id=1 的账号时抛 `IllegalStateException` 并说明，而不是 NPE |
+| 网址校验 | 正则改为预编译 `Pattern`；语义完全不变（只接受站点根地址，带路径的仍判不合法） |
+| 邮件通道 | 改构造器注入；模板名 `owner.html`、收件人 `spring.mail.username`、标题都不变 |
+| Telegram 通道 | 消息体由 `String.format` 改 `StringBuilder` 拼接，行顺序与可选行（QQ / 网站）逻辑完全一致 |
+
+### 验证
+
+**新增 6 个单测**（`CommentUtilsTest`）：头像映射的确定性与取值范围、8 个昵称至少落到 3 张头像、
+网址校验的 4 组正例与 5 组反例（含 `javascript:` 与带路径地址）、关于页与友链页的标题路径、
+未知 page（null / 99）回落 `UNKNOWN`。
+
+**运行时冒烟**（jar 单进程 PID 20256，启动 10.1s，无 Bean 失败）：
+
+| 项 | 结果 |
+|---|---|
+| 构造器注入顺序 | ✅ `CommentUtils` 构造时通过 `ChannelFactory` 取通道成功，`@DependsOn` 生效 |
+| 文章页评论状态 | ✅ `/comments?page=0&blogId=1` → `allComment=0`，状态判定正常 |
+| 关于页评论状态 | ✅ `/comments?page=1` → 200 |
+| 访客发评论 | ✅ 落库：头像 `/img/comment-avatar/6.jpg`、非法网址被置空、`is_published=1`、`is_notice=1`、IP 记录 |
+| 邮件通道 | ✅ 日志出现 `发送模板邮件失败 … template=owner.html: Authentication failed` —— 说明模板渲染成功、文章标题与路径取到，只是本地没有 SMTP 凭据 |
+| 评论列表 | ✅ 新建评论正常出现在顶层列表 |
+| 清理 | ✅ 测试评论已删除，库中残留 0 |
+
+顺带记一笔：评论接口的限流键是 `"192.168.0.191:POST:/comment"`（30 秒 1 次），
+且**限流在参数校验之前**计数 —— 第一次因昵称超长被拒，30 秒内再提交就变成「提交过于频繁」。
+联调时需要先删 Redis 键或换 UUID。
+
+### util 剩下 19 个怎么处理（2,120 行 → 已完成 877 行，剩 1,243 行）
 
 | 组 | 文件 | 行 | 计划 |
 |---|---|---:|---|
-| 评论与通知通道 | `CommentUtils` 318、`TelegramChannel` 92、`MailChannel` 54 | 464 | 下一批。`CommentUtils` 是最大的一块，也是评论头像/通知的核心 |
-| Telegram | `TelegramBotMsgHandler` 295、`TelegramUtils` 153 | 448 | 需要真实 Bot Token 才能验，放后面 |
+| Telegram | `TelegramBotMsgHandler` 295、`TelegramUtils` 153 | 448 | 需要真实 Bot Token 才能验；目前只改了 2 处调用点，主体还没动（相似度 0.97） |
 | 定时任务 | `ScheduleUtils` 138、`ScheduleRunnable` 42 | 180 | 中风险，和 Quartz 生命周期相关 |
 | 其它上传通道 | `GithubChannel` 63、`UpyunChannel` 38 | 101 | 需第三方凭据，可用 Mock 验 |
+| QQ 头像 | `QQInfoUtils` 63 | 63 | 调腾讯接口抓头像，可用 Mock 验；注意 `CommentUtils` 目前没调它 |
 | **Markdown 扩展** | `Cover*` / `Heimu*` 共 12 个 | 451 | **不做**，理由见下 |
 
 **Markdown 扩展为什么不做**：这 12 个文件是 commonmark 的 SPI 实现，

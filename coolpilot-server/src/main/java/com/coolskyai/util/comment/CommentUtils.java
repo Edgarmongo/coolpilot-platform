@@ -6,19 +6,16 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 import com.coolskyai.config.properties.BlogProperties;
 import com.coolskyai.constant.PageConstants;
-import com.coolskyai.constant.RedisKeyConstants;
 import com.coolskyai.entity.User;
 import com.coolskyai.model.dto.Comment;
 import com.coolskyai.model.vo.FriendInfo;
 import com.coolskyai.service.AboutService;
 import com.coolskyai.service.BlogService;
 import com.coolskyai.service.FriendService;
-import com.coolskyai.service.RedisService;
 import com.coolskyai.service.UserService;
 import com.coolskyai.util.HashUtils;
 import com.coolskyai.util.IpAddressUtils;
 import com.coolskyai.util.MailUtils;
-import com.coolskyai.util.QQInfoUtils;
 import com.coolskyai.util.StringUtils;
 import com.coolskyai.util.comment.channel.ChannelFactory;
 import com.coolskyai.util.comment.channel.CommentNotifyChannel;
@@ -29,9 +26,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * 评论工具类
+ * 评论组装与提醒
+ *
+ * 职责有三块：把请求里的评论补全成可入库的实体、判断当前页面是否允许评论、
+ * 以及决定「这条评论该提醒谁」。
+ *
+ * 提醒规则有六种组合（见 judgeSendNotify 注释），核心判断只有两条：
+ * 回复了别人的评论且对方愿意收提醒 → 提醒对方；访客发评论 → 提醒博主自己。
+ *
+ * 注意 blogService 是静态字段：getCommentPageEnum / getPageTitle 是静态方法，
+ * 被模板通道与 Telegram 机器人直接调用。这是历史形态，新增代码请正常注入。
  *
  * @author: CoolSkyAI
  * @date: 2022-01-22
@@ -39,201 +46,205 @@ import java.util.Map;
 @Component
 @DependsOn("springContextUtils")
 public class CommentUtils {
-	@Autowired
-	private BlogProperties blogProperties;
-	@Autowired
-	private MailUtils mailUtils;
-	@Autowired
-	private AboutService aboutService;
-	@Autowired
-	private FriendService friendService;
-	@Autowired
-	private UserService userService;
-	@Autowired
-	private RedisService redisService;
+
+	/** 头像库里的张数，取模保证同一昵称永远同一张 */
+	private static final int AVATAR_COUNT = 6;
+
+	/** 只允许 http/https 的常规域名，挡掉 javascript: 与带特殊字符的地址 */
+	private static final Pattern WEBSITE_PATTERN = Pattern.compile(
+			"^https?://([^!@#$%^&*?.\\s-]([^!@#$%^&*?.\\s]{0,63}[^!@#$%^&*?.\\s])?\\.)+[a-z]{2,6}/?");
+
+	private static final String GUEST_MAIL_TEMPLATE = "guest.html";
 
 	private static BlogService blogService;
 
-	private CommentNotifyChannel notifyChannel;
-	/**
-	 * 新评论是否默认公开
-	 */
-	private Boolean commentDefaultOpen;
+	private final BlogProperties blogProperties;
+	private final MailUtils mailUtils;
+	private final AboutService aboutService;
+	private final FriendService friendService;
+	private final UserService userService;
+	private final CommentNotifyChannel notifyChannel;
+	private final Boolean commentDefaultOpen;
+
+	public CommentUtils(BlogProperties blogProperties,
+	                    MailUtils mailUtils,
+	                    AboutService aboutService,
+	                    FriendService friendService,
+	                    UserService userService,
+	                    @Value("${comment.notify.channel}") String notifyChannelName,
+	                    @Value("${comment.default-open}") Boolean commentDefaultOpen) {
+		this.blogProperties = blogProperties;
+		this.mailUtils = mailUtils;
+		this.aboutService = aboutService;
+		this.friendService = friendService;
+		this.userService = userService;
+		this.notifyChannel = ChannelFactory.getChannel(notifyChannelName);
+		this.commentDefaultOpen = commentDefaultOpen;
+	}
 
 	@Autowired
 	public void setBlogService(BlogService blogService) {
 		CommentUtils.blogService = blogService;
 	}
 
-	@Value("${comment.notify.channel}")
-	public void setNotifyChannel(String channelName) {
-		this.notifyChannel = ChannelFactory.getChannel(channelName);
-	}
-
-	@Value("${comment.default-open}")
-	public void setCommentDefaultOpen(Boolean commentDefaultOpen) {
-		this.commentDefaultOpen = commentDefaultOpen;
-	}
+	// ---------------- 提醒 ----------------
 
 	/**
-	 * 判断是否发送提醒
-	 * 6种情况：
-	 * 1.我以父评论提交：不用提醒
-	 * 2.我回复我自己：不用提醒
-	 * 3.我回复访客的评论：只提醒该访客
-	 * 4.访客以父评论提交：只提醒我自己
-	 * 5.访客回复我的评论：只提醒我自己
-	 * 6.访客回复访客的评论(即使是他自己先前的评论)：提醒我自己和他回复的评论
+	 * 决定这条评论要提醒谁。六种情况：
+	 * 1. 博主以父评论提交：不提醒
+	 * 2. 博主回复自己：不提醒
+	 * 3. 博主回复访客：只提醒该访客（对方开了提醒才发）
+	 * 4. 访客以父评论提交：只提醒博主
+	 * 5. 访客回复博主：只提醒博主
+	 * 6. 访客回复访客（哪怕是自己先前的评论）：提醒被回复者，同时提醒博主
 	 *
-	 * @param comment          当前收到的评论
-	 * @param isVisitorComment 是否访客评论
-	 * @param parentComment    父评论
+	 * @param comment          刚提交的评论
+	 * @param isVisitorComment 是否访客提交
+	 * @param parentComment    父评论，可为 null
 	 */
 	public void judgeSendNotify(Comment comment, boolean isVisitorComment, com.coolskyai.entity.Comment parentComment) {
-		if (parentComment != null && !parentComment.getAdminComment() && parentComment.getNotice()) {
-			//我回复访客的评论，且对方接收提醒，邮件提醒对方(3)
-			//访客回复访客的评论(即使是他自己先前的评论)，且对方接收提醒，邮件提醒对方(6)
-			sendMailToParentComment(parentComment, comment);
+		if (shouldMailParent(parentComment)) {
+			mailParent(parentComment, comment);
 		}
 		if (isVisitorComment) {
-			//访客以父评论提交，只提醒我自己(4)
-			//访客回复我的评论，提醒我自己(5)
-			//访客回复访客的评论，不管对方是否接收提醒，都要提醒我有新评论(6)
-			notifyMyself(comment);
+			notifyChannel.notifyMyself(comment);
 		}
 	}
 
+	private boolean shouldMailParent(com.coolskyai.entity.Comment parent) {
+		if (parent == null) {
+			return false;
+		}
+		// 博主自己的评论不提醒；访客主动关闭提醒也不发
+		return !Boolean.TRUE.equals(parent.getAdminComment()) && Boolean.TRUE.equals(parent.getNotice());
+	}
+
 	/**
-	 * 发送邮件提醒回复对象
-	 *
-	 * @param parentComment 父评论
-	 * @param comment       当前收到的评论
+	 * 邮件提醒被回复的人：内容走 guest.html 模板，链接指向评论所在页面
 	 */
-	private void sendMailToParentComment(com.coolskyai.entity.Comment parentComment, Comment comment) {
-		CommentPageEnum commentPageEnum = getCommentPageEnum(comment);
-		Map<String, Object> map = new HashMap<>(16);
-		map.put("parentNickname", parentComment.getNickname());
-		map.put("nickname", comment.getNickname());
-		map.put("title", commentPageEnum.getTitle());
-		map.put("time", comment.getCreateTime());
-		map.put("parentContent", parentComment.getContent());
-		map.put("content", comment.getContent());
-		map.put("url", blogProperties.getView() + commentPageEnum.getPath());
-		String toAccount = parentComment.getEmail();
+	private void mailParent(com.coolskyai.entity.Comment parent, Comment comment) {
+		Map<String, Object> model = new HashMap<>(16);
+		model.put("parentNickname", parent.getNickname());
+		model.put("nickname", comment.getNickname());
+		model.put("title", getPageTitle(comment));
+		model.put("time", comment.getCreateTime());
+		model.put("parentContent", parent.getContent());
+		model.put("content", comment.getContent());
+		model.put("url", blogProperties.getView() + getPagePath(comment));
+
 		String subject = "您在 " + blogProperties.getName() + " 的评论有了新回复";
-		mailUtils.sendHtmlTemplateMail(map, toAccount, subject, "guest.html");
+		mailUtils.sendHtmlTemplateMail(model, parent.getEmail(), subject, GUEST_MAIL_TEMPLATE);
 	}
 
-	/**
-	 * 通过指定方式通知自己
-	 *
-	 * @param comment 当前收到的评论
-	 */
-	private void notifyMyself(Comment comment) {
-		notifyChannel.notifyMyself(comment);
-	}
+	// ---------------- 页面定位 ----------------
 
 	/**
-	 * 获取评论对应的页面
-	 *
-	 * @param comment 当前收到的评论
-	 * @return CommentPageEnum
+	 * 评论所属页面的枚举常量。只做分类，不携带标题与路径 ——
+	 * 枚举是单例，往它身上写 title/path 会让并发请求互相覆盖。
+	 * 需要标题或路径请用 getPageTitle / getPagePath。
 	 */
 	public static CommentPageEnum getCommentPageEnum(Comment comment) {
-		CommentPageEnum commentPageEnum = CommentPageEnum.UNKNOWN;
-		switch (comment.getPage()) {
-			case 0:
-				//普通博客
-				commentPageEnum = CommentPageEnum.BLOG;
-				commentPageEnum.setTitle(blogService.getTitleByBlogId(comment.getBlogId()));
-				commentPageEnum.setPath("/blog/" + comment.getBlogId());
-				break;
-			case 1:
-				//关于我页面
-				commentPageEnum = CommentPageEnum.ABOUT;
-				break;
-			case 2:
-				//友链页面
-				commentPageEnum = CommentPageEnum.FRIEND;
-				break;
-			default:
-				break;
-		}
-		return commentPageEnum;
+		return constantOf(comment.getPage());
 	}
 
+	public static String getPageTitle(Comment comment) {
+		if (isBlogPage(comment)) {
+			return blogService.getTitleByBlogId(comment.getBlogId());
+		}
+		return constantOf(comment.getPage()).getTitle();
+	}
+
+	public static String getPagePath(Comment comment) {
+		if (isBlogPage(comment)) {
+			return "/blog/" + comment.getBlogId();
+		}
+		return constantOf(comment.getPage()).getPath();
+	}
+
+	private static boolean isBlogPage(Comment comment) {
+		return comment.getPage() != null && comment.getPage() == PageConstants.BLOG;
+	}
+
+	private static CommentPageEnum constantOf(Integer page) {
+		if (page == null) {
+			return CommentPageEnum.UNKNOWN;
+		}
+		return switch (page) {
+			case PageConstants.BLOG -> CommentPageEnum.BLOG;
+			case PageConstants.ABOUT -> CommentPageEnum.ABOUT;
+			case PageConstants.FRIEND -> CommentPageEnum.FRIEND;
+			default -> CommentPageEnum.UNKNOWN;
+		};
+	}
+
+	// ---------------- 是否允许评论 ----------------
+
 	/**
-	 * 查询对应页面评论是否开启
+	 * 查询对应页面的评论是否开放
 	 *
-	 * @param page   页面分类（0普通文章，1关于我，2友链）
-	 * @param blogId 如果page==0，需要博客id参数，校验文章是否公开状态
-	 * @return CommentOpenStateEnum
+	 * @param page   页面分类（0 文章、1 关于我、2 友链）
+	 * @param blogId page 为文章时需要，用于校验文章存在且已公开
 	 */
 	public CommentOpenStateEnum judgeCommentState(Integer page, Long blogId) {
-		switch (page) {
-			case PageConstants.BLOG:
-				//普通博客
-				Boolean commentEnabled = blogService.getCommentEnabledByBlogId(blogId);
-				Boolean published = blogService.getPublishedByBlogId(blogId);
-				if (commentEnabled == null || published == null) {
-					//未查询到此博客
-					return CommentOpenStateEnum.NOT_FOUND;
-				} else if (!published) {
-					//博客未公开
-					return CommentOpenStateEnum.NOT_FOUND;
-				} else if (!commentEnabled) {
-					//博客评论已关闭
-					return CommentOpenStateEnum.CLOSE;
-				}
-				//判断文章是否存在密码
-				String password = blogService.getBlogPassword(blogId);
-				if (!StringUtils.isEmpty(password)) {
-					return CommentOpenStateEnum.PASSWORD;
-				}
-				break;
-			case PageConstants.ABOUT:
-				//关于我页面
-				if (!aboutService.getAboutCommentEnabled()) {
-					//页面评论已关闭
-					return CommentOpenStateEnum.CLOSE;
-				}
-				break;
-			case PageConstants.FRIEND:
-				//友链页面
-				FriendInfo friendInfo = friendService.getFriendInfo(true, false);
-				if (!friendInfo.getCommentEnabled()) {
-					//页面评论已关闭
-					return CommentOpenStateEnum.CLOSE;
-				}
-				break;
-			default:
-				break;
+		if (page == null) {
+			return CommentOpenStateEnum.NOT_FOUND;
 		}
-		return CommentOpenStateEnum.OPEN;
+		return switch (page) {
+			case PageConstants.BLOG -> blogState(blogId);
+			case PageConstants.ABOUT -> aboutState();
+			case PageConstants.FRIEND -> friendState();
+			default -> CommentOpenStateEnum.OPEN;
+		};
+	}
+
+	private CommentOpenStateEnum blogState(Long blogId) {
+		Boolean enabled = blogService.getCommentEnabledByBlogId(blogId);
+		Boolean published = blogService.getPublishedByBlogId(blogId);
+		if (enabled == null || published == null || !published) {
+			return CommentOpenStateEnum.NOT_FOUND;
+		}
+		if (!enabled) {
+			return CommentOpenStateEnum.CLOSE;
+		}
+		// 加密文章要先输密码才谈得上评论
+		return StringUtils.isEmpty(blogService.getBlogPassword(blogId))
+				? CommentOpenStateEnum.OPEN
+				: CommentOpenStateEnum.PASSWORD;
+	}
+
+	private CommentOpenStateEnum aboutState() {
+		return aboutService.getAboutCommentEnabled() ? CommentOpenStateEnum.OPEN : CommentOpenStateEnum.CLOSE;
+	}
+
+	private CommentOpenStateEnum friendState() {
+		FriendInfo info = friendService.getFriendInfo(true, false);
+		return info.getCommentEnabled() ? CommentOpenStateEnum.OPEN : CommentOpenStateEnum.CLOSE;
+	}
+
+	// ---------------- 评论属性 ----------------
+
+	/**
+	 * 为 Telegram 快捷回复补全博主评论属性
+	 */
+	public void setAdminCommentByTelegramAction(Comment comment) {
+		// 约定 id=1 是博主
+		User admin = userService.findUserById(1L);
+		applyAdminComment(comment, admin);
+		comment.setIp("via Telegram");
 	}
 
 	/**
-	 * 对于昵称不是QQ号的评论，根据昵称Hash设置头像
-	 *
-	 * @param comment 当前收到的评论
+	 * 后台直接回复：属性同博主评论，IP 取真实请求
 	 */
-	private void setCommentRandomAvatar(Comment comment) {
-		//设置随机头像
-		//根据评论昵称取Hash，保证每一个昵称对应一个头像
-		long nicknameHash = HashUtils.getMurmurHash32(comment.getNickname());
-		//计算对应的头像
-		long num = nicknameHash % 6 + 1;
-		String avatar = "/img/comment-avatar/" + num + ".jpg";
-		comment.setAvatar(avatar);
+	public void setAdminComment(Comment comment, HttpServletRequest request, User admin) {
+		applyAdminComment(comment, admin);
+		comment.setIp(IpAddressUtils.getIpAddress(request));
 	}
 
-	/**
-	 * 通用博主评论属性
-	 *
-	 * @param comment 评论DTO
-	 * @param admin   博主信息
-	 */
-	private void setGeneralAdminComment(Comment comment, User admin) {
+	private void applyAdminComment(Comment comment, User admin) {
+		if (admin == null) {
+			throw new IllegalStateException("博主账号不存在（id=1），无法以博主身份发表评论");
+		}
 		comment.setAdminComment(true);
 		comment.setCreateTime(new Date());
 		comment.setPublished(true);
@@ -245,46 +256,14 @@ public class CommentUtils {
 	}
 
 	/**
-	 * 为[Telegram快捷回复]方式设置评论属性
-	 *
-	 * @param comment 评论DTO
-	 */
-	public void setAdminCommentByTelegramAction(Comment comment) {
-		//查出博主信息，默认id为1的记录就是博主
-		User admin = userService.findUserById(1L);
-
-		setGeneralAdminComment(comment, admin);
-		comment.setIp("via Telegram");
-	}
-
-	/**
-	 * 设置博主评论属性
-	 *
-	 * @param comment 当前收到的评论
-	 * @param request 用于获取ip
-	 * @param admin   博主信息
-	 */
-	public void setAdminComment(Comment comment, HttpServletRequest request, User admin) {
-		setGeneralAdminComment(comment, admin);
-		comment.setIp(IpAddressUtils.getIpAddress(request));
-	}
-
-	/**
-	 * 设置访客评论属性
-	 *
-	 * @param comment 当前收到的评论
-	 * @param request 用于获取ip
+	 * 补全访客评论：昵称去空白、按昵称分配固定头像、校验网站、给默认值
 	 */
 	public void setVisitorComment(Comment comment, HttpServletRequest request) {
 		comment.setNickname(comment.getNickname().trim());
-		setCommentRandomAvatar(comment);
-
-		//check website
-		if (!isValidUrl(comment.getWebsite())) {
-			comment.setWebsite("");
-		}
+		comment.setAvatar(avatarOf(comment.getNickname()));
+		comment.setWebsite(isValidWebsite(comment.getWebsite()) ? comment.getWebsite() : "");
 		comment.setAdminComment(false);
-		// is_notice 为非空列，客户端漏传时给默认值，否则插入直接报约束错误
+		// is_notice 是非空列，前端漏传时给默认值，否则插入直接被约束拒绝
 		if (comment.getNotice() == null) {
 			comment.setNotice(false);
 		}
@@ -295,35 +274,20 @@ public class CommentUtils {
 	}
 
 	/**
-	 * 设置QQ头像，复用已上传过的QQ头像，不再重复上传
-	 *
-	 * @param comment 当前收到的评论
-	 * @param qq      QQ号
-	 * @throws Exception 上传QQ头像时可能抛出的异常
+	 * 昵称 → 固定头像。用 MurmurHash 而不是随机，保证同一昵称每次都是同一张脸
 	 */
-	private void setCommentQQAvatar(Comment comment, String qq) throws Exception {
-		String uploadAvatarUrl = (String) redisService.getValueByHashKey(RedisKeyConstants.QQ_AVATAR_URL_MAP, qq);
-		if (StringUtils.isEmpty(uploadAvatarUrl)) {
-			uploadAvatarUrl = QQInfoUtils.getQQAvatarUrl(qq);
-			redisService.saveKVToHash(RedisKeyConstants.QQ_AVATAR_URL_MAP, qq, uploadAvatarUrl);
-		}
-		comment.setAvatar(uploadAvatarUrl);
+	static String avatarOf(String nickname) {
+		long bucket = HashUtils.getMurmurHash32(nickname) % AVATAR_COUNT + 1;
+		return "/img/comment-avatar/" + bucket + ".jpg";
 	}
 
 	/**
-	 * URL合法性校验
-	 *
-	 * @param url url
-	 * @return 是否合法
+	 * 个人网站是选填项：不填（null/空串）直接判为不合法，调用方会置空
 	 */
-	private static boolean isValidUrl(String url) {
-		/*
-		 * website 是选填项，前端不传时为 null。
-		 * 直接 url.matches(...) 会抛 NPE，导致「不填个人网站」的评论一律 500。
-		 */
+	static boolean isValidWebsite(String url) {
 		if (url == null || url.isEmpty()) {
 			return false;
 		}
-		return url.matches("^https?://([^!@#$%^&*?.\\s-]([^!@#$%^&*?.\\s]{0,63}[^!@#$%^&*?.\\s])?\\.)+[a-z]{2,6}/?");
+		return WEBSITE_PATTERN.matcher(url).matches();
 	}
 }

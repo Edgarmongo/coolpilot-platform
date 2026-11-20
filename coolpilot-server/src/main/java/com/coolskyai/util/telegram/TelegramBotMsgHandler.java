@@ -8,7 +8,6 @@ import com.coolskyai.config.properties.BlogProperties;
 import com.coolskyai.config.properties.TelegramProperties;
 import com.coolskyai.entity.Comment;
 import com.coolskyai.entity.Moment;
-import com.coolskyai.enums.CommentPageEnum;
 import com.coolskyai.service.CommentService;
 import com.coolskyai.service.MomentService;
 import com.coolskyai.util.comment.CommentUtils;
@@ -209,7 +208,6 @@ public class TelegramBotMsgHandler {
 			//提醒回复对象
 			commentUtils.judgeSendNotify(comment, false, parentComment);
 
-			CommentPageEnum commentPageEnum = CommentUtils.getCommentPageEnum(comment);
 			return String.format(
 					"<b>回复成功！</b>\n" +
 							"\n" +
@@ -223,8 +221,8 @@ public class TelegramBotMsgHandler {
 							"时间：<u>%s</u>\n" +
 							"邮箱：<code>%s</code>\n" +
 							"状态：%s [<a href=\"%s\">管理评论</a>]\n",
-					blogProperties.getView() + commentPageEnum.getPath(),
-					commentPageEnum.getTitle(),
+					blogProperties.getView() + CommentUtils.getPagePath(comment),
+					CommentUtils.getPageTitle(comment),
 					parentComment.getNickname(),
 					comment.getContent(),
 					comment.getId(),

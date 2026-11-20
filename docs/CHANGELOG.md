@@ -8,7 +8,7 @@
 
 ## 未发布
 
-**代码来源整改（第三批）：util 纯工具与上传通道**
+**代码来源整改（第三批）：util 纯工具、上传通道、评论与通知**
 
 - 重写 8 个文件：`JacksonUtils` `StringUtils` `HashUtils` `UserAgentUtils`
   `SpringContextUtils` `ValidatorUtils` `UploadUtils` `LocalChannel`
@@ -18,6 +18,19 @@
 - 顺带修两处：抓取外链图片时 `ContentType` 为空会 NPE；畸形 User-Agent 会让日志落库失败
 - 新增 15 个单测（String 6 / Hash 4 / Upload 3 / LocalChannel 2），不依赖 Spring 容器与网络
 - 本地冒烟：启动、登录、搜索通配符拦截、异常堆栈落库、参数 JSON 序列化、UA 解析全部正常
+
+**同批第二部分：评论工具与两个通知通道**
+
+- 重写 `CommentUtils`（0.95 → 0.13）、`TelegramChannel`（0.97 → 0.35）、`MailChannel`（0.96 → 0.45）
+- **修复并发串号**：`CommentPageEnum` 是枚举单例却带 `setTitle/setPath`，原实现把每篇文章的标题写进枚举，
+  并发通知时邮件/Telegram 可能显示另一篇文章的标题。现拆为 `getPageTitle` / `getPagePath` 按评论各自计算
+- 若干空值保护：父评论 `adminComment/notice` 为 null 不再 NPE；`judgeCommentState(null)` 返回 NOT_FOUND；
+  博主账号缺失时抛明确异常
+- 删除一个从未被调用的私有方法（QQ 头像上传），`CommentUtils` 不再依赖 Redis 与 QQInfoUtils。
+  **注意：这意味着「昵称填 QQ 号自动换 QQ 头像」实际一直是关闭的**，如需启用要单独接回
+- 新增 6 个单测（头像确定性、网址校验正反例、页面标题路径、未知 page 回落）
+- 本地冒烟：评论状态判定、访客发评论（头像/非法网址置空/审核状态/IP 全部正确）、
+  邮件模板渲染成功（本地无 SMTP，仅在发送时认证失败）、测试数据已清理
 
 > 本批未打 tag、未部署，线上仍为 `v1.1.2`。
 
