@@ -18,14 +18,29 @@ export default defineEventHandler(async (event) => {
 	}))
 
 	try {
-		const blogs: any = await $fetch(`${api}/blogs?pageNum=1&pageSize=1000`)
-		for (const b of (blogs?.data?.list || [])) {
-			urls.push({
-				loc: `${base}/blog/${b.slug || b.id}`,
-				lastmod: b.updateTime ? new Date(b.updateTime).toISOString().slice(0, 10) : undefined,
-				changefreq: 'monthly',
-				priority: '0.8'
-			})
+		// 后端 /blogs 的每页条数是常量 5，且不认 pageSize 参数，
+		// 所以只取 pageNum=1 会导致站点地图永远只有最新 5 篇，老文章静默掉出地图。
+		// 这里按 totalPage 翻页取全量，并加一道页数上限防止后端异常时无限翻。
+		const PER_PAGE = 5
+		const MAX_PAGES = 60
+		for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
+			const blogs: any = await $fetch(`${api}/blogs?pageNum=${pageNum}`)
+			const list = blogs?.data?.list || []
+			for (const b of list) {
+				urls.push({
+					loc: `${base}/blog/${b.slug || b.id}`,
+					lastmod: b.updateTime ? new Date(b.updateTime).toISOString().slice(0, 10) : undefined,
+					changefreq: 'monthly',
+					priority: '0.8'
+				})
+			}
+			const totalPage = blogs?.data?.totalPage
+			if (typeof totalPage === 'number') {
+				if (pageNum >= totalPage) break
+			} else if (list.length < PER_PAGE) {
+				// 后端没返回总页数时，用「不满一页」判断已到末页
+				break
+			}
 		}
 	} catch {
 		// 后端不可用时也要能返回一份可用的 sitemap（至少含静态页）

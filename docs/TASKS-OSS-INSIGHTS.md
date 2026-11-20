@@ -341,3 +341,31 @@ redis-cli DEL '"navMenuList:zh-CN"' '"navMenuList:en"'
 
 **回滚**：`.env` 改回 `TAG=v1.0.4` 后 `pull` + `up -d`；数据库已由 Flyway 迁移到 V28，
 回滚应用不会自动回滚表结构，V28 建的三张表保持存在但不被旧代码使用（无破坏性影响）。
+
+## 内容上线记录（2026-11-21，v1.2.1）
+
+栏目上线后一直没有真实项目分析——线上唯一关联的是一篇《SSH 加固实录》，属运维实践，
+不是 Crawl4AI 分析。本次把研究仓里已完成的 5 篇稿件发布进栏目：
+
+| 文章 | 分类 | 关系 | 说明 |
+| --- | --- | --- | --- |
+| Crawl4AI 商业价值分析 | 开源项目商业观察 | business | 唯一推荐位；区分「已核验」与「原稿观点」 |
+| 从跑起来到能改造：研究路线 | 开源技术研究 | research | 8 阶段 / 30 项验收 |
+| Crawl4AI 操作手册（v0.9.5 实测） | 开源技术实践 | practice | 逐条标注【实测】/【文档】 |
+| Crawl4AI + Hermes Agent：采集与执行的组合 | 开源项目商业观察 | business | 能力边界 + 五个商业方向 |
+| 用 24 篇文章研究透 Crawl4AI 与 Hermes | 开源技术研究 | research | 24 篇路线总纲 |
+
+**处理细节**
+
+- 正文以 **Markdown 原文**入库（`blog.content`），后端用 commonmark 渲染（含 GFM table 扩展），
+  不做 HTML 预转换，后续在后台编辑不会变成一坨标签
+- 剥掉正文首个 H1：标题由页面单独渲染，留着会重复
+- 「SSH 加固实录」与 Crawl4AI 的关联解除（文章本身保留在博客，照常可读）
+- 文章流按 `create_time` 倒序，因此按系列顺序错开发布时间，旗舰篇最新
+
+**发布时踩到的两个缓存/接口问题**
+
+1. 文章列表走 Redis 分页缓存（`homeBlogInfoList` / `newBlogList` / `archiveBlogMap`），
+   直接改库后前台看不到，必须 DEL 这三个键
+2. sitemap 只取 `/blogs?pageNum=1`，而后端每页固定 5 条且忽略 `pageSize`，
+   文章超过 5 篇后老文章会静默掉出站点地图 —— 已改为按 `totalPage` 翻页取全量（v1.2.1）
