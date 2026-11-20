@@ -68,32 +68,34 @@
 
 		<footer class="footer">
 			<div class="container">
-				<div class="foot-top">
-					<div>
+				<div class="foot-grid">
+					<!-- 第一栏：品牌 + 平台定位，是页脚里唯一的叙述性内容 -->
+					<div class="foot-brandcol">
 						<NuxtLink :to="localePath('/')" class="foot-brand">
 							<span v-if="brand.brandMark" class="brand-mark">{{ brand.brandMark }}</span>
-							<span>{{ brand.brandName }}</span>
+							<span class="foot-brandname">{{ brand.brandName }}</span>
 						</NuxtLink>
-						<p v-if="brand.footerText || brand.footerTagline" class="foot-desc">
-							{{ [brand.footerText, brand.footerTagline].filter(Boolean).join(' · ') }}
-						</p>
+						<span class="foot-tagline">{{ t('footer.tagline') }}</span>
+						<p class="foot-desc">{{ t('footer.desc') }}</p>
 					</div>
-					<nav class="foot-links">
-						<NuxtLink :to="localePath('/planet')">{{ t('footer.planet') }}</NuxtLink>
-						<NuxtLink :to="localePath('/follow')">{{ t('footer.follow') }}</NuxtLink>
-						<NuxtLink :to="localePath('/about')">{{ t('footer.about') }}</NuxtLink>
-						<NuxtLink :to="localePath('/friends')">{{ t('footer.friends') }}</NuxtLink>
+
+					<!--
+						三组站内导航。分组依据是访客意图，不是栏目字母序：
+						看内容 → 买东西/找人做事 → 了解这个人。
+					-->
+					<nav v-for="group in footGroups" :key="group.key" class="foot-col">
+						<h4>{{ t(group.title) }}</h4>
+						<NuxtLink v-for="item in group.items" :key="item.path" :to="localePath(item.path)">
+							{{ t(item.label) }}
+						</NuxtLink>
 					</nav>
 				</div>
+
 				<div class="foot-bottom">
-					<span>© {{ year }} {{ brand.brandName }}</span>
+					<span>{{ copyrightText }}</span>
 					<a v-if="brand.beian" class="beian" href="https://beian.miit.gov.cn/" target="_blank"
 					   rel="noopener noreferrer">{{ brand.beian }}</a>
-					<span class="foot-links-sm">
-						<NuxtLink :to="localePath('/archives')">{{ t('nav.archives') }}</NuxtLink>
-						<NuxtLink :to="localePath('/topic')">{{ t('nav.topics') }}</NuxtLink>
-						<NuxtLink :to="localePath('/knowledge')">{{ t('nav.knowledge') }}</NuxtLink>
-					</span>
+					<span class="foot-rights">{{ t('footer.rights') }}</span>
 				</div>
 			</div>
 		</footer>
@@ -112,6 +114,52 @@ const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 
 const year = new Date().getFullYear()
+
+/**
+ * 版权行的站名。站点设置里的 brandName 可能已经是中文名（线上现在就是「酷天AI」），
+ * 这时再拼一次中文名会变成「酷天AI · 酷天AI」，所以先比一次再决定要不要补。
+ */
+const copyrightText = computed(() => {
+	const name = brand.value.brandName || 'CoolSkyAI'
+	const cn = t('footer.cnName')
+	const dup = !cn || name.trim().toLowerCase() === cn.trim().toLowerCase() || name.includes(cn)
+	return `© ${year} ${dup ? name : `${name} · ${cn}`}`
+})
+
+/**
+ * 页脚三组入口。存 i18n key 而不是写死文案，切语言才会跟着变。
+ * 顺序对应访客意图：读内容 → 买产品/提需求 → 了解作者。
+ * 全是站内路由，不依赖 nav_menu 配置 —— 页脚是兜底导航，不能跟着菜单一起被隐藏。
+ */
+const footGroups = [
+	{
+		key: 'content',
+		title: 'footer.colContent',
+		items: [
+			{label: 'footer.archives', path: '/archives'},
+			{label: 'footer.oss', path: '/open-source'},
+			{label: 'footer.topics', path: '/topic'}
+		]
+	},
+	{
+		key: 'business',
+		title: 'footer.colBusiness',
+		items: [
+			{label: 'footer.knowledge', path: '/knowledge'},
+			{label: 'footer.service', path: '/service'},
+			{label: 'footer.demand', path: '/demand/new'}
+		]
+	},
+	{
+		key: 'about',
+		title: 'footer.colAbout',
+		items: [
+			{label: 'footer.aboutMe', path: '/about'},
+			{label: 'footer.friends', path: '/friends'},
+			{label: 'footer.contact', path: '/follow'}
+		]
+	}
+]
 
 const langOptions = [
 	{code: 'zh-CN', short: '中'},
@@ -431,81 +479,113 @@ async function logout() {
 }
 
 /* ============================================================
-   页脚
+   页脚：品牌栏 + 三组入口 + 版权行
+   栅格而非 flex —— 三组链接要求基线对齐，flex 会在换行时错位。
    ============================================================ */
 .footer {
 	border-top: 1px solid var(--line);
-	padding: 36px 0 40px;
+	padding: 40px 0 36px;
 	margin-top: 8px;
 }
 
-.foot-top {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 32px;
-	flex-wrap: wrap;
+.foot-grid {
+	display: grid;
+	grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(88px, 132px));
+	gap: 32px 48px;
+	align-items: start;
+}
+
+.foot-brandcol {
+	min-width: 0;
 }
 
 .foot-brand {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 10px;
-	font-size: 15px;
+	gap: 9px;
+	font-size: 15.5px;
 	font-weight: 700;
 	color: var(--ink);
 }
 
+.foot-brand .brand-mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 7px;
+	background: var(--teal);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .2px;
+}
+
+/* 品牌名右侧的定位短语，与品牌名同一行、基线对齐 */
+.foot-tagline {
+	margin-left: 10px;
+	font-size: 12px;
+	color: var(--faint);
+	letter-spacing: .2px;
+}
+
 .foot-desc {
-	margin-top: 10px;
-	font-size: 13px;
+	max-width: 340px;
+	margin: 14px 0 0;
+	font-size: 12.5px;
+	line-height: 1.9;
 	color: var(--muted);
 }
 
-.foot-links {
+.foot-col {
 	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 22px;
-	font-size: 13.5px;
-	color: var(--ink-2);
+	flex-direction: column;
+	gap: 11px;
+	min-width: 0;
 }
 
-.foot-links a:hover {
+.foot-col h4 {
+	margin: 0 0 3px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ink);
+	letter-spacing: .3px;
+}
+
+.foot-col a {
+	font-size: 12.5px;
+	color: var(--muted);
+	line-height: 1.4;
+}
+
+.foot-col a:hover {
 	color: var(--teal);
 }
 
 .foot-bottom {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
 	flex-wrap: wrap;
-	gap: 12px;
-	margin-top: 26px;
+	gap: 8px 20px;
+	margin-top: 34px;
 	padding-top: 18px;
 	border-top: 1px solid var(--line);
-	font-size: 12.5px;
+	font-size: 12px;
+	color: var(--faint);
+}
+
+/* 版权说明推到右端；备案号夹在中间，没有备案号时也不会把版权说明顶到左边 */
+.foot-rights {
+	margin-left: auto;
 	color: var(--muted);
 }
 
 .beian {
-	color: var(--muted);
+	color: var(--faint);
 }
 
 .beian:hover {
-	color: var(--teal);
-}
-
-.foot-links-sm {
-	display: flex;
-	gap: 16px;
-}
-
-.foot-links-sm a {
-	color: var(--muted);
-}
-
-.foot-links-sm a:hover {
 	color: var(--teal);
 }
 
@@ -535,6 +615,20 @@ async function logout() {
 		gap: 22px;
 		height: 48px;
 	}
+
+	/* 品牌栏独占一行，三组入口平分成三列 */
+	.foot-grid {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 26px 24px;
+	}
+
+	.foot-brandcol {
+		grid-column: 1 / -1;
+	}
+
+	.foot-desc {
+		max-width: none;
+	}
 }
 
 @media (max-width: 520px) {
@@ -542,8 +636,22 @@ async function logout() {
 		display: none;
 	}
 
+	.foot-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 22px 18px;
+	}
+
+	.foot-tagline {
+		display: block;
+		margin: 8px 0 0;
+	}
+
 	.foot-bottom {
 		justify-content: flex-start;
+	}
+
+	.foot-rights {
+		margin-left: 0;
 	}
 }
 </style>
