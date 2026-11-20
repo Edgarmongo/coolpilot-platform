@@ -91,6 +91,9 @@ certbot/
 # 临时调试产物（token、抓取的 HTML 等）
 out/
 
+# 用独立 outDir 跑构建验证时产生（避免清空 dist 触发批量删除保护）
+dist_verify/
+
 # 浏览器验收截图等临时产物
 /tmp/
 
