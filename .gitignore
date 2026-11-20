@@ -93,3 +93,6 @@ out/
 
 # 浏览器验收截图等临时产物
 /tmp/
+
+# WorkBuddy 项目记忆（本地工作记录，不进版本库）
+.workbuddy/
