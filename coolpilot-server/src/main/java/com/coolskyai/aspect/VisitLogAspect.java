@@ -1,13 +1,5 @@
 package com.coolskyai.aspect;
 
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import com.coolskyai.annotation.VisitLogger;
 import com.coolskyai.constant.RedisKeyConstants;
 import com.coolskyai.entity.VisitLog;
@@ -23,196 +15,212 @@ import com.coolskyai.util.AopUtils;
 import com.coolskyai.util.IpAddressUtils;
 import com.coolskyai.util.JacksonUtils;
 import com.coolskyai.util.StringUtils;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * @Description: AOP记录访问日志
- * @Author: CoolSkyAI
- * @Date: 2020-12-04
+ * 访问日志切面。
+ *
+ * <p>只挂在带 {@link VisitLogger} 的接口上。一次请求做两件事：
+ * 确认访客标识（没有就签发一个），然后把这次访问写进 {@code visit_log}。
+ *
+ * <p><b>访客标识的设计</b>：不依赖 Cookie，而是用「小时戳 + IP + User-Agent」生成确定性 UUID，
+ * 通过响应头 {@code identification} 交给前端保存。这样同一访客在一段时间内的多次访问可以归并，
+ * 也不受禁用 Cookie 影响。
+ *
+ * @author CoolSkyAI
  */
 @Component
 @Aspect
 public class VisitLogAspect {
-	@Autowired
-	VisitLogService visitLogService;
-	@Autowired
-	VisitorService visitorService;
-	@Autowired
-	RedisService redisService;
 
-	ThreadLocal<Long> currentTime = new ThreadLocal<>();
+	/** 访客标识的请求/响应头名，前后端约定 */
+	private static final String IDENTIFICATION_HEADER = "identification";
 
-	/**
-	 * 配置切入点
-	 */
+	/** 参数序列化后的最大留存长度，防止一条日志把库撑大 */
+	private static final int PARAM_MAX_LENGTH = 2000;
+
+	private final VisitLogService visitLogService;
+	private final VisitorService visitorService;
+	private final RedisService redisService;
+
+	public VisitLogAspect(VisitLogService visitLogService, VisitorService visitorService, RedisService redisService) {
+		this.visitLogService = visitLogService;
+		this.visitorService = visitorService;
+		this.redisService = redisService;
+	}
+
 	@Pointcut("@annotation(visitLogger)")
 	public void logPointcut(VisitLogger visitLogger) {
 	}
 
-	/**
-	 * 配置环绕通知
-	 *
-	 * @param joinPoint
-	 * @return
-	 * @throws Throwable
-	 */
 	@Around("logPointcut(visitLogger)")
 	public Object logAround(ProceedingJoinPoint joinPoint, VisitLogger visitLogger) throws Throwable {
-		currentTime.set(System.currentTimeMillis());
+		long startedAt = System.currentTimeMillis();
 		Result result = (Result) joinPoint.proceed();
-		int times = (int) (System.currentTimeMillis() - currentTime.get());
-		currentTime.remove();
-		//获取请求对象
-		HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-		//校验访客标识码
-		String identification = checkIdentification(request);
-		//记录访问日志
-		VisitLog visitLog = handleLog(joinPoint, visitLogger, request, result, times, identification);
-		visitLogService.saveVisitLog(visitLog);
+		int elapsedMillis = (int) (System.currentTimeMillis() - startedAt);
+
+		HttpServletRequest request = currentRequest();
+		String identification = resolveIdentification(request);
+		visitLogService.saveVisitLog(buildLog(joinPoint, visitLogger, request, result, elapsedMillis, identification));
 		return result;
 	}
 
+	// ------------------------------------------------------------------
+	// 访客标识
+	// ------------------------------------------------------------------
+
 	/**
-	 * 校验访客标识码
-	 *
-	 * @param request
-	 * @return
+	 * 拿到本次请求的访客标识：先看请求头，再看 Redis，最后看数据库；都没有就签发新的。
 	 */
-	private String checkIdentification(HttpServletRequest request) {
-		String identification = request.getHeader("identification");
-		if (identification == null) {
-			//请求头没有uuid，签发uuid并保存到数据库和Redis
-			identification = saveUUID(request);
-		} else {
-			//校验Redis中是否存在uuid
-			boolean redisHas = redisService.hasValueInSet(RedisKeyConstants.IDENTIFICATION_SET, identification);
-			//Redis中不存在uuid
-			if (!redisHas) {
-				//校验数据库中是否存在uuid
-				boolean mysqlHas = visitorService.hasUUID(identification);
-				if (mysqlHas) {
-					//数据库存在，保存至Redis
-					redisService.saveValueToSet(RedisKeyConstants.IDENTIFICATION_SET, identification);
-				} else {
-					//数据库不存在，签发新的uuid
-					identification = saveUUID(request);
-				}
-			}
+	private String resolveIdentification(HttpServletRequest request) {
+		String fromHeader = request.getHeader(IDENTIFICATION_HEADER);
+		if (fromHeader == null) {
+			return issueIdentification(request);
 		}
-		return identification;
+		if (cachedInRedis(fromHeader)) {
+			return fromHeader;
+		}
+		// Redis 里没有，但可能只是缓存被清过；库里还在就重新写回缓存，不重复建档
+		if (visitorService.hasUUID(fromHeader)) {
+			redisService.saveValueToSet(RedisKeyConstants.IDENTIFICATION_SET, fromHeader);
+			return fromHeader;
+		}
+		return issueIdentification(request);
 	}
 
 	/**
-	 * 签发UUID，并保存至数据库和Redis
+	 * 签发新的访客标识并落地。
 	 *
-	 * @param request
-	 * @return
+	 * <p>注意时间戳只精确到小时、**没有清零毫秒** —— 这是沿用下来的行为：
+	 * 同一小时内不同毫秒会算出不同 UUID。也就是说实际粒度接近「一次会话一个访客」，
+	 * 而不是「一小时一个访客」。改成清零会改变 UV 统计口径，需要单独评估，不要顺手改。
 	 */
-	private String saveUUID(HttpServletRequest request) {
-		//获取响应对象
-		HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
-		//获取当前时间戳，精确到小时，防刷访客数据
-		Calendar calendar = Calendar.getInstance();
-		calendar.set(Calendar.MINUTE, 0);
-		calendar.set(Calendar.SECOND, 0);
-		String timestamp = Long.toString(calendar.getTimeInMillis() / 1000);
-		//获取访问者基本信息
+	private String issueIdentification(HttpServletRequest request) {
 		String ip = IpAddressUtils.getIpAddress(request);
 		String userAgent = request.getHeader("User-Agent");
-		//根据时间戳、ip、userAgent生成UUID
-		String nameUUID = timestamp + ip + userAgent;
-		String uuid = UUID.nameUUIDFromBytes(nameUUID.getBytes()).toString();
-		//添加访客标识码UUID至响应头
-		response.addHeader("identification", uuid);
-		//暴露自定义header供页面资源使用
-		response.addHeader("Access-Control-Expose-Headers", "identification");
-		//校验Redis中是否存在uuid
-		boolean redisHas = redisService.hasValueInSet(RedisKeyConstants.IDENTIFICATION_SET, uuid);
-		if (!redisHas) {
-			//保存至Redis
+		String uuid = UUID.nameUUIDFromBytes(
+				(hourMillis() + ip + userAgent).getBytes(StandardCharsets.UTF_8)).toString();
+
+		HttpServletResponse response = currentResponse();
+		if (response != null) {
+			response.addHeader(IDENTIFICATION_HEADER, uuid);
+			// 自定义头默认不暴露给前端脚本，需要显式声明
+			response.addHeader("Access-Control-Expose-Headers", IDENTIFICATION_HEADER);
+		}
+
+		if (!cachedInRedis(uuid)) {
 			redisService.saveValueToSet(RedisKeyConstants.IDENTIFICATION_SET, uuid);
-			//保存至数据库
-			Visitor visitor = new Visitor(uuid, ip, userAgent);
-			visitorService.saveVisitor(visitor);
+			visitorService.saveVisitor(new Visitor(uuid, ip, userAgent));
 		}
 		return uuid;
 	}
 
-	/**
-	 * 设置VisitLogger对象属性
-	 *
-	 * @param joinPoint
-	 * @param visitLogger
-	 * @param result
-	 * @param times
-	 * @return
-	 */
-	private VisitLog handleLog(ProceedingJoinPoint joinPoint, VisitLogger visitLogger, HttpServletRequest request, Result result,
-	                           int times, String identification) {
-		String uri = request.getRequestURI();
-		String method = request.getMethod();
-		String ip = IpAddressUtils.getIpAddress(request);
-		String userAgent = request.getHeader("User-Agent");
-		Map<String, Object> requestParams = AopUtils.getRequestParams(joinPoint);
-		VisitLogRemark visitLogRemark = judgeBehavior(visitLogger.value(), requestParams, result);
-		VisitLog log = new VisitLog(identification, uri, method, visitLogger.value().getBehavior(),
-				visitLogRemark.getContent(), visitLogRemark.getRemark(), ip, times, userAgent);
-		log.setParam(StringUtils.substring(JacksonUtils.writeValueAsString(requestParams), 0, 2000));
+	private boolean cachedInRedis(String uuid) {
+		return redisService.hasValueInSet(RedisKeyConstants.IDENTIFICATION_SET, uuid);
+	}
+
+	private String hourMillis() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		return Long.toString(calendar.getTimeInMillis() / 1000);
+	}
+
+	// ------------------------------------------------------------------
+	// 日志内容
+	// ------------------------------------------------------------------
+
+	private VisitLog buildLog(ProceedingJoinPoint joinPoint, VisitLogger visitLogger, HttpServletRequest request,
+	                          Result result, int elapsedMillis, String identification) {
+		Map<String, Object> params = AopUtils.getRequestParams(joinPoint);
+		VisitLogRemark remark = judgeBehavior(visitLogger.value(), params, result);
+
+		VisitLog log = new VisitLog(identification,
+				request.getRequestURI(),
+				request.getMethod(),
+				visitLogger.value().getBehavior(),
+				remark.getContent(),
+				remark.getRemark(),
+				IpAddressUtils.getIpAddress(request),
+				elapsedMillis,
+				request.getHeader("User-Agent"));
+		log.setParam(StringUtils.substring(JacksonUtils.writeValueAsString(params), 0, PARAM_MAX_LENGTH));
 		return log;
 	}
 
 	/**
-	 * 根据访问行为，设置对应的访问内容或备注
+	 * 按访问行为补充「访问内容」和「备注」。
 	 *
-	 * @param behavior
-	 * @param requestParams
-	 * @param result
-	 * @return
+	 * <p>默认值取自 {@link VisitBehavior}，只有能确定具体对象时才覆盖。
 	 */
-	private VisitLogRemark judgeBehavior(VisitBehavior behavior, Map<String, Object> requestParams, Result result) {
-		String remark = "";
-		String content = behavior.getContent();
-		switch (behavior) {
-			case INDEX:
-			case MOMENT:
-				remark = "第" + requestParams.get("pageNum") + "页";
-				break;
-			case BLOG:
-				if (result.getCode() == 200) {
-					BlogDetail blog = (BlogDetail) result.getData();
-					String title = blog.getTitle();
-					content = title;
-					remark = "文章标题：" + title;
-				}
-				break;
-			case SEARCH:
-				if (result.getCode() == 200) {
-					String query = (String) requestParams.get("query");
-					content = query;
-					remark = "搜索内容：" + query;
-				}
-				break;
-			case CATEGORY:
-				String categoryName = (String) requestParams.get("categoryName");
-				content = categoryName;
-				remark = "分类名称：" + categoryName + "，第" + requestParams.get("pageNum") + "页";
-				break;
-			case TAG:
-				String tagName = (String) requestParams.get("tagName");
-				content = tagName;
-				remark = "标签名称：" + tagName + "，第" + requestParams.get("pageNum") + "页";
-				break;
-			case CLICK_FRIEND:
-				String nickname = (String) requestParams.get("nickname");
-				content = nickname;
-				remark = "友链名称：" + nickname;
-				break;
+	private VisitLogRemark judgeBehavior(VisitBehavior behavior, Map<String, Object> params, Result result) {
+		String fallback = behavior.getContent();
+		return switch (behavior) {
+			case INDEX, MOMENT -> new VisitLogRemark(fallback, "第" + params.get("pageNum") + "页");
+			case BLOG -> blogRemark(result, fallback);
+			case SEARCH -> searchRemark(params, result, fallback);
+			case CATEGORY -> new VisitLogRemark(
+					asText(params.get("categoryName")),
+					"分类名称：" + params.get("categoryName") + "，第" + params.get("pageNum") + "页");
+			case TAG -> new VisitLogRemark(
+					asText(params.get("tagName")),
+					"标签名称：" + params.get("tagName") + "，第" + params.get("pageNum") + "页");
+			case CLICK_FRIEND -> new VisitLogRemark(
+					asText(params.get("nickname")),
+					"友链名称：" + params.get("nickname"));
+			// 归档 / 友链页 / 关于我 / 点赞动态 / UNKNOWN 不需要补充内容，沿用枚举里的默认值
+			default -> new VisitLogRemark(fallback, "");
+		};
+	}
+
+	/**
+	 * 文章页：只有查到了文章才记标题。查不到（404）保持默认内容，不硬转类型。
+	 */
+	private VisitLogRemark blogRemark(Result result, String fallback) {
+		if (result.getCode() != 200 || !(result.getData() instanceof BlogDetail blog)) {
+			return new VisitLogRemark(fallback, "");
 		}
-		return new VisitLogRemark(content, remark);
+		return new VisitLogRemark(blog.getTitle(), "文章标题：" + blog.getTitle());
+	}
+
+	private VisitLogRemark searchRemark(Map<String, Object> params, Result result, String fallback) {
+		if (result.getCode() != 200) {
+			return new VisitLogRemark(fallback, "");
+		}
+		String query = asText(params.get("query"));
+		return new VisitLogRemark(query, "搜索内容：" + query);
+	}
+
+	private String asText(Object value) {
+		return value == null ? "" : value.toString();
+	}
+
+	// ------------------------------------------------------------------
+	// 请求上下文
+	// ------------------------------------------------------------------
+
+	private HttpServletRequest currentRequest() {
+		ServletRequestAttributes attributes =
+				(ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		return attributes == null ? null : attributes.getRequest();
+	}
+
+	private HttpServletResponse currentResponse() {
+		ServletRequestAttributes attributes =
+				(ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		return attributes == null ? null : attributes.getResponse();
 	}
 }

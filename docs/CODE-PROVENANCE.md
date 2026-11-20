@@ -61,10 +61,10 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 
 | 分类 | 文件数 | 行数 | 占当前后端 |
 |---|---|---|---|
-| 逐字一致 | 148 | 8,606 | **27.1%** |
+| 逐字一致 | 146 | 8,308 | **26.2%** |
 | 小幅修改 | 102 | 5,788 | 18.2% |
 | 大幅改写 | 12 | 835 | 2.6% |
-| 独立重写 | 6 | 480 | 1.5% |
+| 独立重写 | 8 | 778 | 2.5% |
 | 基线之后新增 | 137 | ~15,131 | 47.6% |
 | **合计** | **412** | **31,748** | 100% |
 
@@ -424,3 +424,46 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
    按 isXxx 传会静默变成 null，插入时才由数据库约束报错。
 2. **登录接口有频率限制**（`@AccessLimit`），联调时反复登录会被锁 1 分钟。
    测试脚本应复用同一个 token，而不是每次重新登录。
+
+### 批次 E：两个切面（0.20 / 0.23）
+
+| 文件 | 行 | 相似度 | 最长连续 | 关键改动 |
+|---|---:|---:|---:|---|
+| `VisitLogAspect` | 218 | **0.20** | 5 行 | 去掉 `ThreadLocal` 计时（改成局部变量，本就没有嵌套场景）；访客标识逻辑拆成 `resolveIdentification` / `issueIdentification`；7 种行为判定改用 switch 表达式 |
+| `ExceptionLogAspect` | 81 | **0.23** | 4 行 | 抽 `buildLog` / `describeOperation`；补 `request == null` 的保护 |
+
+**两个行为上的改进（不是单纯换写法）**
+
+1. `VisitLogAspect` 的 BLOG 分支原来直接 `(BlogDetail) result.getData()`，
+   一旦返回结构不是 BlogDetail 就 ClassCastException，而它跑在响应返回途中，
+   会把一次正常的 404 变成 500。现在先用 `instanceof` 判断。
+2. `ExceptionLogAspect` 原来对 `RequestContextHolder` 直接取 `.getRequest()`，
+   非 Web 线程下会 NPE —— 而这个切面本身就在异常链上，再抛一次会把原始异常盖掉。
+   现在拿不到上下文就跳过，宁可少一条日志也不掩盖真错误。
+
+**保留的一处历史行为**
+
+访客 UUID 的时间戳只清零了分和秒，**没有清零毫秒**，所以同一小时内不同毫秒会算出不同 UUID，
+实际粒度接近「一次会话一个访客」而非「一小时一个访客」。改成清零会改变 UV 统计口径，
+属于产品决策，这次只在注释里标明，不动代码。
+
+---
+
+## 十四、批次 E 验证记录（含一次差点被误导的经历）
+
+| 验证项 | 结果 |
+|---|---|
+| 响应头签发 | ✅ `identification: d1826a9f-…` + `Access-Control-Expose-Headers` |
+| 访问日志写入 | ✅ `/blogs?pageNum=2` → behavior=访问页面，content=首页，**remark=第2页** |
+| 文章行为判定 | ✅ `/blog?id=1` → content=文章标题，remark=「文章标题：…」 |
+| 访客去重 | ✅ 带同一 UUID 再访问，`visitor` 表仍只有 1 条 |
+| 异常日志 | ✅ `/blog?id=999999` → 业务返回 404，同时 `exception_log` 落一条 NotFoundException 堆栈，description=「查看博客」（从注解取到） |
+
+**差点得出错误结论的一次**：
+
+第一次验证时所有指标都正常，但其实是**旧进程在响应**。原因是 `taskkill` 只杀了 Maven 父进程，
+`spring-boot:run` fork 出的 Java 子进程仍占着 8091，新进程启动失败（`Port 8091 was already in use`），
+而旧进程继续服务 —— 于是「验证通过」的其实是上一批的代码。
+
+后来通过 `netstat` 查 PID、确认与日志里的 PID 一致才发现。**教训：验证前先确认进程是新的，
+不只看接口返回 200。**
