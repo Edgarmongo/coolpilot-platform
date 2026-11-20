@@ -1,53 +1,63 @@
 package com.coolskyai.service.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.entity.Comment;
 import com.coolskyai.exception.PersistenceException;
 import com.coolskyai.mapper.CommentMapper;
 import com.coolskyai.model.vo.PageComment;
 import com.coolskyai.service.CommentService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * @Description: 博客评论业务层实现
- * @Author: CoolSkyAI
- * @Date: 2020-08-03
+ * 评论业务。
+ *
+ * <p>评论是树形结构（楼中楼），但数据库只有一张平表。这里的两个难点：
+ * <ul>
+ *   <li><b>组装</b>：按 parent_id 逐层取，直到取不到为止。用显式队列而非递归，
+ *       避免深层回复把调用栈打穿。</li>
+ *   <li><b>级联</b>：隐藏或删除一条评论时，它的所有后代都要跟着变。
+ *       必须先子后父 —— 否则父记录先没了，子记录就变成孤儿。</li>
+ * </ul>
+ *
+ * @author CoolSkyAI
  */
 @Service
 public class CommentServiceImpl implements CommentService {
-	@Autowired
-	CommentMapper commentMapper;
 
-	@Override
-	public List<Comment> getListByPageAndParentCommentId(Integer page, Long blogId, Long parentCommentId) {
-		List<Comment> comments = commentMapper.getListByPageAndParentCommentId(page, blogId, parentCommentId);
-		for (Comment c : comments) {
-			//递归查询子评论及其子评论
-			List<Comment> replyComments = getListByPageAndParentCommentId(page, blogId, c.getId());
-			c.setReplyComments(replyComments);
-		}
-		return comments;
+	private final CommentMapper commentMapper;
+
+	public CommentServiceImpl(CommentMapper commentMapper) {
+		this.commentMapper = commentMapper;
 	}
 
 	@Override
-	public List<PageComment> getPageCommentList(Integer page, Long blogId, Long parentCommentId) {
-		List<PageComment> comments = getPageCommentListByPageAndParentCommentId(page, blogId, parentCommentId);
-		for (PageComment c : comments) {
-			List<PageComment> tmpComments = new ArrayList<>();
-			getReplyComments(tmpComments, c.getReplyComments());
-			//对于两列评论来说，按时间顺序排列应该比树形更合理些
-			//排序一下
-			Comparator<PageComment> comparator = Comparator.comparing(PageComment::getCreateTime);
-			tmpComments.sort(comparator);
+	public List<Comment> getListByPageAndParentCommentId(Integer page, Long blogId, Long parentCommentId) {
+		return loadReplyTree(page, blogId, parentCommentId);
+	}
 
-			c.setReplyComments(tmpComments);
+	/**
+	 * 前台展示用的评论：树结构取出来后，把每个根节点的后代拍平成一列并按时间排序。
+	 *
+	 * <p>两列布局下，平铺比缩进树更好读 —— 用户不需要数缩进层级，按时间读完就行。
+	 */
+	@Override
+	public List<PageComment> getPageCommentList(Integer page, Long blogId, Long parentCommentId) {
+		List<PageComment> threads = loadPageReplyTree(page, blogId, parentCommentId);
+		for (PageComment thread : threads) {
+			List<PageComment> flatten = new ArrayList<>();
+			flattenInOrder(thread.getReplyComments(), flatten);
+			flatten.sort(Comparator.comparing(PageComment::getCreateTime));
+			thread.setReplyComments(flatten);
 		}
-		return comments;
+		return threads;
 	}
 
 	@Override
@@ -59,61 +69,29 @@ public class CommentServiceImpl implements CommentService {
 		return comment;
 	}
 
-	/**
-	 * 将所有子评论递归取出到一个List中
-	 *
-	 * @param comments
-	 */
-	private void getReplyComments(List<PageComment> tmpComments, List<PageComment> comments) {
-		for (PageComment c : comments) {
-			tmpComments.add(c);
-			getReplyComments(tmpComments, c.getReplyComments());
-		}
-	}
-
-	private List<PageComment> getPageCommentListByPageAndParentCommentId(Integer page, Long blogId, Long parentCommentId) {
-		List<PageComment> comments = commentMapper.getPageCommentListByPageAndParentCommentId(page, blogId, parentCommentId);
-		for (PageComment c : comments) {
-			List<PageComment> replyComments = getPageCommentListByPageAndParentCommentId(page, blogId, c.getId());
-			c.setReplyComments(replyComments);
-		}
-		return comments;
-	}
-
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateCommentPublishedById(Long commentId, Boolean published) {
-		//如果是隐藏评论，则所有子评论都要修改成隐藏状态
-		if (!published) {
-			List<Comment> comments = getAllReplyComments(commentId);
-			for (Comment c : comments) {
-				hideComment(c);
-			}
+		// 隐藏父评论时，子评论一起隐藏；反向（恢复显示）不级联，子评论保持各自状态
+		if (Boolean.FALSE.equals(published)) {
+			cascadeFromLeafToRoot(commentId,
+					c -> requireAffected(commentMapper.updateCommentPublishedById(c.getId(), false), "操作失败"));
 		}
-
-		if (commentMapper.updateCommentPublishedById(commentId, published) != 1) {
-			throw new PersistenceException("操作失败");
-		}
+		requireAffected(commentMapper.updateCommentPublishedById(commentId, published), "操作失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateCommentNoticeById(Long commentId, Boolean notice) {
-		if (commentMapper.updateCommentNoticeById(commentId, notice) != 1) {
-			throw new PersistenceException("操作失败");
-		}
+		requireAffected(commentMapper.updateCommentNoticeById(commentId, notice), "操作失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void deleteCommentById(Long commentId) {
-		List<Comment> comments = getAllReplyComments(commentId);
-		for (Comment c : comments) {
-			delete(c);
-		}
-		if (commentMapper.deleteCommentById(commentId) != 1) {
-			throw new PersistenceException("评论删除失败");
-		}
+		cascadeFromLeafToRoot(commentId,
+				c -> requireAffected(commentMapper.deleteCommentById(c.getId()), "评论删除失败"));
+		requireAffected(commentMapper.deleteCommentById(commentId), "评论删除失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
@@ -125,9 +103,7 @@ public class CommentServiceImpl implements CommentService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateComment(Comment comment) {
-		if (commentMapper.updateComment(comment) != 1) {
-			throw new PersistenceException("评论修改失败");
-		}
+		requireAffected(commentMapper.updateComment(comment), "评论修改失败");
 	}
 
 	@Override
@@ -138,51 +114,94 @@ public class CommentServiceImpl implements CommentService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveComment(com.coolskyai.model.dto.Comment comment) {
-		if (commentMapper.saveComment(comment) != 1) {
-			throw new PersistenceException("评论失败");
+		requireAffected(commentMapper.saveComment(comment), "评论失败");
+	}
+
+	// ------------------------------------------------------------------
+	// 树组装
+	// ------------------------------------------------------------------
+
+	/**
+	 * 广度优先逐层展开：每取出一个节点，查它的直接子节点挂上去，再把子节点入队。
+	 * 队列空时整棵树就建好了，不会因为回复层级深而 StackOverflow。
+	 */
+	private List<Comment> loadReplyTree(Integer page, Long blogId, Long parentId) {
+		List<Comment> roots = commentMapper.getListByPageAndParentCommentId(page, blogId, parentId);
+		Deque<Comment> pending = new ArrayDeque<>(roots);
+		while (!pending.isEmpty()) {
+			Comment node = pending.poll();
+			List<Comment> children = commentMapper.getListByPageAndParentCommentId(page, blogId, node.getId());
+			node.setReplyComments(children);
+			pending.addAll(children);
 		}
+		return roots;
+	}
+
+	private List<PageComment> loadPageReplyTree(Integer page, Long blogId, Long parentId) {
+		List<PageComment> roots = commentMapper.getPageCommentListByPageAndParentCommentId(page, blogId, parentId);
+		Deque<PageComment> pending = new ArrayDeque<>(roots);
+		while (!pending.isEmpty()) {
+			PageComment node = pending.poll();
+			List<PageComment> children =
+					commentMapper.getPageCommentListByPageAndParentCommentId(page, blogId, node.getId());
+			node.setReplyComments(children);
+			pending.addAll(children);
+		}
+		return roots;
 	}
 
 	/**
-	 * 递归删除子评论
-	 *
-	 * @param comment 需要删除子评论的父评论
+	 * 前序平铺：先放自己，再放子孙。用栈模拟递归，逆序压栈保证取出顺序与递归一致。
 	 */
-	private void delete(Comment comment) {
-		for (Comment c : comment.getReplyComments()) {
-			delete(c);
+	private void flattenInOrder(List<PageComment> nodes, List<PageComment> sink) {
+		if (nodes == null || nodes.isEmpty()) {
+			return;
 		}
-		if (commentMapper.deleteCommentById(comment.getId()) != 1) {
-			throw new PersistenceException("评论删除失败");
+		Deque<PageComment> stack = new ArrayDeque<>();
+		pushReversed(stack, nodes);
+		while (!stack.isEmpty()) {
+			PageComment node = stack.pop();
+			sink.add(node);
+			pushReversed(stack, node.getReplyComments());
 		}
 	}
 
-	/**
-	 * 递归隐藏子评论
-	 *
-	 * @param comment 需要隐藏子评论的父评论
-	 */
-	private void hideComment(Comment comment) {
-		for (Comment c : comment.getReplyComments()) {
-			hideComment(c);
+	private void pushReversed(Deque<PageComment> stack, List<PageComment> nodes) {
+		if (nodes == null) {
+			return;
 		}
-		if (commentMapper.updateCommentPublishedById(comment.getId(), false) != 1) {
-			throw new PersistenceException("操作失败");
+		for (int i = nodes.size() - 1; i >= 0; i--) {
+			stack.push(nodes.get(i));
 		}
 	}
 
+	// ------------------------------------------------------------------
+	// 级联
+	// ------------------------------------------------------------------
+
 	/**
-	 * 按id递归查询子评论
+	 * 对指定评论的所有后代执行操作，**自底向上**。
 	 *
-	 * @param parentCommentId 需要查询子评论的父评论id
-	 * @return
+	 * <p>做法：先自顶向下收集全部后代，再整体倒序 —— 倒序后任何一个节点都排在它的父节点之前，
+	 * 满足「先子后父」，删除时不会留下孤儿记录，隐藏时也不会出现父隐藏子可见。
+	 *
+	 * <p>注意不包含传入的 commentId 本身，调用方自己处理根节点。
 	 */
-	private List<Comment> getAllReplyComments(Long parentCommentId) {
-		List<Comment> comments = commentMapper.getListByParentCommentId(parentCommentId);
-		for (Comment c : comments) {
-			List<Comment> replyComments = getAllReplyComments(c.getId());
-			c.setReplyComments(replyComments);
+	private void cascadeFromLeafToRoot(Long rootId, Consumer<Comment> action) {
+		List<Comment> collected = new ArrayList<>();
+		Deque<Comment> stack = new ArrayDeque<>(commentMapper.getListByParentCommentId(rootId));
+		while (!stack.isEmpty()) {
+			Comment node = stack.pop();
+			collected.add(node);
+			stack.addAll(commentMapper.getListByParentCommentId(node.getId()));
 		}
-		return comments;
+		Collections.reverse(collected);
+		collected.forEach(action);
+	}
+
+	private void requireAffected(int rows, String message) {
+		if (rows != 1) {
+			throw new PersistenceException(message);
+		}
 	}
 }

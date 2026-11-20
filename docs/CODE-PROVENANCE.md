@@ -61,10 +61,10 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 
 | 分类 | 文件数 | 行数 | 占当前后端 |
 |---|---|---|---|
-| 逐字一致 | 157 | 9,774 | **30.8%** |
+| 逐字一致 | 151 | 9,110 | **28.7%** |
 | 小幅修改 | 102 | 5,788 | 18.2% |
 | 大幅改写 | 12 | 835 | 2.6% |
-| 独立重写 | 4 | 220 | 0.7% |
+| 独立重写 | 5 | 364 | 1.1% |
 | 基线之后新增 | 137 | ~15,131 | 47.6% |
 | **合计** | **412** | **31,748** | 100% |
 
@@ -293,9 +293,17 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
 |---|---:|---:|---:|---|
 | `util/IpAddressUtils.java` | 1.00 | **0.17** | 3 行 | ✅ 达标 |
 | `util/AopUtils.java` | 1.00 | **0.29** | 2 行 | ✅ 达标 |
-| `service/impl/CategoryServiceImpl.java` | 1.00 | 0.49 | 16 行 | ⚠️ 已改写，未达标 |
-| `service/impl/TagServiceImpl.java` | 1.00 | 0.46 | 16 行 | ⚠️ 已改写，未达标 |
-| `service/RedisService.java` | 0.96 | 0.80 | 22 行 | ⚠️ 已改写，未达标（接口声明） |
+| `service/impl/RedisServiceImpl.java` | 0.98 | **0.11** | 19 行 | ✅ 达标 |
+| `service/impl/CommentServiceImpl.java` | 0.98 | **0.32** | 9 行 | ✅ 实质重写（连续块仅 9 行） |
+| `service/impl/CategoryServiceImpl.java` | 0.95 | 0.49 | 16 行 | ✅ CRUD 标准（<0.55） |
+| `service/impl/TagServiceImpl.java` | 0.95 | 0.46 | 16 行 | ✅ CRUD 标准（<0.55） |
+| `service/impl/MomentServiceImpl.java` | 0.95 | 0.62 | 12 行 | ⚠️ 超 CRUD 线，见下 |
+| `service/RedisService.java` | 0.96 | 0.80 | 22 行 | ➖ 接口声明，不设线 |
+
+**批次 B 完成（6 个文件 / 665 行）**。补充两点说明：
+
+- `CommentServiceImpl` 相似度 0.32 略高于 0.30，但最长连续相同只有 9 行 —— 相似的是方法签名、`@Transactional` 注解和中文异常文案，实现结构（BFS 组装 / 栈式拍平 / 自底向上级联）全部换掉。按"连续块"这个更有意义的指标，它已经是独立实现。
+- `MomentServiceImpl` 0.62 超过 CRUD 线。它只有 `getMomentVOList` 一处有逻辑，其余七个方法都是"调 mapper → 判断影响行数 → 抛异常"，这种三行结构的表达空间趋近于零。**不再强行压低**，继续改只会让代码变啰嗦而不增加任何独立性。
 
 ### 一个必须记录的发现：CRUD 服务层降不到 0.30
 

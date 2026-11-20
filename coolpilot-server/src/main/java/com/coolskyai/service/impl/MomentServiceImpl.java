@@ -1,49 +1,62 @@
 package com.coolskyai.service.impl;
 
-import com.github.pagehelper.PageHelper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.coolskyai.entity.Moment;
 import com.coolskyai.exception.NotFoundException;
 import com.coolskyai.exception.PersistenceException;
 import com.coolskyai.mapper.MomentMapper;
 import com.coolskyai.service.MomentService;
 import com.coolskyai.util.markdown.MarkdownUtils;
+import com.github.pagehelper.PageHelper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * @Description: 博客动态业务层实现
- * @Author: CoolSkyAI
- * @Date: 2020-08-24
+ * 动态业务。
+ *
+ * <p>动态是一段可以直接写 Markdown 的短文，没有标题、没有分类，
+ * 所以这里的逻辑主要是两件事：分页，以及「私密内容不能出现在公开列表里」。
+ *
+ * @author CoolSkyAI
  */
 @Service
 public class MomentServiceImpl implements MomentService {
-	@Autowired
-	MomentMapper momentMapper;
-	//每页显示5条动态
-	private static final int pageSize = 5;
-	//动态列表排序方式
-	private static final String orderBy = "create_time desc";
-	//私密动态提示
-	private static final String PRIVATE_MOMENT_CONTENT = "<p>此条为私密动态，仅发布者可见！</p>";
+
+	/** 前台每页条数。动态是碎片内容，一页给多了反而没人翻。 */
+	private static final int PAGE_SIZE = 5;
+
+	/** 按发布时间倒序，最新的在最上面 */
+	private static final String ORDER_BY = "create_time desc";
+
+	/** 私密动态在公开列表中的占位内容：说清楚状态，不泄露任何正文 */
+	private static final String PRIVATE_PLACEHOLDER = "<p>此条为私密动态，仅发布者可见！</p>";
+
+	private final MomentMapper momentMapper;
+
+	public MomentServiceImpl(MomentMapper momentMapper) {
+		this.momentMapper = momentMapper;
+	}
 
 	@Override
 	public List<Moment> getMomentList() {
 		return momentMapper.getMomentList();
 	}
 
+	/**
+	 * 分页取动态并渲染正文。
+	 *
+	 * @param adminIdentity 后台视角为 true，可以看到全部内容；前台只能看已发布的
+	 */
 	@Override
 	public List<Moment> getMomentVOList(Integer pageNum, boolean adminIdentity) {
-		PageHelper.startPage(pageNum, pageSize, orderBy);
+		PageHelper.startPage(pageNum, PAGE_SIZE, ORDER_BY);
 		List<Moment> moments = momentMapper.getMomentList();
 		for (Moment moment : moments) {
-			if (adminIdentity || moment.getPublished()) {
-				moment.setContent(MarkdownUtils.markdownToHtmlExtensions(moment.getContent()));
-			} else {
-				moment.setContent(PRIVATE_MOMENT_CONTENT);
-			}
+			boolean visible = adminIdentity || Boolean.TRUE.equals(moment.getPublished());
+			moment.setContent(visible
+					? MarkdownUtils.markdownToHtmlExtensions(moment.getContent())
+					: PRIVATE_PLACEHOLDER);
 		}
 		return moments;
 	}
@@ -51,17 +64,13 @@ public class MomentServiceImpl implements MomentService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void addLikeByMomentId(Long momentId) {
-		if (momentMapper.addLikeByMomentId(momentId) != 1) {
-			throw new PersistenceException("操作失败");
-		}
+		requireAffected(momentMapper.addLikeByMomentId(momentId), "操作失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateMomentPublishedById(Long momentId, Boolean published) {
-		if (momentMapper.updateMomentPublishedById(momentId, published) != 1) {
-			throw new PersistenceException("操作失败");
-		}
+		requireAffected(momentMapper.updateMomentPublishedById(momentId, published), "操作失败");
 	}
 
 	@Override
@@ -76,24 +85,27 @@ public class MomentServiceImpl implements MomentService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void deleteMomentById(Long id) {
-		if (momentMapper.deleteMomentById(id) != 1) {
-			throw new PersistenceException("删除失败");
-		}
+		requireAffected(momentMapper.deleteMomentById(id), "删除失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void saveMoment(Moment moment) {
-		if (momentMapper.saveMoment(moment) != 1) {
-			throw new PersistenceException("动态添加失败");
-		}
+		requireAffected(momentMapper.saveMoment(moment), "动态添加失败");
 	}
 
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateMoment(Moment moment) {
-		if (momentMapper.updateMoment(moment) != 1) {
-			throw new PersistenceException("动态修改失败");
+		requireAffected(momentMapper.updateMoment(moment), "动态修改失败");
+	}
+
+	/**
+	 * 影响行数不为 1 说明没命中目标记录，视为失败并回滚。
+	 */
+	private void requireAffected(int rows, String message) {
+		if (rows != 1) {
+			throw new PersistenceException(message);
 		}
 	}
 }
