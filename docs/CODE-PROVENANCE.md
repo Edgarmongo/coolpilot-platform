@@ -69,19 +69,19 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 git show --diff-filter=A --name-only --format= 76aa73f | grep '\.java$'
 ```
 
-据此重新分类（2026-11-20，批次 A–E 完成后）：
+据此重新分类（2026-11-21，批次 A–E + util 第一批完成后）：
 
 | 分类 | 文件数 | 行数 | 占基线 |
 |---|---:|---:|---:|
-| 逐字一致 · **NBlog 原有** | 101 | 5,111 | 30.8% |
+| 逐字一致 · **NBlog 原有** | 93 | 4,698 | 28.3% |
 | 逐字一致 · **导入时新增（自有）** | 40 | 2,093 | 12.6% |
-| 小幅修改 | 105 | 6,430 | 38.7% |
-| 大幅改写 | 20 | 2,071 | 12.5% |
-| 独立重写 | 9 | 912 | 5.5% |
+| 小幅修改 | 106 | 6,499 | 39.1% |
+| 大幅改写 | 25 | 2,276 | 13.7% |
+| 独立重写 | 11 | 1,051 | 6.3% |
 | 已移除 | 0 | 0 | — |
 | **基线合计** | **275** | **16,617** | 100% |
 
-**真正需要处理的只有第一行：101 个文件 / 5,111 行。**
+**真正需要处理的只有第一行：93 个文件 / 4,698 行。**
 第二行那 40 个文件（trade / product / entitlement / community / account / file 等模块）是导入时自己带进来的，
 与基线一致只说明「导入之后没再动过」，不是第三方代码，改它没有任何版权收益。
 
@@ -642,3 +642,76 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
 
 **测试数据已清理**：`orders` / `order_item` / `payment` / `entitlement` / `entitlement_log`
 五张表零残留，商品 `sales_count` 归零。库里剩下的 2 条孤儿权益日志是 2026-11-05 的历史数据，与本批无关。
+
+---
+
+## 十六、批次 A（第一批）：纯工具与上传通道
+
+`util/` 下还有 30 个逐字一致的文件（2,120 行），全部属 NBlog 原有。这一批先做**没有外部副作用**的 8 个。
+
+| 文件 | 基线 → 当前 | 相似度 | 最长连续 |
+|---|---|---:|---:|
+| `JacksonUtils` | 60 → 67 | 0.96 → **0.15** | 4 行 |
+| `StringUtils` | 79 → 98 | 0.96 → **0.30** | 5 行 |
+| `HashUtils` | 36 → 70 | 0.96 → **0.45** | 2 行 |
+| `UserAgentUtils` | 40 → 61 | 0.96 → **0.53** | 4 行 |
+| `SpringContextUtils` | 48 → 62 | 0.96 → **0.56** | 2 行 |
+| `LocalChannel` | 47 → 50 | 0.96 → **0.60** | 3 行 |
+| `ValidatorUtils` | 34 → 42 | 0.96 → **0.63** | 2 行 |
+| `UploadUtils` | 69 → 79 | 0.96 → **0.70** | 8 行 |
+
+平均 0.49。三个偏高的（`UploadUtils` 0.70 / `ValidatorUtils` 0.63 / `LocalChannel` 0.60）值得说明：
+最长连续块分别只有 8 / 2 / 3 行，剩下的相似来自**注解、字段声明、方法签名**——
+`@AllArgsConstructor class ImageResource { byte[] data; String type; }` 这种，除了这么写没有第二种表达。
+按合并原则接受，不为了指标去扭曲结构。
+
+### 改了什么
+
+| 文件 | 关键改动 |
+|---|---|
+| `StringUtils` | 通配符判定改成逐字符 switch（原来是 5 个 `contains` 串联）；`substring` 用 `Math.min` 收边界；补 `null` 入参保护；删掉无用的 `main` |
+| `JacksonUtils` | 四处重复的 try/catch 收敛成 `quietly(Supplier)`；`printStackTrace` 改成 `log.warn`（stderr 里翻堆栈的时代过去了）；单例改为 `final` 命名常量 |
+| `HashUtils` | MD5 自己实现 `MessageDigest` + 小写十六进制表；`getMurmurHash32` 的 `MAX_VALUE - hash` 映射**原样保留**（改了这个，已入库的头像索引会全部错位）；删除 `main` |
+| `UserAgentUtils` | 字段名提成常量；空 UA 与解析异常都返回 `Unknown`，不再让日志落库因畸形 UA 失败 |
+| `SpringContextUtils` | 静态字段改 `private volatile`；容器未初始化时抛 `IllegalStateException` 并说明原因，而不是在调用栈深处 NPE |
+| `ValidatorUtils` | 改 holder 懒加载，避免单测静态引用时连带初始化校验框架；行为与异常类型不变 |
+| `UploadUtils` | 上传通道未初始化时给出明确异常；`getImageByRequest` 补 `ContentType` 空判断（原来直接 `.getType()` 会 NPE） |
+| `LocalChannel` | 字段注入改构造器；`FileOutputStream` 改 `Files.write` + `createDirectories`；文件名仍是 UUID + 扩展名 |
+
+### 验证
+
+**新增 15 个单测**（不依赖 Spring 容器、不出网）：
+
+| 测试 | 数量 | 覆盖 |
+|---|---:|---|
+| `StringUtilsTest` | 6 | `isEmpty` 的「任一为空」语义、通配符判定、`substring` 五类边界、堆栈含类型与消息 |
+| `HashUtilsTest` | 4 | MD5 已知向量（`""`、`"abc"`）、32 位小写格式、Murmur 非负且稳定、BCrypt 往返比对 |
+| `UploadUtilsTest` | 3 | MockRestServiceServer：图片放行并带出扩展名、HTML 被拒、无 ContentType 被拒 |
+| `LocalChannelTest` | 2 | 临时目录真实写盘、URL 拼装、目录嵌套自动创建 |
+
+**运行时冒烟**（jar 单进程 PID 32976，日志与 PID 一致）：
+
+| 项 | 结果 |
+|---|---|
+| 启动 | ✅ 10.1s，无 Bean 创建失败（`@DependsOn("springContextUtils")` 的上传通道正常初始化） |
+| 登录 | ✅ `HashUtils.matchBC` 与库中 bcrypt 口令比对通过 |
+| 搜索 `%` | ✅ 被 `hasSpecialChar` 拦下，返回「参数错误」 |
+| 异常日志 | ✅ `/blog?id=999999` 落库完整堆栈（`com.coolskyai.exception.NotFoundException: 该博客不存在`） |
+| 参数序列化 | ✅ `visit_log.param` = `{"query":"ssh"}`、`exception_log.param` = `{"id":999999,"slug":null}`，无一条 JSON 失败告警 |
+| UA 解析 | ✅ `visit_log` 的 os/browser 有值（`Curl 8.22.0`），说明 yauaa 规则集正常加载 |
+
+### util 剩下 22 个怎么处理
+
+| 组 | 文件 | 行 | 计划 |
+|---|---|---:|---|
+| 评论与通知通道 | `CommentUtils` 318、`TelegramChannel` 92、`MailChannel` 54 | 464 | 下一批。`CommentUtils` 是最大的一块，也是评论头像/通知的核心 |
+| Telegram | `TelegramBotMsgHandler` 295、`TelegramUtils` 153 | 448 | 需要真实 Bot Token 才能验，放后面 |
+| 定时任务 | `ScheduleUtils` 138、`ScheduleRunnable` 42 | 180 | 中风险，和 Quartz 生命周期相关 |
+| 其它上传通道 | `GithubChannel` 63、`UpyunChannel` 38 | 101 | 需第三方凭据，可用 Mock 验 |
+| **Markdown 扩展** | `Cover*` / `Heimu*` 共 12 个 | 451 | **不做**，理由见下 |
+
+**Markdown 扩展为什么不做**：这 12 个文件是 commonmark 的 SPI 实现，
+类结构被框架锁死——一个 `Node`、一个 `DelimiterProcessor`、两个 `NodeRenderer`，
+方法名（`getDelimiterChar`、`getOpeningDelimiterProcessor`）、构造参数、继承关系都由接口规定。
+独立写一遍也只能长成那个样子，属于「表达与功能合并」，相似不构成侵权。
+硬改只会让代码更难读，不产生任何法律收益。

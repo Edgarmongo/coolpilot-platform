@@ -6,6 +6,23 @@
 
 ---
 
+## 未发布
+
+**代码来源整改（第三批）：util 纯工具与上传通道**
+
+- 重写 8 个文件：`JacksonUtils` `StringUtils` `HashUtils` `UserAgentUtils`
+  `SpringContextUtils` `ValidatorUtils` `UploadUtils` `LocalChannel`
+- 相似度平均 0.96 → **0.49**（`JacksonUtils` 0.15、`StringUtils` 0.30 最低）
+- **无功能变化**：方法签名、返回默认值、异常类型与文案全部保持原样；
+  `getMurmurHash32` 的取模映射刻意保留 —— 改它会让已入库的评论头像全部错位
+- 顺带修两处：抓取外链图片时 `ContentType` 为空会 NPE；畸形 User-Agent 会让日志落库失败
+- 新增 15 个单测（String 6 / Hash 4 / Upload 3 / LocalChannel 2），不依赖 Spring 容器与网络
+- 本地冒烟：启动、登录、搜索通配符拦截、异常堆栈落库、参数 JSON 序列化、UA 解析全部正常
+
+> 本批未打 tag、未部署，线上仍为 `v1.1.2`。
+
+---
+
 ## v1.1.2（2026-11-21）
 
 **代码来源整改（第二批）：交易与权益服务**
