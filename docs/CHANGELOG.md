@@ -32,6 +32,18 @@
 - 本地冒烟：评论状态判定、访客发评论（头像/非法网址置空/审核状态/IP 全部正确）、
   邮件模板渲染成功（本地无 SMTP，仅在发送时认证失败）、测试数据已清理
 
+**同批第三部分：定时任务与剩余工具**
+
+- 重写 `ScheduleUtils`（0.96 → 0.41）、`ScheduleRunnable`（0.96 → 0.64）、
+  `GithubChannel`（0.96 → 0.39）、`UpyunChannel`（0.96 → 0.51）、`QQInfoUtils`（0.96 → 0.33）
+- `ScheduleUtils` 的 7 段 try/catch 收敛为 `execute(失败说明, 操作)`；
+  `resumeJob` 的失败文案原来错写成「暂停定时任务失败」，已更正
+- `UpyunChannel` 的 `Response` 改为 try-with-resources（原来不关，连接会滞留在连接池）
+- `GithubChannel` 补 token 未配置时的明确报错
+- 新增 21 个单测（调度器增删改暂停恢复 7、反射调用 7、GitHub 2、又拍云 2、QQ 昵称 3）
+- 本地冒烟：Quartz 初始化正常；立即执行落库 `status=true times=53ms`；
+  暂停后 `nextFireTime=null`、恢复后重新排程；每 10 分钟的任务按计划执行
+
 > 本批未打 tag、未部署，线上仍为 `v1.1.2`。
 
 ---

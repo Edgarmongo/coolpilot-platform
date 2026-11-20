@@ -69,19 +69,19 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 git show --diff-filter=A --name-only --format= 76aa73f | grep '\.java$'
 ```
 
-据此重新分类（2026-11-21，批次 A–E + util 两批完成后）：
+据此重新分类（2026-11-21，批次 A–E + util 三批完成后）：
 
 | 分类 | 文件数 | 行数 | 占基线 |
 |---|---:|---:|---:|
-| 逐字一致 · **NBlog 原有** | 90 | 4,234 | 25.5% |
+| 逐字一致 · **NBlog 原有** | 85 | 3,890 | 23.4% |
 | 逐字一致 · **导入时新增（自有）** | 40 | 2,093 | 12.6% |
 | 小幅修改 | 106 | 6,499 | 39.1% |
-| 大幅改写 | 27 | 2,422 | 14.6% |
+| 大幅改写 | 32 | 2,766 | 16.6% |
 | 独立重写 | 12 | 1,369 | 8.2% |
 | 已移除 | 0 | 0 | — |
 | **基线合计** | **275** | **16,617** | 100% |
 
-**真正需要处理的只有第一行：90 个文件 / 4,234 行。**
+**真正需要处理的只有第一行：85 个文件 / 3,890 行。**
 第二行那 40 个文件（trade / product / entitlement / community / account / file 等模块）是导入时自己带进来的，
 与基线一致只说明「导入之后没再动过」，不是第三方代码，改它没有任何版权收益。
 
@@ -774,14 +774,66 @@ return commentPageEnum;
 且**限流在参数校验之前**计数 —— 第一次因昵称超长被拒，30 秒内再提交就变成「提交过于频繁」。
 联调时需要先删 Redis 键或换 UUID。
 
-### util 剩下 19 个怎么处理（2,120 行 → 已完成 877 行，剩 1,243 行）
+
+### 批次 A 第三批：定时任务与剩余工具
+
+| 文件 | 基线 → 当前 | 相似度 | 最长连续 |
+|---|---|---:|---:|
+| `QQInfoUtils` | 63 → 76 | 0.96 → **0.33** | 4 行 |
+| `GithubChannel` | 63 → 88 | 0.96 → **0.39** | 3 行 |
+| `ScheduleUtils` | 138 → 137 | 0.96 → **0.41** | 9 行 |
+| `UpyunChannel` | 38 → 62 | 0.96 → **0.51** | 3 行 |
+| `ScheduleRunnable` | 42 → 54 | 0.96 → **0.64** | 5 行 |
+
+`ScheduleRunnable` 一开始只降到 0.73，因为触发逻辑写成了「有参一条分支、无参一条分支」，
+两段几乎逐字相同。把 `Method.invoke` 收敛成一次调用（无参传共享的空数组）后降到 0.64、最长连续 5 行 ——
+这是这一批里唯一「为结构而不是为指标」改动的地方。
+
+### 改了什么
+
+| 文件 | 关键改动 |
+|---|---|
+| `ScheduleUtils` | 7 个方法各自 try/catch 收敛成 `execute(失败说明, 操作)`；抽 `cronOf` / `pauseIfDisabled`；`resumeJob` 的失败文案原来错写成「暂停定时任务失败」，已更正 |
+| `ScheduleRunnable` | 构造时校验 beanName/methodName；`Method.invoke` 单次调用；异常包装与文案不变 |
+| `GithubChannel` | 改构造器注入；常量命名成 `CONTENT_API` / `CDN_API`；补 token 未配置时的明确报错；显式设置 JSON Content-Type |
+| `UpyunChannel` | `Response` 改 try-with-resources（原来不关，连接会挂在池里）；抽出 `write()` 便于测试替换 |
+| `QQInfoUtils` | 昵称接口返回结构异常时回落 `nickname`；`isQQNumber(null)` 不再 NPE；补测试用的 `setRestTemplate` |
+
+### 一个「差点改错」的记录
+
+`QQInfoUtils` 的昵称接口写的是 `...?qq={1}`（下标占位符），我原本判断这是 bug ——
+Spring 的 URI 模板变量默认是 0 起始，`{1}` 配一个参数应该解析不出来。
+**先写了断言真实 URL 的测试，结果 `?qq=10001` 完全正确**，说明 Spring 会按下标展开。
+于是保留原写法，没有去做「修复」。这类地方凭印象改就是引入 bug。
+
+### 验证
+
+**新增 21 个单测**：
+
+| 测试 | 数量 | 覆盖 |
+|---|---:|---|
+| `ScheduleUtilsTest` | 7 | 用 RAMJobStore 起不启动的调度器：key 命名、创建启用/停用、改 cron、暂停恢复、删除、任务间互不影响 |
+| `ScheduleRunnableTest` | 7 | mock ApplicationContext：无参、带参、空白参数按无参、私有方法、异常包装与根因、方法不存在、缺 beanName |
+| `GithubChannelTest` | 2 | MockRestServiceServer：PUT 地址与 `token` 鉴权头、返回 CDN 链接；缺 token 报错 |
+| `UpyunChannelTest` | 2 | 假 `write` 替换真实上传：路径拼装、返回地址、失败分支 |
+| `QQInfoUtilsTest` | 3 | QQ 号格式 7 组、昵称正常解析、多余字段时回落 |
+
+**运行时冒烟**（jar 单进程 PID 28944，启动 20.5s，无 Bean 失败）：
+
+| 项 | 结果 |
+|---|---|
+| Quartz 初始化 | ✅ `Quartz Scheduler v2.5.2 created`，JobFactory 为 SpringBeanJobFactory |
+| 任务列表 | ✅ 3 个任务，cron 与状态正确 |
+| 立即执行（jobId=1） | ✅ 返回「提交执行」，`schedule_job_log` 落一条 `job1 status=true times=53ms` |
+| 暂停 / 恢复 | ✅ 暂停后 `status=false` 且 `nextFireTime=null`；恢复后重新排程 |
+| 定时触发 | ✅ jobId=3（每 10 分钟）按计划执行，日志 `status=true` |
+| 任务间隔离 | ✅ 单测覆盖：暂停 job6 不影响 job7 |
+
+### util 剩下 14 个怎么处理（2,120 行 → 已完成 1,221 行，剩 899 行）
 
 | 组 | 文件 | 行 | 计划 |
 |---|---|---:|---|
-| Telegram | `TelegramBotMsgHandler` 295、`TelegramUtils` 153 | 448 | 需要真实 Bot Token 才能验；目前只改了 2 处调用点，主体还没动（相似度 0.97） |
-| 定时任务 | `ScheduleUtils` 138、`ScheduleRunnable` 42 | 180 | 中风险，和 Quartz 生命周期相关 |
-| 其它上传通道 | `GithubChannel` 63、`UpyunChannel` 38 | 101 | 需第三方凭据，可用 Mock 验 |
-| QQ 头像 | `QQInfoUtils` 63 | 63 | 调腾讯接口抓头像，可用 Mock 验；注意 `CommentUtils` 目前没调它 |
+| Telegram | `TelegramBotMsgHandler` 295、`TelegramUtils` 153 | 448 | 需真实 Bot Token 才能验；目前只改了 2 处调用点，主体相似度仍是 0.97 |
 | **Markdown 扩展** | `Cover*` / `Heimu*` 共 12 个 | 451 | **不做**，理由见下 |
 
 **Markdown 扩展为什么不做**：这 12 个文件是 commonmark 的 SPI 实现，
