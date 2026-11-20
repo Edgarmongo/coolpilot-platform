@@ -61,13 +61,16 @@ import {useT} from '@/i18n/ui'
 const t = useT()
 
 import {onMounted, reactive, ref} from 'vue'
+import {useRoute} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Refresh, Search} from '@element-plus/icons-vue'
 import {approveRefund, finishRefund, getRefundList, rejectRefund} from '@/api/trade'
 import {formatDate} from '@/util/date'
 
 const loading = ref(false)
-const query = reactive({status: '', keyword: '', pageNum: 1, pageSize: 10})
+const route = useRoute()
+// 支持从仪表盘待办带筛选跳转：/trade/refund?status=APPLIED
+const query = reactive({status: route.query.status || '', keyword: '', pageNum: 1, pageSize: 10})
 const list = ref([])
 const total = ref(0)
 

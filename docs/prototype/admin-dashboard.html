@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>管理驾驶舱 · 视觉设计稿</title>
+<style>
+	:root{
+		--ink:#303133; --ink-2:#606266; --ink-3:#909399; --ink-4:#b0b3b8;
+		--line:#ebeef5; --bg:#f5f7fa; --card:#fff;
+		--brand:#00875A; --brand-h:#006A46; --brand-soft:#F4FAF7; --brand-soft2:#E7F5EE;
+		--up:#d03050; --down:#18a058;
+		--warn:#d97706; --danger:#dc2626; --info:#2563eb; --unknown:#9aa5b1;
+		--aside:#1f2d3d; --aside-active:#4ec9b0;
+	}
+	*{box-sizing:border-box}
+	body{
+		margin:0; background:var(--bg); color:var(--ink);
+		font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+		font-size:14px; -webkit-font-smoothing:antialiased;
+	}
+	.num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+	/* ---------- 侧边栏 ---------- */
+	.aside{
+		position:fixed; left:0; top:0; bottom:0; width:216px; background:var(--aside);
+		display:flex; flex-direction:column; z-index:10;
+	}
+	.brand{height:56px; display:flex; align-items:center; gap:10px; padding:0 18px; border-bottom:1px solid rgba(255,255,255,.06)}
+	.brand-mark{width:28px; height:28px; border-radius:7px; background:var(--aside-active); color:#12303a;
+		display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px}
+	.brand-text{color:#e6eef4; font-size:13.5px; font-weight:500; letter-spacing:.2px}
+	.nav{padding:12px 10px; overflow:auto; flex:1}
+	.nav-group{font-size:11px; color:#6b7d8f; padding:14px 10px 6px; letter-spacing:.6px}
+	.nav-item{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:6px; color:#bfcbd9;
+		font-size:13.5px; margin-bottom:2px; cursor:default}
+	.nav-item.on{background:#12303a; color:var(--aside-active)}
+	.nav-dot{width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.55}
+	.nav-item.on .nav-dot{opacity:1}
+	.aside-foot{padding:12px 18px; border-top:1px solid rgba(255,255,255,.06); color:#6b7d8f; font-size:11.5px}
+
+	/* ---------- 主区 ---------- */
+	.main{margin-left:216px; min-height:100vh}
+	.topbar{height:56px; background:#fff; border-bottom:1px solid var(--line); display:flex; align-items:center;
+		justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:9}
+	.crumb{font-size:13px; color:var(--ink-3)}
+	.crumb b{color:var(--ink); font-weight:500}
+	.topbar-right{display:flex; align-items:center; gap:14px}
+	.who{font-size:12.5px; color:var(--ink-3)}
+
+	.page{padding:22px 24px 60px; max-width:1440px}
+
+	/* 设计稿标识 */
+	.draft{display:flex; align-items:center; gap:8px; background:#FFF8E6; border:1px solid #f0e0b0;
+		color:#8A6A00; font-size:12px; padding:8px 12px; border-radius:6px; margin-bottom:16px}
+	.draft i{width:6px; height:6px; border-radius:50%; background:#c9a227; display:block}
+
+	/* 页头 */
+	.head{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:16px; gap:20px; flex-wrap:wrap}
+	.h-title{margin:0; font-size:20px; font-weight:600; letter-spacing:.2px}
+	.h-sub{margin:5px 0 0; font-size:12.5px; color:var(--ink-3)}
+	.filters{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+	.seg{display:flex; background:#fff; border:1px solid var(--line); border-radius:8px; padding:3px; gap:2px}
+	.seg span{padding:5px 11px; font-size:12.5px; color:var(--ink-2); border-radius:6px; cursor:default; white-space:nowrap}
+	.seg span.on{background:var(--brand-soft); color:var(--brand); font-weight:500}
+	.btn{display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 13px; border-radius:8px;
+		border:1px solid var(--line); background:#fff; font-size:12.5px; color:var(--ink-2); cursor:default}
+	.btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+	.stamp{font-size:12px; color:var(--ink-4)}
+
+	/* 区块 */
+	.sec{margin-top:22px}
+	.sec-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+	.sec-title{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:600}
+	.sec-no{font-size:11.5px; color:var(--brand); background:var(--brand-soft2); border-radius:4px; padding:2px 6px; font-weight:500}
+	.link{font-size:12.5px; color:var(--brand); cursor:default}
+
+	/* 指标卡 */
+	.cards{display:grid; grid-template-columns:repeat(6,1fr); gap:12px}
+	.card{background:var(--card); border-radius:8px; padding:14px 16px; border-left:3px solid var(--brand); position:relative}
+	.card.t-warn{border-left-color:var(--warn)}
+	.card.t-danger{border-left-color:var(--danger)}
+	.card.t-info{border-left-color:var(--info)}
+	.card.t-mute{border-left-color:#d4d7de}
+	.c-label{font-size:12.5px; color:var(--ink-3); display:flex; align-items:center; gap:5px}
+	.c-val{font-size:24px; font-weight:600; margin:7px 0 5px; letter-spacing:-.4px}
+	.c-val small{font-size:13px; font-weight:500; color:var(--ink-2); margin-right:2px}
+	.c-note{font-size:11.5px; color:var(--ink-4); line-height:1.45; min-height:33px}
+	.delta{font-size:11.5px; margin-left:6px; font-weight:500}
+	.delta.up{color:var(--up)}
+	.delta.down{color:var(--down)}
+	.unknown{color:var(--unknown); font-weight:500}
+
+	/* 卡片容器 */
+	.panel{background:#fff; border-radius:8px; padding:16px 18px}
+	.panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
+	.panel-head h4{margin:0; font-size:13.5px; font-weight:600}
+	.legend{display:flex; gap:14px; font-size:11.5px; color:var(--ink-3)}
+	.legend i{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+	.grid2{display:grid; grid-template-columns:1.35fr 1fr; gap:12px}
+	.grid2b{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+	.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+
+	/* 待办 */
+	.todos{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+	.todo{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 13px;
+		background:#fafbfc; border:1px solid var(--line); border-radius:7px; cursor:default}
+	.todo:hover{background:var(--brand-soft); border-color:rgba(0,135,90,.22)}
+	.todo-l{display:flex; flex-direction:column; gap:3px; min-width:0}
+	.todo-name{font-size:13px; font-weight:500}
+	.todo-meta{font-size:11px; color:var(--ink-4)}
+	.badge{min-width:22px; height:20px; padding:0 6px; border-radius:10px; background:#fdeaea; color:var(--danger);
+		font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
+	.badge.zero{background:#f2f3f5; color:var(--ink-4); font-weight:500}
+	.badge.warn{background:#fdf0e0; color:var(--warn)}
+
+	/* 表格 */
+	table{width:100%; border-collapse:collapse}
+	th{font-size:11.5px; color:var(--ink-3); font-weight:400; text-align:left; padding:0 0 8px; border-bottom:1px solid var(--line)}
+	td{font-size:12.5px; padding:9px 0; border-bottom:1px solid #f5f6f8; color:var(--ink-2)}
+	tr:last-child td{border-bottom:none}
+	td.title{color:var(--ink)}
+	td.r,th.r{text-align:right}
+	.rank{display:inline-flex; width:17px; height:17px; border-radius:4px; background:#f2f3f5; color:var(--ink-3);
+		font-size:10.5px; align-items:center; justify-content:center; margin-right:7px}
+	.rank.top{background:var(--brand-soft2); color:var(--brand); font-weight:600}
+
+	/* 漏斗 */
+	.funnel{display:flex; flex-direction:column; gap:7px; margin-top:2px}
+	.fn-row{display:flex; align-items:center; gap:10px; font-size:12px}
+	.fn-name{width:58px; color:var(--ink-3); flex:none}
+	.fn-bar{flex:1; height:20px; background:#f2f4f6; border-radius:4px; overflow:hidden; display:block}
+	.fn-fill{display:block; height:20px; background:var(--brand); opacity:.85; border-radius:4px}
+	.fn-val{width:26px; text-align:right; color:var(--ink-2); flex:none}
+
+	/* 健康度 */
+	.health{display:grid; grid-template-columns:repeat(8,1fr); gap:9px}
+	.h-item{border:1px solid var(--line); border-radius:7px; padding:10px 11px; background:#fff}
+	.h-top{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2); margin-bottom:6px}
+	.dot{width:7px; height:7px; border-radius:50%; flex:none}
+	.dot.up{background:var(--down)}
+	.dot.warn{background:var(--warn)}
+	.dot.down{background:var(--danger)}
+	.dot.unknown{background:var(--unknown)}
+	.h-state{font-size:12.5px; font-weight:600}
+	.h-state.up{color:var(--down)} .h-state.warn{color:var(--warn)}
+	.h-state.down{color:var(--danger)} .h-state.unknown{color:var(--unknown)}
+	.h-detail{font-size:10.5px; color:var(--ink-4); margin-top:3px; line-height:1.45}
+
+	/* 状态标签 */
+	.tag{display:inline-block; padding:1px 6px; border-radius:4px; font-size:10.5px; line-height:1.6}
+	.tag.g{background:#e8f5ee; color:#0b7a4b}
+	.tag.a{background:#fdf0e0; color:#96600a}
+	.tag.r{background:#fdeaea; color:#b02a37}
+	.tag.b{background:#e8f0fd; color:#1d4ed8}
+	.tag.n{background:#f2f3f5; color:#6b7280}
+
+	/* 折线图轴 */
+	.axis{font-size:10px; fill:#b0b3b8}
+	.gridline{stroke:#f0f2f5; stroke-width:1}
+	.footnote{margin-top:8px; font-size:11px; color:var(--ink-4); line-height:1.6}
+	.kpi-row{display:flex; gap:26px; margin-bottom:14px; flex-wrap:wrap}
+	.kpi{min-width:78px}
+	.kpi .k-l{font-size:11.5px; color:var(--ink-3); margin-bottom:4px}
+	.kpi .k-v{font-size:17px; font-weight:600}
+</style>
+</head>
+<body>
+
+<aside class="aside">
+	<div class="brand">
+		<div class="brand-mark">CP</div>
+		<div class="brand-text">CoolSkyAI 后台</div>
+	</div>
+	<nav class="nav">
+		<div class="nav-group">概览</div>
+		<div class="nav-item on"><span class="nav-dot"></span>管理仪表盘</div>
+		<div class="nav-group">内容</div>
+		<div class="nav-item"><span class="nav-dot"></span>文章管理</div>
+		<div class="nav-item"><span class="nav-dot"></span>分类与标签</div>
+		<div class="nav-item"><span class="nav-dot"></span>专题</div>
+		<div class="nav-item"><span class="nav-dot"></span>开源观察</div>
+		<div class="nav-item"><span class="nav-dot"></span>动态</div>
+		<div class="nav-group">交易</div>
+		<div class="nav-item"><span class="nav-dot"></span>订单管理</div>
+		<div class="nav-item"><span class="nav-dot"></span>退款处理</div>
+		<div class="nav-item"><span class="nav-dot"></span>权益管理</div>
+		<div class="nav-group">商品与服务</div>
+		<div class="nav-item"><span class="nav-dot"></span>商品管理</div>
+		<div class="nav-item"><span class="nav-dot"></span>服务需求</div>
+		<div class="nav-item"><span class="nav-dot"></span>项目交付</div>
+	</nav>
+	<div class="aside-foot">v1.1.3 · 设计稿</div>
+</aside>
+
+<div class="main">
+	<div class="topbar">
+		<div class="crumb">后台管理 / <b>管理仪表盘</b></div>
+		<div class="topbar-right">
+			<span class="who">CoolSky · 所有者</span>
+			<span class="who">2026-11-21 01:34</span>
+		</div>
+	</div>
+
+	<div class="page">
+
+		<div class="draft"><i></i><span>视觉设计稿 · 全部数值为示意数据，不代表线上真实经营情况 · 口径说明按 PRD 要求随指标展示</span></div>
+
+		<div class="head">
+			<div>
+				<h2 class="h-title">管理驾驶舱</h2>
+				<p class="h-sub">看经营 · 看内容 · 看用户 · 看商品 · 看服务 · 看待办 · 看系统</p>
+			</div>
+			<div class="filters">
+				<div class="seg">
+					<span>今日</span><span>昨日</span><span>近 7 天</span>
+					<span class="on">近 30 天</span><span>本月</span><span>上月</span><span>自定义</span>
+				</div>
+				<button class="btn">刷新</button>
+				<span class="stamp">更新于 01:34</span>
+			</div>
+		</div>
+
+		<!-- 01 经营总览 -->
+		<section class="sec" style="margin-top:0">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">01</span>经营总览</div>
+				<span class="link">导出对账明细</span>
+			</div>
+			<div class="cards">
+				<div class="card">
+					<div class="c-label">成交金额</div>
+					<div class="c-val num" data-kpi="sales"><small>¥</small>0.00</div>
+					<div class="c-note">按支付时间 · 含已退款</div>
+				</div>
+				<div class="card" style="border-left-color:#16a34a">
+					<div class="c-label">实际净收入</div>
+					<div class="c-val num" data-kpi="net"><small>¥</small>0.00</div>
+					<div class="c-note">成交 − 退款 · 归属不同</div>
+				</div>
+				<div class="card t-warn">
+					<div class="c-label">退款金额</div>
+					<div class="c-val num" data-kpi="refund"><small>¥</small>0.00</div>
+					<div class="c-note">按退款时间 · 仅成功</div>
+				</div>
+				<div class="card t-danger">
+					<div class="c-label">待确认收款</div>
+					<div class="c-val num" data-kpi="waiting">0</div>
+					<div class="c-note">数支付单，不数订单</div>
+				</div>
+				<div class="card t-info">
+					<div class="c-label">新增订单</div>
+					<div class="c-val num" data-kpi="neworders">0</div>
+					<div class="c-note">按下单时间 · 含未付</div>
+				</div>
+				<div class="card t-mute">
+					<div class="c-label">客单价</div>
+					<div class="c-val num" data-kpi="aov"><small>¥</small>0.00</div>
+					<div class="c-note">成交额 ÷ 成交单数</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 02 经营趋势 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">02</span>经营趋势</div>
+				<span class="stamp">日粒度 · 缺失时间桶补零</span>
+			</div>
+			<div class="grid2">
+				<div class="panel">
+					<div class="panel-head">
+						<h4>成交 / 退款 / 净流入 · 近 30 天</h4>
+						<div class="legend">
+							<span><i style="background:#00875A"></i>成交金额</span>
+							<span><i style="background:#d97706"></i>退款金额</span>
+							<span><i style="background:#2563eb"></i>净资金流入</span>
+						</div>
+					</div>
+					<svg id="chartMoney" viewBox="0 0 620 200" width="100%" height="200"></svg>
+					<div class="footnote">成交按 <b>支付确认时间</b>、退款按 <b>退款完成时间</b> 各自归属。跨期退款减少退款发生期的净流入，不回溯原成交期。</div>
+				</div>
+				<div class="panel">
+					<div class="panel-head">
+						<h4>新增用户 / 新增订单</h4>
+						<div class="legend">
+							<span><i style="background:#00875A"></i>新增用户</span>
+							<span><i style="background:#a8b1bd"></i>新增订单</span>
+						</div>
+					</div>
+					<svg id="chartUser" viewBox="0 0 440 200" width="100%" height="200"></svg>
+					<div class="footnote">用户按注册时间、订单按下单时间统计，与金额口径不同轴，请勿叠加比较。</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 03 待办 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">03</span>待办事项<span style="font-size:11.5px;color:#909399;font-weight:400">· 共 <b class="num" id="todoTotal">0</b> 项</span></div>
+				<span class="link">全部待办</span>
+			</div>
+			<div class="todos">
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">待确认收款</span><span class="todo-meta">最早 11-19 14:22 · 用户已传转账凭证</span></div>
+					<span class="badge">3</span>
+				</div>
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">待处理退款</span><span class="todo-meta">最早 11-20 09:41 · 申请中未审批</span></div>
+					<span class="badge warn">2</span>
+				</div>
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">待报价需求</span><span class="todo-meta">最早 11-18 16:05 · 已通过审核</span></div>
+					<span class="badge warn">4</span>
+				</div>
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">待确认报价</span><span class="todo-meta">最早 11-20 11:30 · 报价单已发出</span></div>
+					<span class="badge zero">0</span>
+				</div>
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">逾期里程碑</span><span class="todo-meta">最早 11-14 到期 · 已逾期 7 天</span></div>
+					<span class="badge">1</span>
+				</div>
+				<div class="todo">
+					<div class="todo-l"><span class="todo-name">未处理反馈</span><span class="todo-meta">最早 11-21 08:12 · 站内反馈</span></div>
+					<span class="badge zero">0</span>
+				</div>
+			</div>
+			<div class="footnote">待办数量与对应业务列表使用同一筛选条件；角标为 0 时统一显示灰色，避免视觉噪音。</div>
+		</section>
+
+		<!-- 04 内容运营 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">04</span>内容运营</div>
+				<span class="link">内容管理 →</span>
+			</div>
+			<div class="grid2">
+				<div class="panel">
+					<div class="kpi-row">
+						<div class="kpi"><div class="k-l">内容总数</div><div class="k-v num">128</div></div>
+						<div class="kpi"><div class="k-l">近 30 天新增</div><div class="k-v num">9</div></div>
+						<div class="kpi"><div class="k-l">累计阅读</div><div class="k-v num">42,180</div></div>
+						<div class="kpi"><div class="k-l">近 30 天 PV</div><div class="k-v num">8,642</div></div>
+						<div class="kpi">
+							<div class="k-l">独立访客</div>
+							<div class="k-v unknown">—</div>
+						</div>
+					</div>
+					<div class="panel-head" style="margin-bottom:8px"><h4>热门文章 TOP 5 · 近 30 天</h4></div>
+					<table>
+						<thead><tr><th>标题</th><th class="r">阅读</th><th class="r">收藏</th><th class="r">评论</th></tr></thead>
+						<tbody>
+							<tr><td class="title"><span class="rank top">1</span>用 Spring Boot 搭建可观测的 API 网关</td><td class="r num">1,284</td><td class="r num">36</td><td class="r num">12</td></tr>
+							<tr><td class="title"><span class="rank top">2</span>Nuxt 3 SSR 首屏性能优化实录</td><td class="r num">962</td><td class="r num">24</td><td class="r num">8</td></tr>
+							<tr><td class="title"><span class="rank">3</span>从零实现一个轻量级 RBAC</td><td class="r num">748</td><td class="r num">19</td><td class="r num">6</td></tr>
+							<tr><td class="title"><span class="rank">4</span>DeepSeek 接入实践：RAG 落地</td><td class="r num">651</td><td class="r num">28</td><td class="r num">15</td></tr>
+							<tr><td class="title"><span class="rank">5</span>MySQL 慢查询治理清单</td><td class="r num">530</td><td class="r num">11</td><td class="r num">3</td></tr>
+						</tbody>
+					</table>
+					<div class="footnote">独立访客显示「—」：访客标识当前未透传真实 IP/UA，UV 不可用，不以 PV 冒充。</div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h4>站内搜索词 TOP 8</h4><span class="link">按 PV</span></div>
+					<div style="display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px">
+						<span class="tag g" style="font-size:11.5px;padding:4px 9px">Spring Boot 42</span>
+						<span class="tag g" style="font-size:11px;padding:4px 9px">Nuxt 31</span>
+						<span class="tag g" style="font-size:11px;padding:4px 9px">AI Agent 26</span>
+						<span class="tag n" style="font-size:11px;padding:4px 9px">RAG 19</span>
+						<span class="tag n" style="font-size:11px;padding:4px 9px">MySQL 索引 16</span>
+						<span class="tag n" style="font-size:11px;padding:4px 9px">Docker 部署 12</span>
+						<span class="tag n" style="font-size:11px;padding:4px 9px">Vue 3 9</span>
+						<span class="tag n" style="font-size:11px;padding:4px 9px">Redis 锁 7</span>
+					</div>
+					<div class="panel-head" style="margin-bottom:8px"><h4>内容发布趋势</h4></div>
+					<svg id="chartPublish" viewBox="0 0 420 96" width="100%" height="96"></svg>
+					<div class="footnote">搜索词取自访问日志的 SEARCH 行为，按关键词字符串聚合。</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 05 用户运营 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">05</span>用户运营</div>
+				<span class="link">用户管理 →</span>
+			</div>
+			<div class="grid2b">
+				<div class="panel">
+					<div class="kpi-row">
+						<div class="kpi"><div class="k-l">注册用户</div><div class="k-v num">1,246</div></div>
+						<div class="kpi"><div class="k-l">近 30 天新增</div><div class="k-v num" data-kpi="newusers">0</div></div>
+						<div class="kpi"><div class="k-l">付费用户</div><div class="k-v num">87</div></div>
+						<div class="kpi"><div class="k-l">付费转化</div><div class="k-v num">6.9%</div></div>
+						<div class="kpi"><div class="k-l">活跃用户</div><div class="k-v unknown">—</div></div>
+					</div>
+					<div class="footnote" style="margin-top:0;margin-bottom:12px">活跃用户显示「—」：当前无用户行为事件源（登录日志只记后台管理员），不以注册数替代。</div>
+					<div class="panel-head" style="margin-bottom:8px"><h4>最近登录用户</h4></div>
+					<table>
+						<thead><tr><th>用户</th><th>注册</th><th class="r">最后登录</th></tr></thead>
+						<tbody>
+							<tr><td class="title">linrh</td><td>11-18</td><td class="r">11-21 00:42</td></tr>
+							<tr><td class="title">zhaoyu_dev</td><td>11-15</td><td class="r">11-20 22:18</td></tr>
+							<tr><td class="title">wangke</td><td>11-09</td><td class="r">11-20 19:05</td></tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h4>新增用户趋势</h4><span class="link">近 30 天</span></div>
+					<svg id="chartUserTrend" viewBox="0 0 460 132" width="100%" height="132"></svg>
+					<div class="panel-head" style="margin:14px 0 8px"><h4>付费用户 TOP 5</h4></div>
+					<table>
+						<thead><tr><th>用户</th><th class="r">订单</th><th class="r">累计支付</th></tr></thead>
+						<tbody>
+							<tr><td class="title">chenwei</td><td class="r num">3</td><td class="r num">¥4,280</td></tr>
+							<tr><td class="title">linrh</td><td class="r num">2</td><td class="r num">¥2,960</td></tr>
+							<tr><td class="title">zhaoyu_dev</td><td class="r num">1</td><td class="r num">¥1,980</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- 06 商品与服务 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">06</span>商品与服务</div>
+				<span class="link">商品管理 →</span>
+			</div>
+			<div class="grid3">
+				<div class="panel">
+					<div class="panel-head"><h4>商品销售 TOP 5</h4><span class="link">按销售额</span></div>
+					<table>
+						<thead><tr><th>商品</th><th class="r">销量</th><th class="r">金额</th></tr></thead>
+						<tbody>
+							<tr><td class="title"><span class="rank top">1</span>AI Agent 实战课</td><td class="r num">18</td><td class="r num">5,382</td></tr>
+							<tr><td class="title"><span class="rank top">2</span>全栈工程化文档包</td><td class="r num">24</td><td class="r num">3,120</td></tr>
+							<tr><td class="title"><span class="rank">3</span>Spring 脚手架源码</td><td class="r num">31</td><td class="r num">2,480</td></tr>
+							<tr><td class="title"><span class="rank">4</span>Nuxt 3 模板</td><td class="r num">12</td><td class="r num">1,188</td></tr>
+							<tr><td class="title"><span class="rank">5</span>数据库设计手册</td><td class="r num">9</td><td class="r num">510</td></tr>
+						</tbody>
+					</table>
+					<div class="footnote">金额取自订单明细快照，不按商品现价推算。</div>
+				</div>
+
+				<div class="panel">
+					<div class="panel-head"><h4>服务需求漏斗</h4><span class="link">近 30 天</span></div>
+					<div class="funnel">
+						<div class="fn-row"><span class="fn-name">提交</span><span class="fn-bar"><span class="fn-fill" style="width:100%"></span></span><span class="fn-val num">12</span></div>
+						<div class="fn-row"><span class="fn-name">已报价</span><span class="fn-bar"><span class="fn-fill" style="width:75%"></span></span><span class="fn-val num">9</span></div>
+						<div class="fn-row"><span class="fn-name">已确认</span><span class="fn-bar"><span class="fn-fill" style="width:50%"></span></span><span class="fn-val num">6</span></div>
+						<div class="fn-row"><span class="fn-name">进行中</span><span class="fn-bar"><span class="fn-fill" style="width:33%"></span></span><span class="fn-val num">4</span></div>
+						<div class="fn-row"><span class="fn-name">已验收</span><span class="fn-bar"><span class="fn-fill" style="width:17%"></span></span><span class="fn-val num">2</span></div>
+					</div>
+					<div class="footnote">需求、报价、项目各自状态独立统计，不相加为客户数。</div>
+					<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+						<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px">
+							<span style="color:var(--ink-3)">进行中项目</span><span class="num" style="font-weight:500">4</span>
+						</div>
+						<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px">
+							<span style="color:var(--ink-3)">待交付</span><span class="num" style="font-weight:500">3</span>
+						</div>
+						<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px">
+							<span style="color:var(--ink-3)">已逾期里程碑</span><span class="num" style="font-weight:500;color:var(--danger)">1</span>
+						</div>
+						<div style="display:flex;justify-content:space-between;font-size:12px">
+							<span style="color:var(--ink-3)">已验收交付额</span><span class="num" style="font-weight:500">¥18,600</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="panel">
+					<div class="panel-head"><h4>需要跟进的项目</h4><span class="link">全部 →</span></div>
+					<table>
+						<thead><tr><th>项目</th><th class="r">状态</th></tr></thead>
+						<tbody>
+							<tr>
+								<td class="title">企业知识库建设<br><span style="font-size:11px;color:#b0b3b8">里程碑 2/4 · 11-28 到期</span></td>
+								<td class="r"><span class="tag g">进行中</span></td>
+							</tr>
+							<tr>
+								<td class="title">API 网关改造<br><span style="font-size:11px;color:#dc2626">里程碑逾期 7 天</span></td>
+								<td class="r"><span class="tag r">逾期</span></td>
+							</tr>
+							<tr>
+								<td class="title">数据看板定制<br><span style="font-size:11px;color:#b0b3b8">待客户验收</span></td>
+								<td class="r"><span class="tag a">待验收</span></td>
+							</tr>
+							<tr>
+								<td class="title">内部工具重构<br><span style="font-size:11px;color:#b0b3b8">11-20 已交付</span></td>
+								<td class="r"><span class="tag b">待确认</span></td>
+							</tr>
+						</tbody>
+					</table>
+					<div class="footnote">逾期按 milestone.due_date &lt; 今天且未验收判定，due_date 为空不计入。</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 07 平台健康 -->
+		<section class="sec">
+			<div class="sec-head">
+				<div class="sec-title"><span class="sec-no">07</span>平台健康</div>
+				<span class="stamp">逐项真实探测 · 非页面存活推断</span>
+			</div>
+			<div class="health">
+				<div class="h-item">
+					<div class="h-top"><span class="dot up"></span>后端服务</div>
+					<div class="h-state up">UP</div>
+					<div class="h-detail">uptime 3d 4h</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot up"></span>MySQL</div>
+					<div class="h-state up">UP</div>
+					<div class="h-detail">SELECT 1 · 8ms</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot up"></span>Redis</div>
+					<div class="h-state up">UP</div>
+					<div class="h-detail">PING · 1ms</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot warn"></span>文件存储</div>
+					<div class="h-state warn">WARN</div>
+					<div class="h-detail">已用 3.2GB · 剩余 8%</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot unknown"></span>AI 服务</div>
+					<div class="h-state unknown">UNKNOWN</div>
+					<div class="h-detail">近 24h 无调用，无法判断</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot up"></span>定时任务</div>
+					<div class="h-state up">UP</div>
+					<div class="h-detail">最近 01:00 成功</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot up"></span>支付链路</div>
+					<div class="h-state up">UP</div>
+					<div class="h-detail">近 7 天失败 0 笔</div>
+				</div>
+				<div class="h-item">
+					<div class="h-top"><span class="dot down"></span>系统异常</div>
+					<div class="h-state down">DOWN</div>
+					<div class="h-detail">近 24h 5 条</div>
+				</div>
+			</div>
+			<div class="footnote">四态：UP / WARN / DOWN / UNKNOWN。数据不足时显示 UNKNOWN，不显示「正常」——不知道比猜测更诚实。</div>
+		</section>
+
+	</div>
+</div>
+
+<script>
+	/* ---------- 示意数据（全部由本脚本生成，页面数字自洽） ---------- */
+	const sales = [180,240,320,280,410,520,460,380,440,560,690,620,540,480,520,610,720,660,580,640,760,880,820,700,620,680,790,910,860,740];
+	const refund = [0,0,0,0,0,0,0,0,0,0,120,0,0,0,0,0,0,0,0,0,0,0,0,80,0,0,0,0,0,0];
+	const newUsers = [3,5,4,6,8,7,5,4,6,9,11,8,6,5,7,9,8,6,7,10,12,9,7,6,8,10,9,7,11,13];
+	const newOrders = [1,2,1,2,3,4,3,2,3,4,6,5,4,3,4,5,6,5,4,5,7,8,6,5,4,5,7,8,7,6];
+	const publish = [0,1,0,0,2,1,0,0,1,0,0,1,0,0,2,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0];
+
+	const sum = a => a.reduce((x,y)=>x+y,0);
+	const net = sales.map((v,i)=>v-refund[i]);
+	const paidOrders = newOrders.reduce((x,y)=>x+y,0);
+
+	const fmt = n => n.toLocaleString('zh-CN',{minimumFractionDigits:2, maximumFractionDigits:2});
+	const setKpi = (k,v) => { const el=document.querySelector(`[data-kpi="${k}"]`); if(el) el.innerHTML = v; };
+
+	setKpi('sales', `<small>¥</small>${fmt(sum(sales))}`);
+	setKpi('refund', `<small>¥</small>${fmt(sum(refund))}`);
+	setKpi('net', `<small>¥</small>${fmt(sum(net))}`);
+	setKpi('waiting','3');
+	setKpi('neworders', paidOrders);
+	setKpi('aov', `<small>¥</small>${fmt(sum(sales)/Math.max(paidOrders,1))}`);
+	setKpi('newusers', sum(newUsers));
+	document.getElementById('todoTotal').textContent = 3+2+4+0+1+0;
+
+	/* ---------- 通用折线 ---------- */
+	function lineChart(id, series, opt){
+		const svg = document.getElementById(id);
+		if(!svg) return;
+		const W = +svg.getAttribute('viewBox').split(' ')[2];
+		const H = +svg.getAttribute('viewBox').split(' ')[3];
+		const padL = opt.padL ?? 40, padR = opt.padR ?? 8, padT = 10, padB = 22;
+
+		const all = series.flatMap(s=>s.data);
+		const max = opt.max ?? Math.max(...all, 1);
+		const n = series[0].data.length;
+		const x = i => padL + (W-padL-padR) * (n===1?0:i/(n-1));
+		const y = v => H-padB - (H-padT-padB) * (v/max);
+
+		let out = '';
+		/* 网格与 y 轴 */
+		const ticks = opt.ticks ?? 3;
+		for(let t=0;t<=ticks;t++){
+			const val = max*t/ticks;
+			const yy = y(val);
+			out += `<line class="gridline" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}"/>`;
+			out += `<text class="axis" x="${padL-6}" y="${(yy+3).toFixed(1)}" text-anchor="end">${opt.tickFmt?opt.tickFmt(val):Math.round(val)}</text>`;
+		}
+		/* x 轴标签：只标首尾与中点 */
+		[0, Math.floor((n-1)/2), n-1].forEach(i=>{
+			out += `<text class="axis" x="${x(i).toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':(i===n-1?'end':'middle')}">${opt.xFmt?opt.xFmt(i):''}</text>`;
+		});
+		/* 系列 */
+		series.forEach(s=>{
+			const pts = s.data.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+			if(s.area){
+				const area = `M${x(0).toFixed(1)},${(H-padB).toFixed(1)} L${pts.split(' ').join(' L')} L${x(n-1).toFixed(1)},${(H-padB).toFixed(1)} Z`;
+				out += `<path d="${area}" fill="${s.color}" opacity=".07"/>`;
+			}
+			out += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="${s.w||2}" stroke-linejoin="round" stroke-linecap="round" ${s.dash?'stroke-dasharray="3 3"':''}/>`;
+			/* 末点标记 */
+			if(s.dot!==false){
+				out += `<circle cx="${x(n-1).toFixed(1)}" cy="${y(s.data[n-1]).toFixed(1)}" r="3" fill="#fff" stroke="${s.color}" stroke-width="2"/>`;
+			}
+		});
+		svg.innerHTML = out;
+	}
+
+	const dayLabel = i => ['10-23','11-06','11-21'][Math.round(i/29*2)] || '';
+	const kFmt = v => v===0 ? '0' : (v/1000).toFixed(1).replace(/\.0$/,'')+'k';
+
+	lineChart('chartMoney', [
+		{data: net,  color:'#2563eb', area:true,  w:1.5, dot:false},
+		{data: sales, color:'#00875A', w:2.2},
+		{data: refund, color:'#d97706', w:1.6, dash:true, dot:false}
+	], { max: 1000, ticks: 2, xFmt: dayLabel, tickFmt: kFmt });
+
+	lineChart('chartUser', [
+		{data: newUsers, color:'#00875A', area:true, w:2},
+		{data: newOrders, color:'#a8b1bd', w:1.6, dot:false}
+	], { max: 14, ticks: 2, xFmt: dayLabel, padL: 26 });
+
+	lineChart('chartUserTrend', [
+		{data: newUsers, color:'#00875A', area:true, w:2}
+	], { max: 14, ticks: 2, xFmt: dayLabel, padL: 26 });
+
+	/* 发布趋势用柱状 */
+	(function(){
+		const svg = document.getElementById('chartPublish');
+		const W = 420, H = 96, padL = 22, padB = 16, padT = 6;
+		const max = Math.max(...publish, 1);
+		const n = publish.length, bw = (W-padL-4)/n;
+		let out = '';
+		publish.forEach((v,i)=>{
+			const h = (H-padB-padT) * (v/max);
+			const x = padL + i*bw;
+			if(v>0) out += `<rect x="${(x+bw*0.18).toFixed(1)}" y="${(H-padB-h).toFixed(1)}" width="${(bw*0.64).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="#00875A" opacity=".72"/>`;
+		});
+		out += `<line class="gridline" x1="${padL}" y1="${H-padB}" x2="${W-4}" y2="${H-padB}"/>`;
+		out += `<text class="axis" x="0" y="${H-padB-2}">3</text>`;
+		out += `<text class="axis" x="${padL}" y="${H-3}">10-23</text>`;
+		out += `<text class="axis" x="${W-4}" y="${H-3}" text-anchor="end">11-21</text>`;
+		svg.innerHTML = out;
+	})();
+</script>
+</body>
+</html>

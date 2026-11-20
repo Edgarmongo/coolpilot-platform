@@ -39,4 +39,6 @@ public class Project {
 	private String nickname;
 	private Integer milestoneCount;
 	private Integer acceptedCount;
+	/** 逾期里程碑数，列表查询附带，用于仪表盘待办跳转后的核对 */
+	private Integer overdueCount;
 }

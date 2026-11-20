@@ -148,16 +148,16 @@ public class ProjectService {
 	public PageResult<Project> myProjects(Long userId, String status, Integer pageNum, Integer pageSize) {
 		int page = normalizePage(pageNum);
 		int size = normalizeSize(pageSize);
-		int total = projectMapper.count(userId, status, null);
-		List<Project> list = projectMapper.page(userId, status, null, (page - 1) * size, size);
+		int total = projectMapper.count(userId, status, null, null);
+		List<Project> list = projectMapper.page(userId, status, null, null, (page - 1) * size, size);
 		return new PageResult<>((total + size - 1) / size, total, list);
 	}
 
-	public PageResult<Project> pageAdmin(String status, String keyword, Integer pageNum, Integer pageSize) {
+	public PageResult<Project> pageAdmin(String status, String keyword, Boolean overdue, Integer pageNum, Integer pageSize) {
 		int page = normalizePage(pageNum);
 		int size = normalizeSize(pageSize);
-		int total = projectMapper.count(null, status, keyword);
-		List<Project> list = projectMapper.page(null, status, keyword, (page - 1) * size, size);
+		int total = projectMapper.count(null, status, keyword, overdue);
+		List<Project> list = projectMapper.page(null, status, keyword, overdue, (page - 1) * size, size);
 		return new PageResult<>((total + size - 1) / size, total, list);
 	}
 

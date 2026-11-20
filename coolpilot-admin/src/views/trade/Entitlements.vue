@@ -88,6 +88,7 @@ import {useT} from '@/i18n/ui'
 const t = useT()
 
 import {onMounted, reactive, ref} from 'vue'
+import {useRoute} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {Plus, Search} from '@element-plus/icons-vue'
 import {getEntitlementList, getProductOptions, grantEntitlement, revokeEntitlement} from '@/api/trade'
@@ -95,7 +96,8 @@ import {formatDate} from '@/util/date'
 
 const loading = ref(false)
 const granting = ref(false)
-const query = reactive({userId: '', status: '', pageNum: 1, pageSize: 10})
+const route = useRoute()
+const query = reactive({userId: '', status: route.query.status || '', pageNum: 1, pageSize: 10})
 const list = ref([])
 const total = ref(0)
 const products = ref([])

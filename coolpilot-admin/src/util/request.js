@@ -21,7 +21,10 @@ request.interceptors.request.use(config => {
 request.interceptors.response.use(response => {
 	const res = response.data
 	if (res.code !== 200) {
-		ElMessage.error(res.msg || '请求失败')
+		// silent：交给调用方自己展示错误（仪表盘并发多请求时避免刷屏）
+		if (!response.config.silent) {
+			ElMessage.error(res.msg || '请求失败')
+		}
 		return Promise.reject(new Error(res.msg || '请求失败'))
 	}
 	return res
@@ -34,7 +37,9 @@ request.interceptors.response.use(response => {
 			location.href = '/cms/login'
 		}
 	}
-	ElMessage.error(error.message || '网络异常')
+	if (!(error.config && error.config.silent)) {
+		ElMessage.error(error.message || '网络异常')
+	}
 	return Promise.reject(error)
 })
 

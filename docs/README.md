@@ -70,6 +70,11 @@
 | [CP-WEB-OS-01-现状审计与改造方案.md](CP-WEB-OS-01-现状审计与改造方案.md) | 栏目动工前的只读审计（8 处需修正） | 已落地 |
 | [UI-SYSTEM.md](UI-SYSTEM.md) | 视觉系统：令牌、组件、布局约定、栏目页规则 | v2 |
 | [UI-OSS-INSIGHTS.md](UI-OSS-INSIGHTS.md) | 栏目视觉方向（六条规范、待决项） | 已实现 |
+| [PRD-ADMIN-DASHBOARD.md](PRD-ADMIN-DASHBOARD.md) | **后台仪表盘需求基线**（CS-ADMIN-DASHBOARD-PRD-01 V2.0）：六域、口径、8 接口、5 阶段、16 任务卡、三个质量门 | 需求已冻结，待实施 |
+| [dashboard/01-CURRENT-STATE.md](dashboard/01-CURRENT-STATE.md) | CP-DASHBOARD-01 现状审计：七项结论、交易链路、UV 缺陷、路由可达性 | 2026-11-21 只读审计 |
+| [dashboard/02-DATA-MAPPING.md](dashboard/02-DATA-MAPPING.md) | CP-DASHBOARD-02 数据映射：61 表归位、两套口径 SQL、逐指标追溯、验证 SQL | 同上 |
+| [dashboard/03-API-MAPPING.md](dashboard/03-API-MAPPING.md) | CP-DASHBOARD-03 接口映射：8 接口复用关系、旧接口处置、待办跳转缺口、实现偏差 | Phase 1 已实现 |
+| [FEATURE-ADMIN-DASHBOARD.md](FEATURE-ADMIN-DASHBOARD.md) | 仪表盘**数据可行性分析**：62 指标逐项判定（51/6/5），已不作为需求基线 | v2.1 |
 
 ---
 
@@ -104,6 +109,7 @@
 | 加了页面 / 改了路由 | `ARCHITECTURE.md` §6.1、`FEATURE-MAP.md` 的页面数 |
 | 加了模块 | `ARCHITECTURE.md` §4.2 |
 | 改了视觉规范 | `UI-SYSTEM.md` |
+| 改了仪表盘指标口径 / 统计规则 | `PRD-ADMIN-DASHBOARD.md` §4 + `dashboard/02-DATA-MAPPING.md` |
 | 改了发布流程 | `DEPLOY.md` / `CI-CD.md` |
 | 做了产品级取舍 | 新增 `ADR-000N-*.md`，并在 `FEATURE-REVIEW.md` 登记 |
 

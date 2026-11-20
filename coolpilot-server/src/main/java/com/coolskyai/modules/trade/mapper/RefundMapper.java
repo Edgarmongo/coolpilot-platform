@@ -88,8 +88,17 @@ public interface RefundMapper {
 	           @Param("operatorId") Long operatorId,
 	           @Param("remark") String remark);
 
+	/**
+	 * 统计：已成功退款金额（后台销售概览）
+	 *
+	 * <p>时间轴是 <b>refund_time（退款完成时间）</b> —— 钱实际退出去的那一刻，
+	 * 不是申请时间、也不是原订单的下单时间。跨期退款只减少退款发生期的净流入，
+	 * 不回溯修改原成交期。
+	 *
+	 * <p>区间<b>左闭右开</b>：{@code <= endTime} 会让相邻区间重复统计边界那一秒。
+	 */
 	@Select("SELECT IFNULL(SUM(amount), 0) FROM refund WHERE status = 'SUCCESS' " +
 			"AND (#{startTime} IS NULL OR refund_time >= #{startTime}) " +
-			"AND (#{endTime} IS NULL OR refund_time <= #{endTime})")
+			"AND (#{endTime} IS NULL OR refund_time < #{endTime})")
 	java.math.BigDecimal sumRefunded(@Param("startTime") String startTime, @Param("endTime") String endTime);
 }

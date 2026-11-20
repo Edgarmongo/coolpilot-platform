@@ -11,6 +11,9 @@
 				          @keyup.enter="search"/>
 			</el-form-item>
 			<el-form-item>
+				<el-checkbox v-model="query.overdue" @change="search">{{ t('只看有逾期里程碑') }}</el-checkbox>
+			</el-form-item>
+			<el-form-item>
 				<el-button type="primary" :icon="Search" @click="search">{{ t('搜索') }}</el-button>
 				<el-button :icon="Refresh" @click="reset">{{ t('重置') }}</el-button>
 			</el-form-item>
@@ -29,8 +32,13 @@
 			<el-table-column :label="t('金额')" width="110">
 				<template #default="{row}">¥{{ money(row.amount) }}</template>
 			</el-table-column>
-			<el-table-column :label="t('里程碑')" width="110">
-				<template #default="{row}">{{ t('{a} / {b} 已验收', {a: row.acceptedCount || 0, b: row.milestoneCount || 0}) }}</template>
+			<el-table-column :label="t('里程碑')" width="130">
+				<template #default="{row}">
+					{{ t('{a} / {b} 已验收', {a: row.acceptedCount || 0, b: row.milestoneCount || 0}) }}
+					<el-tag v-if="row.overdueCount > 0" type="danger" size="small" style="margin-left: 4px">
+						{{ t('逾期') }} {{ row.overdueCount }}
+					</el-tag>
+				</template>
 			</el-table-column>
 			<el-table-column :label="t('状态')" width="100">
 				<template #default="{row}">
@@ -193,6 +201,7 @@ import {useT} from '@/i18n/ui'
 const t = useT()
 
 import {onMounted, reactive, ref} from 'vue'
+import {useRoute} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {Search, Refresh} from '@element-plus/icons-vue'
 import {getProjects, getProject, addMilestone, updateMilestone, deliverMilestone, moveProject as moveProjectApi} from '@/api/service'
@@ -208,7 +217,10 @@ const statusOptions = [
 
 const projectStatuses = statusOptions
 
-const query = reactive({status: '', keyword: '', pageNum: 1, pageSize: 10})
+const route = useRoute()
+// 支持从仪表盘待办带筛选跳转：?status=IN_PROGRESS / ?overdue=1
+const query = reactive({status: route.query.status || '', keyword: '', pageNum: 1, pageSize: 10,
+	overdue: route.query.overdue === '1'})
 const list = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -243,6 +255,7 @@ function search() {
 function reset() {
 	query.status = ''
 	query.keyword = ''
+	query.overdue = false
 	query.pageNum = 1
 	load()
 }

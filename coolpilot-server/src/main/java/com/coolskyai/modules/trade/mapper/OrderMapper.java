@@ -142,17 +142,38 @@ public interface OrderMapper {
 	int restoreAfterRefundRejected(@Param("orderNo") String orderNo);
 
 	/**
-	 * 统计：已支付订单数与金额（后台销售概览）
+	 * 统计：已支付订单金额（后台销售概览）
+	 *
+	 * <p>时间轴是 <b>paid_time（支付确认时间）</b>，不是 create_time。
+	 * 与退款统计（refund_time）合起来才构成「资金实际进出」的口径，两者可以相减得到净流入。
+	 * 按下单时间统计会把「昨天提交、今天到账」的钱记在昨天，跨期时两个数字永远对不上。
+	 *
+	 * <p>区间<b>左闭右开</b>，避免相邻区间重复统计边界那一秒。
 	 */
+	@Select("SELECT IFNULL(SUM(pay_amount), 0) FROM orders " +
+			"WHERE status IN ('PAID', 'COMPLETED', 'REFUNDING', 'REFUNDED') " +
+			"AND (#{startTime} IS NULL OR paid_time >= #{startTime}) " +
+			"AND (#{endTime} IS NULL OR paid_time < #{endTime})")
+	java.math.BigDecimal sumPaidAmount(@Param("startTime") String startTime, @Param("endTime") String endTime);
+
+	/** 与 {@link #sumPaidAmount} 同口径，时间轴同为 paid_time */
+	@Select("SELECT COUNT(*) FROM orders " +
+			"WHERE status IN ('PAID', 'COMPLETED', 'REFUNDING', 'REFUNDED') " +
+			"AND (#{startTime} IS NULL OR paid_time >= #{startTime}) " +
+			"AND (#{endTime} IS NULL OR paid_time < #{endTime})")
+	int countPaid(@Param("startTime") String startTime, @Param("endTime") String endTime);
+
+	/**
+	 * 旧口径：按下单时间统计。
+	 *
+	 * <p>保留仅为口径切换期的对比核对与回滚，<b>不要在新代码里调用</b>。
+	 * 两个数字在跨期订单存在时必然不同，这是口径差异而非 bug。
+	 */
+	@Deprecated
 	@Select("SELECT IFNULL(SUM(pay_amount), 0) FROM orders " +
 			"WHERE status IN ('PAID', 'COMPLETED', 'REFUNDING', 'REFUNDED') " +
 			"AND (#{startTime} IS NULL OR create_time >= #{startTime}) " +
 			"AND (#{endTime} IS NULL OR create_time <= #{endTime})")
-	java.math.BigDecimal sumPaidAmount(@Param("startTime") String startTime, @Param("endTime") String endTime);
-
-	@Select("SELECT COUNT(*) FROM orders " +
-			"WHERE status IN ('PAID', 'COMPLETED', 'REFUNDING', 'REFUNDED') " +
-			"AND (#{startTime} IS NULL OR create_time >= #{startTime}) " +
-			"AND (#{endTime} IS NULL OR create_time <= #{endTime})")
-	int countPaid(@Param("startTime") String startTime, @Param("endTime") String endTime);
+	java.math.BigDecimal sumPaidAmountByCreateTime(@Param("startTime") String startTime,
+	                                                @Param("endTime") String endTime);
 }

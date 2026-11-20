@@ -107,9 +107,10 @@ public class ServiceAdminController {
 	@GetMapping("/admin/projects")
 	public Result projects(@RequestParam(required = false) String status,
 	                       @RequestParam(required = false) String keyword,
+	                       @RequestParam(required = false) Boolean overdue,
 	                       @RequestParam(defaultValue = "1") Integer pageNum,
 	                       @RequestParam(defaultValue = "10") Integer pageSize) {
-		return Result.ok("OK", projectService.pageAdmin(status, keyword, pageNum, pageSize));
+		return Result.ok("OK", projectService.pageAdmin(status, keyword, overdue, pageNum, pageSize));
 	}
 
 	@GetMapping("/admin/project/{projectNo}")
