@@ -1,8 +1,13 @@
 package com.coolskyai.controller.admin;
 
+import com.coolskyai.annotation.OperationLogger;
+import com.coolskyai.entity.Category;
+import com.coolskyai.model.vo.Result;
+import com.coolskyai.service.BlogService;
+import com.coolskyai.service.CategoryService;
+import com.coolskyai.util.StringUtils;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,106 +16,87 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.coolskyai.annotation.OperationLogger;
-import com.coolskyai.entity.Category;
-import com.coolskyai.model.vo.Result;
-import com.coolskyai.service.BlogService;
-import com.coolskyai.service.CategoryService;
-import com.coolskyai.util.StringUtils;
 
 /**
- * @Description: 博客分类后台管理
- * @Author: CoolSkyAI
- * @Date: 2020-08-02
+ * 分类后台管理。
+ *
+ * <p>规则与标签一致：名称不可重复、被文章引用时不可删除。
+ * 注意两者的提示文案不同（「分类名称不能为空」/「该分类已存在」），
+ * 前端直接展示这些字符串，改中文案要同步改前端。
+ *
+ * @author CoolSkyAI
  */
 @RestController
 @RequestMapping("/admin")
 public class CategoryAdminController {
-	@Autowired
-	BlogService blogService;
-	@Autowired
-	CategoryService categoryService;
 
-	/**
-	 * 获取博客分类列表
-	 *
-	 * @param pageNum  页码
-	 * @param pageSize 每页个数
-	 * @return
-	 */
+	private static final String ORDER_BY_ID_DESC = "id desc";
+
+	private final BlogService blogService;
+	private final CategoryService categoryService;
+
+	public CategoryAdminController(BlogService blogService, CategoryService categoryService) {
+		this.blogService = blogService;
+		this.categoryService = categoryService;
+	}
+
 	@GetMapping("/categories")
-	public Result categories(@RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
-		String orderBy = "id desc";
-		PageHelper.startPage(pageNum, pageSize, orderBy);
+	public Result categories(@RequestParam(defaultValue = "1") Integer pageNum,
+	                         @RequestParam(defaultValue = "10") Integer pageSize) {
+		PageHelper.startPage(pageNum, pageSize, ORDER_BY_ID_DESC);
 		PageInfo<Category> pageInfo = new PageInfo<>(categoryService.getCategoryList());
 		return Result.ok("请求成功", pageInfo);
 	}
 
-	/**
-	 * 添加新分类
-	 *
-	 * @param category 分类实体
-	 * @return
-	 */
 	@OperationLogger("添加分类")
 	@PostMapping("/category")
 	public Result saveCategory(@RequestBody Category category) {
-		return getResult(category, "save");
+		Result invalid = checkName(category, null);
+		if (invalid != null) {
+			return invalid;
+		}
+		categoryService.saveCategory(category);
+		return Result.ok("分类添加成功");
 	}
 
-	/**
-	 * 修改分类名称
-	 *
-	 * @param category 分类实体
-	 * @return
-	 */
 	@OperationLogger("修改分类")
 	@PutMapping("/category")
 	public Result updateCategory(@RequestBody Category category) {
-		return getResult(category, "update");
+		Result invalid = checkName(category, category.getId());
+		if (invalid != null) {
+			return invalid;
+		}
+		categoryService.updateCategory(category);
+		return Result.ok("分类更新成功");
 	}
 
 	/**
-	 * 执行分类添加或更新操作：校验参数是否合法，分类是否已存在
-	 *
-	 * @param category 分类实体
-	 * @param type     添加或更新
-	 * @return
-	 */
-	private Result getResult(Category category, String type) {
-		if (StringUtils.isEmpty(category.getName())) {
-			return Result.error("分类名称不能为空");
-		}
-		//查询分类是否已存在
-		Category category1 = categoryService.getCategoryByName(category.getName());
-		//如果 category1.getId().equals(category.getId()) == true 就是更新分类
-		if (category1 != null && !category1.getId().equals(category.getId())) {
-			return Result.error("该分类已存在");
-		}
-		if ("save".equals(type)) {
-			categoryService.saveCategory(category);
-			return Result.ok("分类添加成功");
-		} else {
-			categoryService.updateCategory(category);
-			return Result.ok("分类更新成功");
-		}
-	}
-
-	/**
-	 * 按id删除分类
-	 *
-	 * @param id 分类id
-	 * @return
+	 * 按 id 删除分类，仍被文章引用时拒绝 —— 否则文章详情取分类会查空。
 	 */
 	@OperationLogger("删除分类")
 	@DeleteMapping("/category")
 	public Result delete(@RequestParam Long id) {
-		//删除存在博客关联的分类后，该博客的查询会出异常
-		int num = blogService.countBlogByCategoryId(id);
-		if (num != 0) {
+		if (blogService.countBlogByCategoryId(id) != 0) {
 			return Result.error("已有博客与此分类关联，不可删除");
 		}
 		categoryService.deleteCategoryById(id);
 		return Result.ok("删除成功");
+	}
+
+	/**
+	 * 校验名称非空且不与**其它**分类重名。
+	 *
+	 * @param selfId 修改场景传自己的 id，同名记录是它就放行；新增传 null
+	 */
+	private Result checkName(Category category, Long selfId) {
+		if (StringUtils.isEmpty(category.getName())) {
+			return Result.error("分类名称不能为空");
+		}
+		Category sameName = categoryService.getCategoryByName(category.getName());
+		if (sameName == null) {
+			return null;
+		}
+		boolean belongsToSelf = selfId != null && selfId.equals(sameName.getId());
+		return belongsToSelf ? null : Result.error("该分类已存在");
 	}
 }
