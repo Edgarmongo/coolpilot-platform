@@ -2,7 +2,7 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.1.2`**
+**当前线上版本：`v1.1.3`**
 
 ---
 
@@ -44,12 +44,25 @@
 - 本地冒烟：Quartz 初始化正常；立即执行落库 `status=true times=53ms`；
   暂停后 `nextFireTime=null`、恢复后重新排程；每 10 分钟的任务按计划执行
 
-**发布结果**
+**发布结果（2026-11-21 01:00）**
 
-- tag `v1.1.3` → CI 出齐 4 个镜像 → `TAG` 切换 → pull → up
-- 本版无数据库迁移；`.env` 备份为 `.env.bak-v1.1.2-*`
+- tag `v1.1.3` → CI 约 3 分钟出齐 4 个镜像
+- 部署：`.env` 备份为 `.env.bak-v1.1.2-*`，`TAG=v1.1.3` → pull → up
+- 迁移：`Schema 'coolpilot' is up to date. No migration necessary.`（本版无 DDL）
+- 容器：api / admin / web / gateway 全部 healthy；**mysql（2 周）与 redis（27 小时）未重启**
 - 本版为纯内部重构 + 若干缺陷修复，**功能与界面均无变化**
 - 与 NBlog 逐字一致的文件：101 个 / 5,111 行（31.3%）→ 85 个 / 3,890 行（23.4%）
+
+**生产验证**
+
+| 项 | 结果 |
+|---|---|
+| 页面 | `/` `/archives` `/open-source` `/blog/...` `/knowledge` 全部 200，0.25–0.68s |
+| 通配符搜索 | `query=%` 被 `hasSpecialChar` 拦下，返回「参数错误」（重写后的 StringUtils 生效） |
+| 评论接口 | `/api/comments?page=0&blogId=11` 正常返回空结构 |
+| 收款渠道 | `MANUAL_WECHAT / MANUAL_ALIPAY / MANUAL_PAYPAL` 顺序不变 |
+| 定时任务 | 3 个任务 cron 与状态正确；手动触发 jobId=3 落库 `17:03:34Z status=true 5ms`，**晚于容器启动 16:59:58Z**，确认跑的是新代码 |
+| 后台分页 | 权益、附件、任务日志分页均 200 |
 
 ---
 
