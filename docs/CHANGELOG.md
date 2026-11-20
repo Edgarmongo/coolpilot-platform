@@ -6,9 +6,9 @@
 
 ---
 
-## 未发布
+## v1.1.3（2026-11-21）
 
-**代码来源整改（第三批）：util 纯工具、上传通道、评论与通知**
+**代码来源整改（第三批）：util 整体重写（16 个文件 / 1,221 行）**
 
 - 重写 8 个文件：`JacksonUtils` `StringUtils` `HashUtils` `UserAgentUtils`
   `SpringContextUtils` `ValidatorUtils` `UploadUtils` `LocalChannel`
@@ -44,7 +44,12 @@
 - 本地冒烟：Quartz 初始化正常；立即执行落库 `status=true times=53ms`；
   暂停后 `nextFireTime=null`、恢复后重新排程；每 10 分钟的任务按计划执行
 
-> 本批未打 tag、未部署，线上仍为 `v1.1.2`。
+**发布结果**
+
+- tag `v1.1.3` → CI 出齐 4 个镜像 → `TAG` 切换 → pull → up
+- 本版无数据库迁移；`.env` 备份为 `.env.bak-v1.1.2-*`
+- 本版为纯内部重构 + 若干缺陷修复，**功能与界面均无变化**
+- 与 NBlog 逐字一致的文件：101 个 / 5,111 行（31.3%）→ 85 个 / 3,890 行（23.4%）
 
 ---
 
