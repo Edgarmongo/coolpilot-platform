@@ -61,10 +61,10 @@ git show v0.1.0-baseline:blog-api/src/main/java/top/naccl/<file>.java
 
 | 分类 | 文件数 | 行数 | 占当前后端 |
 |---|---|---|---|
-| 逐字一致 | 146 | 8,308 | **26.2%** |
+| 逐字一致 | 143 | 7,802 | **24.6%** |
 | 小幅修改 | 102 | 5,788 | 18.2% |
 | 大幅改写 | 12 | 835 | 2.6% |
-| 独立重写 | 8 | 778 | 2.5% |
+| 独立重写 | 9 | 912 | 2.9% |
 | 基线之后新增 | 137 | ~15,131 | 47.6% |
 | **合计** | **412** | **31,748** | 100% |
 
@@ -504,3 +504,38 @@ diff <(git show v0.1.0-baseline:<原始路径>) <当前路径> | grep -c '^[<>]'
 **批次 D 剩余**：`PaymentService`（318 行，含 `onPaid` 主链路）、`EntitlementService`（280 行）、
 `CommunityService`（134 行）、`MessageService`（61 行）、三个 controller。
 其中 `PaymentService` 风险最高 —— 它同时改支付单、订单、权益三张表。
+
+### 批次 D 第二批：社区与消息（0.26 / 0.66）
+
+| 文件 | 行 | 相似度 | 最长连续 | 关键改动 |
+|---|---:|---:|---:|---|
+| `CommunityService` | 134 | **0.26** | 10 行 | 收藏/点赞的类型与 id 校验合并成 `requireTarget`；`likeResult` / `likeStatus` 共用一个快照方法；动态计数同步抽 `bumpMomentLikes` |
+| `MessageService` | 61 | 0.66 | 11 行 | 构造器注入、分页常量、抽 `DEFAULT_TYPE`。文件只有 4 个方法，表达空间有限，停在 0.66 |
+
+**顺手收紧的一处校验**：`removeLike` / `isFavorited` / `likeStatus` 原来只校验类型不校验 `targetId`，
+现在统一走 `requireTarget`。正常调用不受影响（都会带有效 id），但传 0 或负数时会明确报「目标ID无效」
+而不是静默执行一次无意义的删除。
+
+**本地实测（PID 31240）**
+
+| 操作 | 结果 |
+|---|---|
+| 收藏文章 | ✅ `{favorited: true}` |
+| 查询收藏状态 | ✅ `true` |
+| 点赞 | ✅ `{liked: true, count: 1}` |
+| **重复点赞** | ✅ `count` 仍为 1（幂等生效） |
+| 取消点赞 | ✅ `{liked: false, count: 0}` |
+| 非法类型 | ✅ 「不支持的目标类型：BAD」 |
+| 取消收藏 | ✅ `{favorited: false}` |
+| 数据残留 | ✅ favorite / like_record 均为 0 |
+
+### 批次 D 的五个控制器：全部跳过
+
+`TradeController`(131) · `TradeAdminController`(155) · `EntitlementAdminController`(79) ·
+`CommunityController`(85) · `FeedbackAdminController`(41)
+
+逐个查过：**if 语句数量为 0（EntitlementAdmin 有 1 个），私有方法都是取当前用户 id 的小工具**。
+每个接口都是「取参数 → 调 service → 包 Result」，与批次 C 那 13 个同属纯转发。
+
+**结论：D 批次实际只剩两个文件** —— `PaymentService`(318) 与 `EntitlementService`(280)。
+它们合计 598 行，占了这批真正的工作量。
