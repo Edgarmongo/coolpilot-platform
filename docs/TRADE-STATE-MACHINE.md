@@ -115,3 +115,46 @@
 **回归方式**：本地起服务，用真实接口走一遍
 「下单 → 提交凭证 → 后台确认 → 查权益」，
 再走一遍「下单 → 取消」，最后确认 `orders` / `payment` / `entitlement` 三张表的数据一致。
+
+---
+
+## 七、已修复的两处状态错位（2026-11-20）
+
+重写 `PaymentService` / `EntitlementService` 时，核对状态机发现了两个真实缺口。两条都不是「代码风格问题」，
+而是会在特定时序下产生错位数据。
+
+### 7.1 `closeExpired` 只关订单，不关支付单
+
+```java
+// OrderMapper
+@Update("UPDATE orders SET status = 'CLOSED', update_time = NOW() " +
+        "WHERE order_no = #{orderNo} AND status = 'PENDING_PAY'")
+int closeExpired();
+```
+
+超时任务把订单关掉，**payment 仍是 `INIT`**。此前的 `submitTransferProof` 只检查支付单的状态，
+于是用户在这个窗口里提交凭证会得到：
+
+- 支付单 → `WAIT_CONFIRM`
+- 订单 → 仍是 `CLOSED`（`markPendingConfirm` 的条件更新影响 0 行，返回值被丢弃）
+- 后台 → 收到「有新的转账凭证待确认」通知
+
+后台看到待确认、点了确认，`onPaid` 的 `markPaid` 影响 0 行 → 抛「订单状态为「已关闭」，无法确认收款」。
+钱没少，但用户在「待确认」和「无法确认」之间来回撞，运营侧也要人工排查。
+
+**现在**：订单侧推进失败即抛错并回滚，支付单保持 `INIT`，用户看到「订单当前状态为「已关闭」，无法提交转账凭证」。
+
+> 没有顺手去改 `closeExpired` 让它同时关支付单 —— 那是改订单侧行为，影响面比修一处校验大。
+> 这里的判断是：**校验能兜住，就不要扩大到定时任务**。
+
+### 7.2 转账时间用宽松解析
+
+`SimpleDateFormat` 默认 `lenient=true`，`2026-02-31 10:00:00` 会被解析成 3 月 3 日。
+这个字段要和银行流水对账，被悄悄改动等于对不上账且没人发现。已改 `setLenient(false)`。
+
+### 7.3 检查清单补一条
+
+原 §六 的清单里，第 3 条只说「`onPaid` 顺序是支付单 → 订单 → 权益」。
+本次补上**反向的那一半**：
+
+- [ ] 提交凭证（`submitTransferProof`）也必须是「支付单 + 订单」两侧一起成功，任一失败就回滚
