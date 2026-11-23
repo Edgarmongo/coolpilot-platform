@@ -2,7 +2,40 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.2.4`**
+**当前线上版本：`v1.2.6`**
+
+---
+
+## v1.2.6（2026-11-24）
+
+**文章页规范地址与 canonical 对齐**
+
+v1.2.5 把 `/en/**` 的 canonical 指向中文原页，但文章页自己又覆写了 `og:url`，
+导致 `/en/blog/x` 的 `og:url` 是英文地址、canonical 却是中文地址，两边打架。
+
+- `pageUrl` 按 canonical 规则计算（去掉 `/en` 前缀），JSON-LD 的 `@id`
+  与 `mainEntityOfPage` 都跟着它走
+- 删掉页面级 `og:url` 覆写，交给 `app.vue` 的 `canonicalUrl` 统一输出
+
+## v1.2.5（2026-11-24）
+
+**英文版 canonical 指向中文原页，撤掉 hreflang**
+
+v1.2.3 给中英两版加了 hreflang 互指，上线后复核认为不严谨：hreflang 的前提是
+「同一内容的不同语言版本」，而本站只有界面翻译、正文没有翻译 ——
+`/en/blog/x` 与 `/blog/x` 的正文是同一份中文。给这种页面标 `hreflang="en"`，
+等于告诉搜索引擎「这是英文内容」，而它实际是中文。
+
+- canonical：`/en/**` 一律指向去掉 `/en` 的中文地址（`/en` → `/`，
+  `/en/blog/x` → `/blog/x`），抽出 `canonicalPath` / `canonicalUrl`
+  两个 computed 供 canonical 与 `og:url` 共用
+- 移除 hreflang 互指，只保留 `x-default` 指向中文版
+- sitemap：撤掉英文地址与 `xhtml:link`，只提交中文页（25 条）。
+  canonical 已声明以中文为准，再把英文当独立页提交是自相矛盾
+
+取舍：英文站仍可访问、分享、切换语言，但不参与英文搜索竞争，
+与「英文站冻结、不投入内容」的策略一致。将来真翻译了正文，
+换回 hreflang 互指即可（v1.2.3 的实现留在 git 历史里）。
 
 ---
 

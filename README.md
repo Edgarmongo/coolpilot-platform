@@ -264,6 +264,7 @@ coolpilot-platform/
 | [docs/DATA-MODEL.md](docs/DATA-MODEL.md) | 59 张存量表 + V28 三张新表的设计与取舍 |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 上线手册：gateway 分流、Cloudflare、证书、备份恢复、排查 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 各版本变更明细 |
+| [docs/SEO-CONTENT-PLAN.md](docs/SEO-CONTENT-PLAN.md) | SEO / GEO 内容改造清单（逐篇改写与选题矩阵） |
 
 ## CI/CD
 
