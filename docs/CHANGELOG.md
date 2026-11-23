@@ -2,39 +2,88 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.2.1`**
+**当前线上版本：`v1.2.4`**
 
 ---
 
-## v1.2.1（2026-11-21）
+## v1.2.4（2026-11-24）
 
-**sitemap 修复 + 开源栏目首批 5 篇分析上线**
+**自定义错误页**
 
-### sitemap 只收录最新 5 篇文章（既有缺陷，内容一多才暴露）
+修完软 404 后暴露的下一个问题：真 404 会渲染 Nuxt 内置错误页——标题
+「404 - Article not found | Nuxt」、正文英文、带框架品牌名。个人站出现框架水印
+不专业，也浪费了「访客走错路还能留下来」的机会。
 
-`sitemap.xml` 只请求 `/blogs?pageNum=1`，而后端该接口的每页条数是常量 5、
-且不认 `pageSize` 参数。发布第 6 篇文章后，最早的一篇立刻从站点地图消失。
+新增 `error.vue`：
 
-改为按 `totalPage` 翻页取全量；后端未返回总页数时用「不满一页」判断末页；
-设 60 页上限防止后端异常时无限翻。本地对生产接口验证：6 篇全部收集到。
+- 中英双语按 locale 分支，不读 i18n 词条（错误页可能在 i18n 就绪前渲染）
+- 404 与 5xx 分开措辞，5xx 不说「页面不存在」避免误导
+- 给出路而不是死胡同：站内搜索 + 首页 + 技术文章 / 开源项目 / 技术服务
+- `noindex, follow`：错误页不该被收录，但保留顺链抓取
 
-### 开源栏目首批内容
+顺带修掉拼路径的坑：英文前缀单独用变量，直接拿 `/en` 拼 `/archives`
+会得到 `/enarchives`。
 
-研究仓里 5 篇 Crawl4AI 稿件发布进栏目（此前栏目唯一关联的是一篇 SSH 加固实录，
-属运维实践而非项目分析）：
+## v1.2.3（2026-11-24）
 
-| 文章 | 分类 | 关系 |
-| --- | --- | --- |
-| Crawl4AI 商业价值分析 | 开源项目商业观察 | business |
-| 从跑起来到能改造：研究路线 | 开源技术研究 | research |
-| Crawl4AI 操作手册（v0.9.5 实测） | 开源技术实践 | practice |
-| Crawl4AI + Hermes Agent：采集与执行的组合 | 开源项目商业观察 | business |
-| 用 24 篇文章研究透 Crawl4AI 与 Hermes | 开源技术研究 | research |
+**技术 SEO 与 GEO 基建：修软 404、hreflang、结构化数据、llms.txt、RSS**
 
-正文以 **Markdown 原文**入库，由后端 commonmark 渲染（含 GFM table 扩展），
-不做 HTML 预转换。同时解除 SSH 加固实录与 Crawl4AI 项目的关联（文章仍可读）。
+对线上逐项实测后按优先级修。原状态并不差：TTFB 0.29s、HTTP/2、brotli、
+canonical 全站都有、每页 h1 唯一。问题集中在三处硬伤与一块空白。
 
-> 纯内容改动，无代码逻辑变更；版本号打出是因为 sitemap 需要重新构建镜像。
+### 一、软 404（影响最大）
+
+不存在的文章返回 **200**，标题还是「受密码保护」，等于让搜索引擎把所有拼错、
+已删除的地址当正常页收录。现在后端 `code=404` 时抛真 404。
+判断放在首次加载之后而不是 `fetchBlog` 内部——解锁流程也调它，
+在里面抛会把人从密码框弹到 404 页。锁定页（有密码未解锁）补 `noindex`。
+
+### 二、hreflang
+
+`/` 与 `/en/` 结构完全一致却互不标注，会被当重复内容只收一个。
+用 `switchLocalePath` 生成（自动处理带参数、带前缀的路由），
+`x-default` 指向中文版。
+
+### 三、结构化数据
+
+- 全局：`Organization` + `WebSite`（含 SearchAction 站内搜索）
+- 文章页：`BlogPosting`（作者、发布/修改时间、字数、阅读时长、分类、标签）
+  + `BreadcrumbList`。字数与时长取后端已有字段，不额外查询。
+
+AI 引擎解析页面时，JSON-LD 里的「谁在何时写了什么」最容易被抽取成事实，
+只靠 meta 标签拿不到这层关系。
+
+### 四、分享卡片
+
+新增 `public/og-default.png`（1200×630，**浏览器渲染而非 AI 生图**，
+中文字体可控）。文章无首图时兜底，避免微信/社群抓到空白卡片。
+补 `og:url`、`og:image`、`og:locale`、`article:modified_time`、`article:tag`，
+twitter card 升级为 `summary_large_image`。
+
+### 五、sitemap
+
+移除 `/search`（已 noindex）；每条内容输出中英两个地址并带 `xhtml:link`
+hreflang —— 站点地图里的 hreflang 比页面 `<link>` 更权威。
+线上结果：50 条 URL（25 × 2 语言）、150 条 xhtml:link。
+
+### 六、llms.txt 与 RSS（GEO）
+
+- `/llms.txt` 按 llmstxt.org 约定输出站名、定位、文章与项目索引、引用说明，
+  内容实时从后端拉，新文章自动出现（当前 19 条索引）
+- `/rss.xml` 输出最近 20 篇，聚合站与抓取管线靠 feed 发现更新
+
+### 七、URL 规范化
+
+新增 `server/middleware/canonical-url.ts`：`www` → 裸域 301
+（只在该站规范域名不带 www 时生效，不按 host 强制跳，避免误伤 IP 访问
+与健康检查）；尾斜杠 301 归一。canonical 只是建议，301 才是结论。
+
+### 八、robots 显式放行 AI 爬虫
+
+`GPTBot` / `OAI-SearchBot` / `ChatGPT-User` / `ClaudeBot` / `PerplexityBot` /
+`Google-Extended` 单列 `Allow`。不只为表明意图，也为将来若有人加全局
+`Disallow` 时不误伤。注意 Cloudflare 的 Bot Fight Mode 会绕过 robots.txt
+直接拦，需在 CF 后台确认关闭。
 
 ---
 

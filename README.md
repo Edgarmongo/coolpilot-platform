@@ -45,8 +45,16 @@
 | `v1.0.3` | 前端按视觉稿重构：白色双行头部、统一卡片与正文排版、文章目录侧栏、列表/时间线双视图 | 已上线 |
 | `v1.0.4` | 正文渲染对 HTML / Markdown 双格式都安全，修代码块被二次解析 | 已上线 |
 | `v1.1.0` | **开源项目商业观察栏目**：V28 三张表、9 个公开接口、前后台各一套页面 | 已上线 |
+| `v1.1.1` | 代码来源整改第一批（19 个文件） | 已上线 |
+| `v1.1.2` | 重写支付与权益服务，修超时关单后的凭证错位 | 已上线 |
+| `v1.1.3` | `util` 包整体重写（16 个文件 / 1,221 行） | 已上线 |
+| `v1.2.0` | 后台经营驾驶舱 + 首页平台化改版 | 已上线 |
+| `v1.2.1` | sitemap 翻页取全量（修老文章掉出地图）；开源栏目首批内容 | 已上线 |
+| `v1.2.3` | 技术 SEO 与 GEO 基建：软 404、hreflang、结构化数据、llms.txt、RSS、URL 规范化 | 已上线 |
+| `v1.2.4` | 自定义错误页，替换 Nuxt 默认 404/500 | 已上线 |
 
-线上运行版本以服务器 `.env` 的 `TAG` 为准。变更明细见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
+线上运行版本以服务器 `.env` 的 `TAG` 为准。
+`v1.2.2` 未发布：tag 在自动化流程中被重复创建后删除，版本号因此跳过。变更明细见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
 ## 架构一览
 
@@ -98,6 +106,32 @@
 英文值留空时回落中文，可以逐项补翻译。品牌名就是这套机制的一个实例：`blogName` 的中文值 `酷天AI`、英文值 `CoolSkyAI`。
 
 后台语言存 localStorage（不走 URL），因为后台是登录后的工作台，没有 SEO 诉求。
+
+## SEO 与 GEO
+
+技术层已经内建，不需要额外插件：
+
+| 能力 | 实现位置 | 说明 |
+|---|---|---|
+| 标题 / 描述 / canonical | `app.vue` | 自指 canonical，尾斜杠与 `www` 由中间件 301 归一 |
+| hreflang | `app.vue` | 中英互指 + `x-default`，用 `switchLocalePath` 生成 |
+| JSON-LD | `app.vue`、`pages/blog/[id].vue` | 全局 `Organization` + `WebSite`；文章页 `BlogPosting` + `BreadcrumbList` |
+| 分享卡片 | `app.vue`、`pages/blog/[id].vue`、`public/og-default.png` | 文章无首图时用默认大图，twitter card 为大图模式 |
+| 站点地图 | `server/routes/sitemap.xml.ts` | 中英各一条，带 `xhtml:link` hreflang；`/search` 已排除 |
+| RSS | `server/routes/rss.xml.ts` | 最近 20 篇，供聚合站与抓取管线发现更新 |
+| llms.txt | `server/routes/llms.txt.ts` | 给 AI 引擎的站点索引，内容实时从后端拉 |
+| robots | `server/routes/robots.txt.ts` | 显式放行 GPTBot / ClaudeBot / PerplexityBot 等 |
+| 错误页 | `error.vue` | 双语、`noindex`、给站内搜索与主要入口 |
+
+两个容易踩的点：
+
+1. **Cloudflare 的 Bot Fight Mode 会绕过 robots.txt 直接拦 AI 爬虫**，
+   要在地理位置正确的前提下确认它是关闭的，否则 llms.txt 与 robots 都白写。
+2. **`og:image` 必须是绝对地址**，相对路径各家抓取器都不认；
+   默认图放在 `public/og-default.png`（1200×630）。
+
+内容侧的规则写在 [docs/CHANGELOG.md](docs/CHANGELOG.md) 的 v1.2.3 条目里：
+每节先给结论、关键论断配数字、Q&A 段落用问题式小标题 —— 这几条决定 AI 是否愿意引用。
 
 ## 技术栈
 
