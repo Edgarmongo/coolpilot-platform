@@ -18,6 +18,22 @@ const siteUrl = computed(() => String(config.public.siteUrl || '').replace(/\/$/
 const defaultOgImage = computed(() => `${siteUrl.value}/og-default.png`)
 
 /**
+ * 规范路径：英文版归到中文原页（理由见下面 canonical 的注释）。
+ * 抽成 computed 是因为 canonical 与 og:url 必须一致，各写一遍迟早写岔。
+ */
+const canonicalPath = computed(() => {
+	let path = route.path === '/' ? '/' : route.path.replace(/\/$/, '')
+	if (path === '/en') {
+		return '/'
+	}
+	if (path.startsWith('/en/')) {
+		return path.slice(3)
+	}
+	return path
+})
+const canonicalUrl = computed(() => siteUrl.value + canonicalPath.value)
+
+/**
  * 页面标题统一在这里拼品牌后缀。
  *
  * 页面里只写「归档」「搜索」这样的短标题，语言切换时自动跟着变；
@@ -35,42 +51,34 @@ useHead({
 		{property: 'og:description', content: computed(() => t('site.description'))},
 		// 大图卡片的点击率明显高于纯文字卡片；页面级有封面时会覆盖成文章自己的图
 		{property: 'og:image', content: defaultOgImage},
-		{property: 'og:url', content: computed(() => siteUrl.value + (route.path === '/' ? '/' : route.path.replace(/\/$/, '')))},
+		{property: 'og:url', content: canonicalUrl},
 		{property: 'og:locale', content: computed(() => (locale.value === 'en' ? 'en_US' : 'zh_CN'))},
 		{name: 'twitter:card', content: 'summary_large_image'},
 		{name: 'twitter:image', content: defaultOgImage}
 	],
 	link: [
 		/**
-		 * canonical 指向当前页自己的规范地址。
+		 * canonical：英文版统一指向中文原页。
 		 *
-		 * 双语站每个语言版本各有自己的地址，自指是对的；这样即使带 ?q= 、
-		 * 带尾斜杠之类的变体被抓到，权重也不会分散到多个 URL 上。
+		 * 这里不打 hreflang，而是让 /en/** 的 canonical 指向去掉 /en 的中文地址。
+		 * 原因是本站只有界面翻译、没有内容翻译：/en/blog/x 和 /blog/x 的正文
+		 * 是同一份中文。hreflang 的前提是「同一内容的不同语言版本」，
+		 * 而这种「UI 英文 + 正文中文」的页面并不满足，硬标 hreflang="en"
+		 * 属于对搜索引擎撒谎。
+		 *
+		 * canonical 更诚实也更干净：把英文地址的权重并回中文原页，
+		 * 避免两套结构完全相同的页面互相稀释。英文站仍可正常访问与分享，
+		 * 只是不参与英文搜索竞争 —— 与「英文站冻结、不投入内容」的策略一致。
+		 *
+		 * 将来真的翻译了正文，把这段换回 hreflang 互指即可（历史上实现过，
+		 * 见 git log app.vue 的 v1.2.3 版本）。
 		 */
 		{
 			rel: 'canonical',
-			href: computed(() => {
-				const base = siteUrl.value
-				const path = route.path === '/' ? '/' : route.path.replace(/\/$/, '')
-				return base + path
-			})
+			href: canonicalUrl
 		},
-		/**
-		 * hreflang：告诉搜索引擎「这两个地址是同一篇内容的不同语言版本」。
-		 *
-		 * 不加的后果很实际：中文 /、英文 /en/ 结构完全一致，
-		 * 会被当成重复内容，Google 只挑一个收录，另一版等于白做。
-		 * x-default 指向中文版，给没匹配到语言的用户（也告诉 Google 谁是主版本）。
-		 * switchLocalePath 在路由不存在对应语言版本时返回空值，这里过滤掉。
-		 */
-		...['zh-CN', 'en'].map(code => ({
-			rel: 'alternate',
-			hreflang: code === 'en' ? 'en' : 'zh-CN',
-			href: computed(() => {
-				const p = switchLocalePath(code as 'zh-CN' | 'en')
-				return p ? siteUrl.value + p : ''
-			})
-		})).filter(Boolean),
+		// og:url 跟 canonical 保持一致，否则分享抓取会拿到英文地址、
+		// 收录信号却指向中文地址，两边打架
 		{
 			rel: 'alternate',
 			hreflang: 'x-default',

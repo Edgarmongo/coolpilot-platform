@@ -119,37 +119,18 @@ export default defineEventHandler(async (event) => {
 	}
 
 	/**
-	 * 每条内容都输出中英两个地址，并用 xhtml:link 互相标注 hreflang。
+	 * 只提交中文地址。
 	 *
-	 * 只提交中文版是之前的问题：英文页面虽然能访问，但搜索引擎不知道
-	 * 它们存在、也不知道「这是同一篇的另一种语言」，于是一律当重复内容处理。
-	 * 站点地图里的 hreflang 比页面里的 <link> 更权威，两者都给最稳妥。
+	 * 英文页（/en/**）的 canonical 指向中文原页 —— 正文没有翻译，
+	 * 两套地址是同一份内容。既然 canonical 已经声明「以中文为准」，
+	 * 再把英文地址当独立页提交就是自相矛盾，只会让抓取预算浪费在
+	 * 注定被合并的 URL 上。
 	 */
-	type Entry = {loc: string, lastmod?: string, changefreq?: string, priority?: string}
-	const localized: Entry[] = []
-	for (const u of urls as Entry[]) {
-		const path = u.loc.startsWith(base) ? u.loc.slice(base.length) || '/' : u.loc
-		const zh = base + (path === '/' ? '/' : path)
-		const en = base + '/en' + (path === '/' ? '' : path)
-		localized.push({...u, loc: zh})
-		localized.push({...u, loc: en || base + '/en'})
-	}
-
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${localized.map(u => {
-		const path = u.loc.startsWith(base) ? u.loc.slice(base.length) || '/' : u.loc
-		const bare = path.startsWith('/en') ? path.slice(3) || '/' : path
-		const zhHref = base + (bare === '/' ? '/' : bare)
-		const enHref = base + '/en' + (bare === '/' ? '' : bare)
-		return `  <url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url>
     <loc>${escapeXml(u.loc)}</loc>${u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : ''}${u.changefreq ? `\n    <changefreq>${u.changefreq}</changefreq>` : ''}${u.priority ? `\n    <priority>${u.priority}</priority>` : ''}
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="${escapeXml(zhHref)}"/>
-    <xhtml:link rel="alternate" hreflang="en" href="${escapeXml(enHref)}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(zhHref)}"/>
-  </url>`
-	}).join('\n')}
+  </url>`).join('\n')}
 </urlset>`
 
 	setHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
