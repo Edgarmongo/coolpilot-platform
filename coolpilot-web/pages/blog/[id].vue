@@ -396,7 +396,11 @@ if (blog.value) {
 	 * og:image 用封面图，没有的话微信抓到的就是空白卡片。
 	 */
 	const desc = (blog.value.description || plainText(blog.value.content) || '').slice(0, 150)
-	const pageUrl = siteUrl + route.path
+	// 英文页的规范地址是去掉 /en 的中文原页（正文没翻译），
+	// 结构化数据里的 @id / mainEntityOfPage 必须跟 canonical 一致，
+	// 否则等于告诉搜索引擎「这个页面的主体是另一个地址」。
+	const canonicalPath = route.path.startsWith('/en/') ? route.path.slice(3) : route.path
+	const pageUrl = siteUrl + canonicalPath
 	const cover = blog.value.firstPicture ? absoluteUrl(blog.value.firstPicture) : `${siteUrl}/og-default.png`
 	const tags = (blog.value.tags || []).map((x: any) => x.name).filter(Boolean)
 	useHead({
@@ -406,7 +410,6 @@ if (blog.value) {
 			{property: 'og:type', content: 'article'},
 			{property: 'og:title', content: blog.value.title},
 			{property: 'og:description', content: desc},
-			{property: 'og:url', content: pageUrl},
 			{property: 'og:image', content: cover},
 			{name: 'twitter:card', content: 'summary_large_image'},
 			{name: 'twitter:image', content: cover},
