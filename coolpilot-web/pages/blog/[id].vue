@@ -133,8 +133,10 @@
 <script setup lang="ts">
 const route = useRoute()
 const {call, isLogin} = useApi()
-const {t, te} = useI18n()
+const {t, te, locale} = useI18n()
 const localePath = useLocalePath()
+// 结构化数据里的作者名跟着品牌走（中文酷天AI / 英文CoolSkyAI）
+const brand = useBrand()
 const siteUrl = String(useRuntimeConfig().public.siteUrl || '').replace(/\/$/, '')
 
 /** 摘要要从 HTML 正文里抠纯文本：直接截 HTML 会把标签也塞进 description */
@@ -168,6 +170,9 @@ const blog = ref<any>(null)
 // 评论、收藏、点赞都需要真实 id，slug 进来时由接口返回后再填
 const blogId = ref<number>(isIdParam ? Number(param) : 0)
 const locked = ref(false)
+// 文章确实不存在（后端 404）。这个标记只用于首次加载后抛 404，
+// 解锁流程里再次拉取失败不该触发，否则输错密码会跳成 404 页。
+const notFound = ref(false)
 const message = ref('')
 const password = ref('')
 const unlocking = ref(false)
@@ -250,6 +255,9 @@ async function fetchBlog() {
 	} else {
 		blog.value = null
 		locked.value = false
+		// 后端对不存在的 slug 返回 code 404，这里记下来，交给首次加载后统一抛，
+		// 不直接 throw：解锁流程也会走这个分支，抛出去会把人从密码框弹到 404 页。
+		notFound.value = res?.code === 404
 		message.value = (res && res.msg) || '加载失败'
 	}
 }
@@ -277,6 +285,18 @@ async function unlock() {
 }
 
 await fetchBlog()
+
+/*
+ * 文章不存在 → 返回真正的 404。
+ *
+ * 之前这里渲染的是一个 200 的「加载失败」页面，后果是：所有拼错的、
+ * 已删除的文章地址都会被搜索引擎当正常页收录，白耗抓取预算、
+ * 稀释整站质量。注意必须在首次加载后判断，不能塞进 fetchBlog 里抛，
+ * 那个函数解锁时也会调用。
+ */
+if (notFound.value) {
+	throw createError({statusCode: 404, statusMessage: 'Article not found'})
+}
 
 /**
  * 收藏/点赞状态只对已登录用户查询。
@@ -376,6 +396,9 @@ if (blog.value) {
 	 * og:image 用封面图，没有的话微信抓到的就是空白卡片。
 	 */
 	const desc = (blog.value.description || plainText(blog.value.content) || '').slice(0, 150)
+	const pageUrl = siteUrl + route.path
+	const cover = blog.value.firstPicture ? absoluteUrl(blog.value.firstPicture) : `${siteUrl}/og-default.png`
+	const tags = (blog.value.tags || []).map((x: any) => x.name).filter(Boolean)
 	useHead({
 		title: blog.value.title,
 		meta: [
@@ -383,16 +406,80 @@ if (blog.value) {
 			{property: 'og:type', content: 'article'},
 			{property: 'og:title', content: blog.value.title},
 			{property: 'og:description', content: desc},
-			...(blog.value.firstPicture
-				? [{property: 'og:image', content: absoluteUrl(blog.value.firstPicture)}]
-				: []),
+			{property: 'og:url', content: pageUrl},
+			{property: 'og:image', content: cover},
+			{name: 'twitter:card', content: 'summary_large_image'},
+			{name: 'twitter:image', content: cover},
 			...(blog.value.createTime
 				? [{property: 'article:published_time', content: blog.value.createTime}]
-				: [])
-		]
+				: []),
+			...(blog.value.updateTime
+				? [{property: 'article:modified_time', content: blog.value.updateTime}]
+				: []),
+			...(tags.length ? [{property: 'article:tag', content: tags.join(',')}] : [])
+		],
+		/**
+		 * 文章级结构化数据：BlogPosting + 面包屑。
+		 *
+		 * 这是被 AI 引擎引用的前提——GPTBot / PerplexityBot 解析页面时，
+		 * JSON-LD 里的作者、发布时间、正文摘要是最容易被抽取成「事实」的部分。
+		 * 只靠 meta 标签它们拿不到「谁在什么时候写了什么」这层关系。
+		 */
+		script: [{
+			type: 'application/ld+json',
+			innerHTML: JSON.stringify({
+				'@context': 'https://schema.org',
+				'@graph': [
+					{
+						'@type': 'BlogPosting',
+						'@id': `${pageUrl}#article`,
+						headline: blog.value.title,
+						description: desc,
+						inLanguage: locale.value === 'en' ? 'en' : 'zh-CN',
+						mainEntityOfPage: {'@type': 'WebPage', '@id': pageUrl},
+						datePublished: blog.value.createTime || undefined,
+						dateModified: blog.value.updateTime || blog.value.createTime || undefined,
+						image: [cover],
+						wordCount: blog.value.words || undefined,
+						timeRequired: blog.value.readTime ? `PT${blog.value.readTime}M` : undefined,
+						articleSection: blog.value.category?.name || undefined,
+						keywords: tags.length ? tags.join(', ') : undefined,
+						author: {
+							'@type': 'Person',
+							name: brand.value.brandName,
+							url: `${siteUrl}/about`
+						},
+						publisher: {'@id': `${siteUrl}/#organization`}
+					},
+					{
+						'@type': 'BreadcrumbList',
+						itemListElement: [
+							{'@type': 'ListItem', position: 1, name: t('post.crumbHome'), item: `${siteUrl}/`},
+							{'@type': 'ListItem', position: 2, name: t('archives.listTitle'), item: `${siteUrl}/archives`},
+							...(blog.value.category?.name
+								? [{
+									'@type': 'ListItem', position: 3, name: blog.value.category.name,
+									item: `${siteUrl}/category/${blog.value.category.name}`
+								}]
+								: []),
+							{
+								'@type': 'ListItem',
+								position: blog.value.category?.name ? 4 : 3,
+								name: blog.value.title,
+								item: pageUrl
+							}
+						]
+					}
+				]
+			})
+		}]
 	})
 } else {
-	useHead({title: t('post.lockedTitle')})
+	useHead({
+		title: t('post.lockedTitle'),
+		// 锁定页没有正文，收录进去只有坏处：既排不上名，又拉低整站内容质量
+		meta: [{name: 'robots', content: 'noindex, follow'}]
+	})
 }
 </script>
 

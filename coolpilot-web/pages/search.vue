@@ -96,7 +96,16 @@ function sourceText(type: string) {
 	return te(key) ? t(key) : type
 }
 
-useHead({title: t('search.title')})
+useHead({
+	title: t('search.title'),
+	/*
+	 * 搜索结果页不该被收录：每换一个关键词就是一个新 URL，
+	 * 内容全是站内既有页面的片段，属于典型 thin content。
+	 * 被收进去只会稀释整站质量，还可能让用户从搜索页二次跳转才到正题。
+	 * follow 保留，让爬虫仍能顺着结果页发现文章。
+	 */
+	meta: [{name: 'robots', content: 'noindex, follow'}]
+})
 </script>
 
 <style scoped>
