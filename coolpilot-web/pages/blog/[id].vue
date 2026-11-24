@@ -166,7 +166,15 @@ function absoluteUrl(url: string) {
 const param = String(route.params.id)
 const isIdParam = /^\d+$/.test(param)
 const blogQuery = isIdParam ? `id=${param}` : `slug=${encodeURIComponent(param)}`
-const blog = ref<any>(null)
+/*
+ * 用 useState 而不是 ref，是为了让 SSR 的结果跟着 payload 一起下发。
+ *
+ * 用 ref 时客户端 setup 会重新执行、blog 从 null 开始，必须再请求一次接口；
+ * 在请求返回之前模板会把 SSR 渲染好的正文 patch 掉——GSC 的实时测试就是
+ * 在这一瞬间抓到「加载失败 + noindex」，把整篇文章判成不可索引。
+ * payload 传过来之后客户端首次渲染就与 SSR 一致，不存在这个空窗期。
+ */
+const blog = useState<any>(`blog:${param}`, () => null)
 // 评论、收藏、点赞都需要真实 id，slug 进来时由接口返回后再填
 const blogId = ref<number>(isIdParam ? Number(param) : 0)
 const locked = ref(false)
@@ -329,7 +337,18 @@ async function unlock() {
 	}
 }
 
-await fetchBlog()
+/*
+ * 已经拿到数据就不再请求：水合时 blog 来自 payload，客户端软导航时为空。
+ * 判定标准只有一条——有没有数据，而不是「在不在服务端」。
+ */
+if (blog.value) {
+	// 正文来自 payload，但关联内容（专题/项目/相关阅读）不进 payload，仍要拉；
+	// 它们都是 .catch(() => null)，失败只是少几块侧栏，不影响正文
+	blogId.value = blog.value.id || blogId.value
+	await Promise.all([loadRelated(), loadTopics(), loadRelatedPosts(), loadOssProject()])
+} else {
+	await fetchBlog()
+}
 
 /*
  * 文章不存在 → 返回真正的 404。
