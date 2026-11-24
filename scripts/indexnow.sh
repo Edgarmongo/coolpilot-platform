@@ -32,8 +32,9 @@ fi
 
 echo "提交 ${#URLS[@]} 条 URL 到 IndexNow..."
 
-# 拼 JSON 用 python，避免手写逗号拼串出错
-BODY=$(printf '%s\n' "${URLS[@]}" | python3 -c '
+# 拼 JSON 用 python，避免手写逗号拼串出错；Windows 的 Git Bash 只有 python
+PY=$(command -v python3 || command -v python)
+BODY=$(printf '%s\n' "${URLS[@]}" | "$PY" -c '
 import json, sys
 urls = [line.strip() for line in sys.stdin if line.strip()]
 print(json.dumps({"host": sys.argv[1], "key": sys.argv[2],
