@@ -77,8 +77,12 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  # ---------------- 部署到服务器（可选） ----------------
-  # 默认不执行。在仓库 Settings → Secrets and variables → Actions 里：
+  # ---------------- 部署到服务器（可选，默认关闭） ----------------
+  # 常规发布走服务器侧的拉取式部署：deploy/systemd/coolpilot-autodeploy.timer
+  # 每 3 分钟比对一次远端 tag，有新版就 pull + up -d + 健康检查（失败自动回滚），
+  # 不需要在这里存任何 SSH 私钥。见 docs/DEPLOY.md 第五节。
+  #
+  # 下面这个 job 只作应急路径：需要时在 Settings → Secrets and variables → Actions 里
   #   Variables: DEPLOY_ENABLED=true
   #   Secrets:   DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY / DEPLOY_PATH
   # 服务器上需事先放好 docker-compose.prod.yml 与 .env

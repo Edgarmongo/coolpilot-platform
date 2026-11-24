@@ -1,0 +1,14 @@
+[Unit]
+Description=每 3 分钟检查一次 CoolPilot 是否有新版本
+
+[Timer]
+# 开机后 3 分钟先跑一次（补上关机期间发布的版本）
+OnBootSec=3min
+# 之后每 3 分钟一次：脚本自身幂等，没有新 tag 时只是十几毫秒的空转
+OnUnitActiveSec=3min
+AccuracySec=30s
+# 不积累补跑：错过的那次没有意义，下一轮自然会检查出最新 tag
+Persistent=false
+
+[Install]
+WantedBy=timers.target

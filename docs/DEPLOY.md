@@ -149,14 +149,56 @@ crontab -e
 
 ## 五、日常发布与回滚
 
-### 发布
+### 发布：只需要推一个 tag
 
 ```bash
-git tag -a v1.1.0 -m "v1.1.0: ..."
-git push origin v1.1.0
+git tag -a v1.3.2 -m "v1.3.2: ..."
+git push origin v1.3.2
 ```
 
-Release 构建完四个镜像后（开了 `DEPLOY_ENABLED` 会自动部署），服务器上：
+之后不需要登录服务器。链路是：
+
+```
+推 tag → release.yml 构建四个镜像 → 服务器上的 timer 发现新 tag → 拉镜像
+       → 写 .env 的 TAG → up -d → 健康检查 →（失败则自动回滚）
+```
+
+服务器侧的检查由 `coolpilot-autodeploy.timer` 每 3 分钟触发一次，
+脚本是 `scripts/auto-deploy.sh`。安装（首次）：
+
+```bash
+sudo cp deploy/systemd/coolpilot-autodeploy.service /etc/systemd/system/
+sudo cp deploy/systemd/coolpilot-autodeploy.timer   /etc/systemd/system/
+sudo cp scripts/auto-deploy.sh /opt/coolpilot-platform/scripts/
+sudo chmod +x /opt/coolpilot-platform/scripts/auto-deploy.sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now coolpilot-autodeploy.timer
+systemctl list-timers | grep autodeploy
+tail -f /var/log/coolpilot-autodeploy.log
+```
+
+**为什么是服务器拉、而不是 Actions 推**：推的模式要在仓库里存 SSH 私钥和
+4 个 secret，配错时最早的信号是一次红色 workflow，而站点安静地停在旧版本；
+拉的模式不需要任何 GitHub 凭据（仓库公开，`git ls-remote` 匿名可用），
+失败只记一行日志、下一轮继续。`release.yml` 里的 `deploy` job 保留着，
+默认不执行（需要 `DEPLOY_ENABLED=true`），只作应急用。
+
+脚本的关键行为，出问题时先看这几条：
+
+| 行为 | 原因 |
+|---|---|
+| 镜像还没构建完时 `pull` 失败 → 记 `WAITING` 退出 0 | tag 比镜像先出现，下一轮自然重试 |
+| 先 `pull` 成功才改 `.env` | 避免 `.env` 指向不存在的 tag，把手工 `up` 也搞坏 |
+| 启动后 3 分钟内 4 个应用容器不 healthy 或本机回环拿不到 200 → 自动回滚 | 不用人盯着 |
+| 回滚后把坏版本写进 `.deploy-blocked` | 否则每 3 分钟重试一次，变成重启循环 |
+
+需要人工确认一次迁移时，可以先停掉 timer，改回手工流程：
+
+```bash
+sudo systemctl stop coolpilot-autodeploy.timer
+```
+
+**手工发布（timer 停掉或不适用时）**：
 
 ```bash
 cd /opt/coolpilot-platform
@@ -193,13 +235,27 @@ docker exec coolpilot-redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warn
 镜像不可变，回滚就是改回上一个 tag：
 
 ```bash
+# 先停自动部署，否则 3 分钟内会把刚回滚掉的版本又装回来
+sudo systemctl stop coolpilot-autodeploy.timer
+
 sed -i 's/^TAG=.*/TAG=v1.0.4/' .env
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+想恢复自动部署，先处理坏版本，二选一：
+
+```bash
+# 方式一：让脚本跳过这个 tag（修好后也用它解锁）
+echo v1.3.2 >> /opt/coolpilot-platform/.deploy-blocked
+
+# 方式二：把坏 tag 从远端删掉，让「最新版」退回上一个好版本
+git push origin :refs/tags/v1.3.2
+```
+
 > 如果新版本包含 Flyway 迁移，回滚**代码**不会回滚**表结构**。
 > 迁移请遵循「只加不减」：加列、加表可以，删列/改类型不要做，否则回滚会炸。
+
 
 ---
 

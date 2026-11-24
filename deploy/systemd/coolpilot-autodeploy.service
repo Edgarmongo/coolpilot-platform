@@ -1,0 +1,17 @@
+[Unit]
+Description=CoolPilot 自动上线（比对最新 git tag，有新版本就部署）
+# 需要能访问 github.com 与 ghcr.io，且 docker 已就绪
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/coolpilot-platform
+Environment=REPO_URL=https://github.com/Edgarmongo/coolpilot-platform.git
+ExecStart=/opt/coolpilot-platform/scripts/auto-deploy.sh
+# 一次部署含拉镜像与健康检查，给足 20 分钟
+TimeoutStartSec=20min
+# 日志同时留在文件里：journal 会被轮转，回看一次回滚的原因时文件更方便
+StandardOutput=append:/var/log/coolpilot-autodeploy.log
+StandardError=append:/var/log/coolpilot-autodeploy.log
