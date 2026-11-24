@@ -10,7 +10,11 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883)](https://vuejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)](https://www.mysql.com/)
 
-线上实例：<https://coolskyai.com>
+线上站点：**[酷天AI · coolskyai.com](https://coolskyai.com)** —— 本仓库的完整实例，文章、开源项目商业观察、知识产品与技术服务都在真实运行。
+
+[![站点](https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E7%AB%99%E7%82%B9-coolskyai.com-00875a)](https://coolskyai.com)
+[![技术文章](https://img.shields.io/badge/%E6%96%87%E7%AB%A0-%E5%BC%80%E6%BA%90%E4%B8%8E%20Agent%20%E5%AE%9E%E8%B7%B5-0f766e)](https://coolskyai.com/archives)
+[![开源观察](https://img.shields.io/badge/%E5%BC%80%E6%BA%90%E8%A7%82%E5%AF%9F-%E9%A1%B9%E7%9B%AE%E5%95%86%E4%B8%9A%E4%BB%B7%E5%80%BC%E8%AF%84%E4%BC%B0-1f6feb)](https://coolskyai.com/open-source)
 
 ---
 
@@ -52,6 +56,13 @@
 | `v1.2.1` | sitemap 翻页取全量（修老文章掉出地图）；开源栏目首批内容 | 已上线 |
 | `v1.2.3` | 技术 SEO 与 GEO 基建：软 404、hreflang、结构化数据、llms.txt、RSS、URL 规范化 | 已上线 |
 | `v1.2.4` | 自定义错误页，替换 Nuxt 默认 404/500 | 已上线 |
+| `v1.2.5` | 英文站 canonical 指向中文原页，撤掉 hreflang | 已上线 |
+| `v1.2.6` | 文章页 `og:url` 与 canonical 统一，修两边打架 | 已上线 |
+| `v1.3.0` | 九篇文章补摘要、常见问题段与内链；FAQPage 结构化数据；IndexNow 推送 | 已上线 |
+| `v1.3.1` | 修文章详情接口不返回 `description`，摘要长期回落正文截断 | 已上线 |
+| `v1.3.2` | 推 tag 自动上线：服务器侧拉取 + 健康检查 + 失败回滚 | 已上线 |
+| `v1.3.3` | 读接口抖动会把文章误判成 `noindex` | 已上线 |
+| `v1.3.4` | 文章正文改由 payload 下发，消除水合期「空窗 + noindex」 | 已上线 |
 
 线上运行版本以服务器 `.env` 的 `TAG` 为准。
 `v1.2.2` 未发布：tag 在自动化流程中被重复创建后删除，版本号因此跳过。变更明细见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。

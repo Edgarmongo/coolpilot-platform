@@ -2,9 +2,61 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.3.1`**
+**当前线上版本：`v1.4.0`**
 
 ---
+
+## v1.4.0（2026-11-24）
+
+**补两篇 P0 文章：一个入口词、一个故障词**
+
+现有九篇里三篇 Hermes 全是进阶内容，读者没有从零开始的路径；Crawl4AI 一侧
+缺具体故障词。按 `SEO-CONTENT-PLAN` 第四节的选题矩阵补上：
+
+- `hermes-agent-tutorial`（4,952 字）：构建 4.65GB 镜像 → 启动 → 接模型 →
+  第一个任务 → 三个验证，五步走通；末尾给五个必踩的坑和「什么时候别用它」
+- `crawl4ai-403-anti-bot`（3,420 字）：把 403 拆成五种成因（服务端拒绝、
+  WAF 挑战、频率、IP 段、条款不允许），按代价从低到高给五种处置，
+  并划清合规边界
+- `V30__p0_two_articles.sql` 入库，带 `NOT EXISTS` 判断；标签复用现有 tag，
+  不新增词典项
+
+两篇都带「常见问题」段，自动获得 `FAQPage`；`first_picture` 留空交给
+`AppCover` 生成封面，不依赖外部图片。
+
+## v1.3.4（2026-11-24）
+
+**修复：文章页给自己贴 noindex，正文在水合期被清空**
+
+GSC 实时测试报 `Excluded by noindex tag`，但服务端返回的 HTML 里 `noindex`
+出现 0 次。原因是水合期的一次网络往返：`blog` 用 `ref`，客户端 setup 重跑时
+从 null 开始，必须再请求一次接口；请求返回之前模板把 SSR 已渲染的正文 patch
+成空状态，而那个分支挂着 `noindex`。Google 就在这个窗口里截图。
+
+- 正文数据改用 `useState`，SSR 结果随 payload 下发，客户端首次渲染即与 SSR 一致
+- 初始加载的判定从「在服务端就拉」改成「没数据才拉」
+- `noindex` 只在密码锁定页输出（那才是它本来的语义），读接口失败不再标
+
+代价：HTML 多一份文章 JSON（gzip 后约 15KB），换「正文一定在首屏 DOM 里」。
+
+## v1.3.3（2026-11-24）
+
+**修复：读接口抖动会把文章误判成 noindex**
+
+同一问题的一半：失败分支会把 `blog` 置空，导致本文进 `else` 分支。
+先收窄了 `noindex` 的触发条件，v1.3.4 才从根上消除空窗。
+
+## v1.3.2（2026-11-24）
+
+**推 tag 自动上线（服务器拉取式，失败自动回滚）**
+
+`release.yml` 的 deploy job 挂 `if: vars.DEPLOY_ENABLED == 'true'`，变量没设，
+推 tag 只出镜像，每次发布都要手工 SSH 改 `.env`。改成服务器侧拉取：
+`coolpilot-autodeploy.timer` 每 3 分钟比对远端最新 tag 与 `.env` 的 TAG，
+不同就 pull → 写 `.env` → up -d → 健康检查。
+
+四个防呆：镜像没构建完只记 WAITING；pull 成功才改 `.env`；3 分钟内不 healthy
+自动回滚；回滚后把坏版本写进 `.deploy-blocked` 防止重启循环。
 
 ## v1.3.1（2026-11-24）
 
