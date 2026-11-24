@@ -2,9 +2,26 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.3.0`**
+**当前线上版本：`v1.3.1`**
 
 ---
+
+## v1.3.1（2026-11-24）
+
+**修复：文章详情接口不返回摘要，后台填的 description 一直是白填**
+
+v1.3.0 写完九篇摘要后，线上 meta description 没有任何变化。查下来不是缓存，
+是接口根本没这个字段：`BlogDetail` 里没有 `description` 属性，
+`getBlogByIdAndIsPublished` 的 select 里也没有 `b.description`。
+
+前端因此长期走兜底分支 `description || plainText(content).slice(0, 150)`——
+所谓「摘要」其实是被硬截断的正文首段，搜索结果与分享卡片都停在一句话中间。
+
+- `BlogDetail` 增加 `description` / `slug`
+- 详情查询补 `b.description`、`b.slug`，`resultMap` 显式映射
+
+这条也解释了为什么 v1.2.3 给 `og:image` 做兜底时，封面永远落到
+`og-default.png` 而不是文章封面：详情 VO 里同样没有 `firstPicture`。
 
 ## v1.3.0（2026-11-24）
 
