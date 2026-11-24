@@ -177,6 +177,13 @@ systemctl list-timers | grep autodeploy
 tail -f /var/log/coolpilot-autodeploy.log
 ```
 
+> `scripts/` 不在镜像里，改了 `auto-deploy.sh` 必须重新 scp 到服务器，
+> 否则服务器跑的还是旧脚本 —— 这是这套机制唯一的「手动同步点」：
+>
+> ```bash
+> scp scripts/auto-deploy.sh root@<host>:/opt/coolpilot-platform/scripts/
+> ```
+
 **为什么是服务器拉、而不是 Actions 推**：推的模式要在仓库里存 SSH 私钥和
 4 个 secret，配错时最早的信号是一次红色 workflow，而站点安静地停在旧版本；
 拉的模式不需要任何 GitHub 凭据（仓库公开，`git ls-remote` 匿名可用），

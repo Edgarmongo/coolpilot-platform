@@ -66,10 +66,13 @@ if [ "$DRY_RUN" = "1" ]; then
   exit 0
 fi
 
-# 镜像可能还在构建：pull 失败不是错误，下一轮继续
+# 镜像可能还在构建：pull 失败不是错误，下一轮继续。
+# 只留一行原因，不把 compose 的整段失败输出写进日志——「仍在构建」是常态，
+# 日志里堆满 Error/Interrupted 会让人以为是真故障。
 export TAG="$LATEST"
-if ! docker compose -f "$COMPOSE" pull --quiet 2>&1 | tail -5; then
-  log "WAITING $LATEST 的镜像还拉不到（可能仍在构建），下一轮再试"
+if ! pull_out="$(docker compose -f "$COMPOSE" pull 2>&1)"; then
+  reason="$(echo "$pull_out" | grep -iE 'error|unknown|denied|unauthorized|timeout' | tail -1 | cut -c1-120)"
+  log "WAITING ${LATEST} 镜像还拉不到（可能仍在构建）：${reason:-pull 失败}，下一轮再试"
   exit 0
 fi
 
