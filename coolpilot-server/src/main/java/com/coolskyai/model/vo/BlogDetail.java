@@ -22,7 +22,9 @@ import java.util.List;
 @ToString
 public class BlogDetail {
 	private Long id;
+	private String slug;//文章别名（旧链接仍可用 id 访问）
 	private String title;//文章标题
+	private String description;//摘要：页面 subtitle 与 meta/og:description 都用它
 	private String content;//文章正文
 	private Boolean appreciation;//赞赏开关
 	private Boolean commentEnabled;//评论开关
