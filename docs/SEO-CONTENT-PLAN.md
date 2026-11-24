@@ -8,6 +8,10 @@
 
 ## 一、先看现状
 
+> **新文章不再需要参考本文的逐篇改造清单** —— 规则已固化为
+> [ARTICLE-TEMPLATE.md](ARTICLE-TEMPLATE.md) + `scripts/article_lint.py`（校验）
+> + `scripts/article_to_sql.py`（生成迁移）。本文保留作为改造历史与选题矩阵。
+
 | 指标 | 数值 | 判断 |
 |---|---|---|
 | 文章数 | 9 篇 | 太少，长尾覆盖不住；但主题很垂直，方向对 |

@@ -276,6 +276,8 @@ coolpilot-platform/
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 上线手册：gateway 分流、Cloudflare、证书、备份恢复、排查 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 各版本变更明细 |
 | [docs/SEO-CONTENT-PLAN.md](docs/SEO-CONTENT-PLAN.md) | SEO / GEO 内容改造清单（逐篇改写与选题矩阵） |
+| [docs/ARTICLE-TEMPLATE.md](docs/ARTICLE-TEMPLATE.md) | **写文章前先看这份**：模板骨架、十二条规则、发布五步、反例清单 |
+| [content/](content/) | 文章写作源文件（`*.md` + front matter），配 `scripts/article_lint.py` 校验 |
 
 ## CI/CD
 

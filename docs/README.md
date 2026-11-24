@@ -43,6 +43,7 @@
 | 文档 | 内容 | 适用 |
 |---|---|---|
 | [DEPLOY.md](DEPLOY.md) | 首次部署、证书、日常发布与回滚、备份恢复、排查表、上线检查清单 | 运维 |
+| [ARTICLE-TEMPLATE.md](ARTICLE-TEMPLATE.md) | 文章模板与十二条 SEO/GEO 规则、发布五步、反例清单 | 写文章 |
 | [CI-CD.md](CI-CD.md) | CI 做什么、Release 出哪四个镜像、如何启用自动部署 | 改流水线 |
 | [DOCKER.md](DOCKER.md) | 本地六容器、配置注入、数据卷、Flyway 初始化、常见问题 | 本地开发 |
 | [engineering/README.md](engineering/README.md) | 2026-11-04 三份工程审计的索引（历史） | 追溯 |
