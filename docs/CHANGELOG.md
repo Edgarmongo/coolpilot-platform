@@ -2,9 +2,28 @@
 
 本文件记录已发布版本的变更。版本号对应 Git tag，镜像由 `release.yml` 在同名 tag 上构建。
 
-**当前线上版本：`v1.2.6`**
+**当前线上版本：`v1.3.0`**
 
 ---
+
+## v1.3.0（2026-11-24）
+
+**九篇文章的摘要素、问答段与内链：把 SEO 清单落成迁移**
+
+v1.2.3–v1.2.6 解决的是「技术层能不能被正确解析」，这一版解决「内容层能不能被引用」。
+`docs/SEO-CONTENT-PLAN.md` 的诊断是结构问题：文章是叙事型，结论藏在中段，
+没有问句结构，正文之间互不相链。
+
+- `V29__seo_content_enrich.sql`：9 篇 `description` 重写（原来存的是正文首段
+  硬截断，直接进 `meta description`），每篇追加 H2「常见问题」+ 4 组 H3 问答，
+  并补至少 3 条关键词锚文本内链；`web-intelligence-lab` 作为簇中心链全部 8 篇
+- `pages/blog/[id].vue`：从正文 H2「常见问题」解析出问答，输出 `FAQPage`
+  结构化数据（接入已有的 `@graph`）。没有该段就不输出——空 FAQ 是无效结构化数据
+- `scripts/indexnow.sh` + `public/<key>.txt`：Google 与 Bing 的 sitemap ping
+  都已下线，改用 IndexNow 主动推送 URL（覆盖 Bing / Yandex / Seznam / Naver）
+
+取舍：内容改动写成 Flyway 迁移而不是后台逐篇编辑。后台改完就只存在于线上库，
+既不能 review 也不能回滚；写成 SQL 至少能像代码一样被审查，出错重发即可。
 
 ## v1.2.6（2026-11-24）
 

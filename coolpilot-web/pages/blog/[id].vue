@@ -215,6 +215,39 @@ const rendered = computed<{html: string, toc: {id: string, text: string, lv: num
 	return {html, toc}
 })
 
+/**
+ * 「常见问题」段落 → FAQPage 结构化数据。
+ *
+ * 为什么放前端解析而不是后端建表：问答就是正文的一部分，作者在后台写 H2「常见问题」
+ * + 若干 H3 问句即可，不需要再维护一份结构化数据。没写这一段就返回空数组，不输出
+ * FAQPage——空 FAQ 会被搜索引擎判为无效结构化数据，比不输出更糟。
+ *
+ * 配对规则刻意收窄：一个问题只取紧随其后的第一个 <p>，这样文末的「延伸阅读」
+ * 链接段不会被拼进最后一条答案里。
+ */
+const faq = computed<{q: string, a: string}[]>(() => {
+	const html = rendered.value.html
+	const marker = html.search(/<h2[^>]*>\s*常见问题\s*<\/h2>/)
+	if (marker < 0) {
+		return []
+	}
+	const tail = html.slice(marker)
+	// 截止到下一个 h2，避免把后面章节的 h3 误当成问题
+	const next = tail.slice(1).search(/<h2[^>]*>/)
+	const block = next < 0 ? tail : tail.slice(0, next + 1)
+	const items: {q: string, a: string}[] = []
+	const re = /<h3[^>]*>([\s\S]*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/g
+	let m: RegExpExecArray | null
+	while ((m = re.exec(block))) {
+		const q = decodeEntities(String(m[1]).replace(/<[^>]+>/g, '')).trim()
+		const a = decodeEntities(String(m[2]).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+		if (q && a) {
+			items.push({q, a})
+		}
+	}
+	return items
+})
+
 /** 正文由 Markdown 渲染时会带实体（&quot; 之类），目录里不能原样显示 */
 function decodeEntities(text: string) {
 	return text
@@ -472,7 +505,20 @@ if (blog.value) {
 								item: pageUrl
 							}
 						]
-					}
+					},
+					// 问答段存在才输出，空 FAQPage 属于无效结构化数据
+					...(faq.value.length
+						? [{
+							'@type': 'FAQPage',
+							'@id': `${pageUrl}#faq`,
+							inLanguage: locale.value === 'en' ? 'en' : 'zh-CN',
+							mainEntity: faq.value.map((item: {q: string, a: string}) => ({
+								'@type': 'Question',
+								name: item.q,
+								acceptedAnswer: {'@type': 'Answer', text: item.a}
+							}))
+						}]
+						: [])
 				]
 			})
 		}]

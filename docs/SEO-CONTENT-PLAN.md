@@ -187,7 +187,66 @@
 
 ## 六、需要我配合的（一次发布即可）
 
-- [ ] `FAQPage` 结构化数据：把每篇的 Q&A 段喂给搜索引擎（需要文章里先有 Q&A）
-- [ ] 文章 `description`：现在多篇没有独立摘要，`og:description` 是正文首段硬截断。
+- [x] `FAQPage` 结构化数据：把每篇的 Q&A 段喂给搜索引擎（需要文章里先有 Q&A）
+- [x] 文章 `description`：现在多篇没有独立摘要，`og:description` 是正文首段硬截断。
       后台给每篇填 1 句 60–80 字的摘要，分享卡片与搜索结果都会好看很多
 - [ ] 相关文章自动关联：目前靠手工内链，可改为按标签自动推荐（后端已有 `related` 接口）
+
+---
+
+## 七、执行记录（v1.3.0，2026-11-24）
+
+上面第三、六节的清单已落地，实现方式与后续动作记在这里。
+
+### 1. 内容改造是迁移，不是手工改库
+
+九篇的摘要、问答、内链写进 `V29__seo_content_enrich.sql`，随服务启动由 Flyway 执行：
+
+| 改动 | 数量 | 说明 |
+|---|---|---|
+| `description` 重写 | 9 篇 | 70–90 字，带工具名与具体数字；取代原来的正文首段硬截断 |
+| 追加 H2「常见问题」 | 9 篇 × 4 组 | 每篇 4 组 H3 问句 + 单段直答，问句按真实搜索语句写 |
+| 正文内链 | 每篇 ≥ 3 条 | 锚文本用目标页关键词，`web-intelligence-lab` 作为簇中心链全部 8 篇 |
+
+写迁移而不是在后台逐篇粘贴，是为了让「内容」也能被 review 和回滚：
+改错了改 SQL 重发，不用靠记忆比对线上文本。条件里带 `NOT LIKE '%常见问题%'`，
+重复执行不会叠加两份问答。
+
+### 2. FAQPage 由前端从正文解析
+
+`pages/blog/[id].vue` 找 H2「常见问题」，按「H3 问句 + 紧随其后的第一个 `<p>`」
+配对生成 FAQPage。没有这一段就不输出 —— 空 `FAQPage` 属于无效结构化数据，
+比不输出更糟。
+
+刻意只取第一段答案：文末「延伸阅读」是独立段落，不会被拼进最后一条答案。
+
+### 3. IndexNow 替代已停用的 sitemap ping
+
+Google 与 Bing 的 sitemap ping 端点都已下线，等收录只能靠 Search Console 手工提交
+或 IndexNow。IndexNow 不需要账号，凭站点根目录的 key 文件即可提交：
+
+```bash
+./scripts/indexnow.sh                 # 提交 sitemap 里的全部 URL
+./scripts/indexnow.sh <url> [url...]  # 只提交指定 URL
+```
+
+key 文件是 `coolpilot-web/public/ce422a5aafd5dcc01f323b156624f3fa.txt`，
+上线后可访问 `https://coolskyai.com/ce422a5aafd5dcc01f323b156624f3fa.txt` 自检。
+
+> IndexNow 覆盖 Bing / Yandex / Seznam / Naver，**不覆盖 Google**。
+> Google 侧仍需在 Search Console 里手工提交 sitemap（见下）。
+
+### 4. Google Search Console 手工步骤（只能人工做）
+
+1. 打开 [Search Console](https://search.google.com/search-console)，选 `coolskyai.com`
+2. 左侧「索引 → 站点地图」，输入 `sitemap.xml` → 提交
+3. 同一处提交 `rss.xml`（RSS 也能被当发现渠道）
+4. 「网址检查」里对首页和 9 篇文章各点一次「请求编入索引」
+5. Bing 侧除了 IndexNow，可在 [Bing Webmaster](https://www.bing.com/webmasters) 导入 GSC 数据
+
+### 5. 还没做的
+
+- 标题改造：第三节的「标题建议」尚未执行。改 H1 会影响已有排名的页面，
+  建议等新内容收录稳定（2–3 周）后再逐篇替换，一次只改一篇并观察效果
+- 相关文章自动关联：仍是手工内链，可改为按标签自动推荐
+
