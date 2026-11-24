@@ -237,6 +237,17 @@ docker exec coolpilot-redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warn
 
 键名外的双引号是 Spring 序列化的结果，不能省 —— 省了 `DEL` 返回 0，看起来删了其实没删。
 
+**如果迁移直接写入了 `blog` 表（内容迁移，如 V29 / V30），同样要清文章列表缓存**，
+否则页面和 sitemap 都还是旧的条数 —— 因为绕过服务层写库，`deleteBlogRedisCache()` 不会被执行：
+
+```bash
+docker exec coolpilot-redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning \
+  DEL "\"homeBlogInfoList\"" "\"archiveBlogMap\""'
+```
+
+验证方式很简单：`curl -s https://<域名>/sitemap.xml | grep -c "<loc>"`，条数应等于
+11 个静态页 + 文章数 + 专题 + 商品 + 作品 + 开源项目与领域。
+
 ### 回滚
 
 镜像不可变，回滚就是改回上一个 tag：
