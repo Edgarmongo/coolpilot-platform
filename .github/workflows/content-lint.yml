@@ -1,0 +1,46 @@
+name: Content Lint
+
+# 只检查 content/ 下的文章源文件，不碰三端构建。
+# 为什么单独一个 workflow：ci.yml 里 paths-ignore 忽略了 **.md 与 docs/**，
+# 内容改动不会触发它。而文章恰恰是最该在合并前卡一道的——结构错了要回头重写。
+#
+# 规则来源见 docs/ARTICLE-TEMPLATE.md，检查项见 scripts/article_lint.py。
+
+on:
+  push:
+    paths:
+      - 'content/**'
+      - 'scripts/article_lint.py'
+      - 'docs/ARTICLE-TEMPLATE.md'
+  pull_request:
+    paths:
+      - 'content/**'
+      - 'scripts/article_lint.py'
+      - 'docs/ARTICLE-TEMPLATE.md'
+  workflow_dispatch:
+
+concurrency:
+  group: content-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: 文章结构与 GEO 规则
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 脚本只用标准库，不需要 pip install
+      - name: Lint content/*.md
+        run: |
+          shopt -s nullglob
+          files=(content/*.md)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "content/ 下没有文章，跳过"
+            exit 0
+          fi
+          python3 scripts/article_lint.py "${files[@]}"
