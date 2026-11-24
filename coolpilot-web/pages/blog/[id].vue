@@ -286,6 +286,18 @@ async function fetchBlog() {
 		locked.value = true
 		message.value = res.msg || '该文章受密码保护'
 	} else {
+		/*
+		 * 水合时 setup 会再跑一次 fetchBlog。这一次失败不能把 SSR 已经渲染好的
+		 * 正文清掉，原因有两条，第二条是线上真实踩到的：
+		 *
+		 * 1. 用户会看到整页空白，只是刷新一下就好，但体验很差；
+		 * 2. blog 被置空后会走进模板的 else 分支，那里挂了 noindex ——
+		 *    GSC 的实时测试就是因此报「被 noindex 排除」，一篇文章因为
+		 *    一次读接口的抖动被判成不可索引，代价太大。
+		 */
+		if (blog.value) {
+			return
+		}
 		blog.value = null
 		locked.value = false
 		// 后端对不存在的 slug 返回 code 404，这里记下来，交给首次加载后统一抛，
@@ -526,8 +538,15 @@ if (blog.value) {
 } else {
 	useHead({
 		title: t('post.lockedTitle'),
-		// 锁定页没有正文，收录进去只有坏处：既排不上名，又拉低整站内容质量
-		meta: [{name: 'robots', content: 'noindex, follow'}]
+		/*
+		 * 只有「密码锁」才标 noindex —— 那种页面本来就没有正文，收录进去
+		 * 既排不上名又拉低整站质量。
+		 *
+		 * 而「读接口失败」不能标：那只是瞬时状态，Google 抓到一次就判
+		 * 不可索引，等于用一次网络抖动换掉一篇文章的收录权。文章不存在
+		 * 的情况上面已经 throw 404 了，不会走到这里。
+		 */
+		meta: locked.value ? [{name: 'robots', content: 'noindex, follow'}] : []
 	})
 }
 </script>
